@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=65.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "engine"
+version = "0.0.1"
+description = "2D pygame engine"
+authors = [{ name = "WhiteWolf45380" }]
+dependencies = [
+    "pygame",
+    "pygame_manager @ https://github.com/WhiteWolf45380/Pygame-Manager/archive/refs/heads/main.zip",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["engine*"]

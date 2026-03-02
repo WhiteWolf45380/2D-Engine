@@ -1,0 +1,1 @@
+pip install https://github.com/WhiteWolf45380/2D-Engine/archive/refs/heads/main.zip
