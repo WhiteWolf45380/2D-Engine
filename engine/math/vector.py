@@ -2,13 +2,14 @@
 from __future__ import annotations
 
 from .._internal import expect
+from ..core import MathObject
 
 from numbers import Real
 from typing import Iterator
 from math import acos
 
 # ======================================== OBJET ========================================
-class Vector:
+class Vector(MathObject):
     """Objet mathématique 2D abstrait : Vecteur"""
     __slots__ = ("_x", "_y")
     PRECISION = 9
@@ -18,8 +19,9 @@ class Vector:
             x(Real): composante x
             y(Real): composante y
         """
-        self._x = round(float(expect(x, Real)), self.PRECISION)
-        self._y = round(float(expect(y, Real)), self.PRECISION)
+        super().__init__()
+        self._x: float = round(float(expect(x, Real)), self.PRECISION)
+        self._y: float = round(float(expect(y, Real)), self.PRECISION)
     
     # ======================================== CONVERSIONS ========================================
     def __repr__(self) -> str:

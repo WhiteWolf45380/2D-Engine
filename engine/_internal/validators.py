@@ -1,8 +1,18 @@
 # ======================================== IMPORTS ========================================
 from types import UnionType
-from typing import Tuple, get_args, get_origin
+from typing import Tuple, get_args, get_origin, Union
 
 # ======================================== TYPE CHECK ========================================
+def typename(t: type):
+    """
+    Renvoie le str du type
+
+    Args:
+        t(type): type à vérifier
+    """
+    return getattr(t, "__name__", str(t))
+
+
 def expect(value: object, types: type | Tuple[type, ...]):
     """
     Vérifie la valeur contre un type supporté :
@@ -29,8 +39,8 @@ def expect(value: object, types: type | Tuple[type, ...]):
     if isinstance(types, tuple):
         types = tuple(type(None) if t is None else t for t in types)
         if not isinstance(value, types):
-            readable = " | ".join(t.__name__ for t in types)
-            raise TypeError(f"expected ({readable}), got ({type(value).__name__})")
+            readable = " | ".join(typename(t) for t in types)
+            raise TypeError(f"expected ({readable}), got ({typename(value)})")
         return value
 
     # T
@@ -38,29 +48,29 @@ def expect(value: object, types: type | Tuple[type, ...]):
     if origin is None:
         types = type(None) if types is None else types
         if not isinstance(value, types):
-            raise TypeError(f"expected ({types.__name__}), got ({type(value).__name__})")
+            raise TypeError(f"expected ({typename(types)}), got ({typename(value)})")
         return value
     
     # T1 |T2
     args = get_args(types)
-    if origin is UnionType:
+    if origin in (UnionType, Union):
         for t in args:
             try:
                 return expect(value, t)
             except TypeError:
                 continue
-        readable = " | ".join(t.__name__ for t in args)
-        raise TypeError(f"expected ({readable}), got ({type(value).__name__})")
+        readable = " | ".join(typename(t) for t in args)
+        raise TypeError(f"expected ({readable}), got ({typename(value)})")
 
-    # list[T] / set[T]
-    if origin in (list, set):
+    # list[T] / set[T] / frozenset[T]
+    if origin in (list, set, frozenset):
         if not isinstance(value, origin):
-            raise TypeError(f"expected ({origin.__name__}), got ({type(value).__name__})")
+            raise TypeError(f"expected ({typename(origin)}), got ({typename(value)})")
         inner = args[0]
         if get_origin(inner) is None:
             for i, v in enumerate(value):
                 if not isinstance(v, inner):
-                    raise TypeError(f"at index {i}: expected ({inner.__name__}), got ({type(v).__name__})")
+                    raise TypeError(f"at index {i}: expected ({typename(inner)}), got ({typename(v)})")
         else:
             for i, v in enumerate(value):
                 try:
@@ -72,13 +82,13 @@ def expect(value: object, types: type | Tuple[type, ...]):
     # tuple[T] / tuple[T1, T2, T3]
     if origin is tuple:
         if not isinstance(value, tuple):
-            raise TypeError(f"expected (tuple), got ({type(value).__name__})")
-        if len(args) == 1:
+            raise TypeError(f"expected (tuple), got ({typename(value)})")
+        if len(args) == 1 or len(args) == 2 and args[1] is Ellipsis:
             inner = args[0]
             if get_origin(inner) is None:
                 for i, v in enumerate(value):
                     if not isinstance(v, inner):
-                        raise TypeError(f"at index {i}: expected ({inner.__name__}), got ({type(v).__name__})")
+                        raise TypeError(f"at index {i}: expected ({typename(inner)}), got ({typename(v)})")
             else:
                 for i, v in enumerate(value):
                     try:
@@ -91,7 +101,7 @@ def expect(value: object, types: type | Tuple[type, ...]):
             for i, (v, t) in enumerate(zip(value, args)):
                 if get_origin(t) is None:
                     if not isinstance(v, t):
-                        raise TypeError(f"at index {i}: expected ({t.__name__}), got ({type(v).__name__})")
+                        raise TypeError(f"at index {i}: expected ({typename(t)}), got ({typename(v)})")
                 else:
                     try:
                         expect(v, t)
@@ -102,14 +112,14 @@ def expect(value: object, types: type | Tuple[type, ...]):
     # dict[K, V]
     if origin is dict:
         if not isinstance(value, dict):
-            raise TypeError(f"expected (dict), got ({type(value).__name__})")
+            raise TypeError(f"expected (dict), got ({typename(value)})")
         kt, vt = args
         kt_simple = get_origin(kt) is None
         vt_simple = get_origin(vt) is None
         for k, v in value.items():
             if kt_simple:
                 if not isinstance(k, kt):
-                    raise TypeError(f"at key {k!r}: invalid key: expected ({kt.__name__}), got ({type(k).__name__})")
+                    raise TypeError(f"at key {k!r}: invalid key: expected ({typename(kt)}), got ({typename(k)})")
             else:
                 try:
                     expect(k, kt)
@@ -117,7 +127,7 @@ def expect(value: object, types: type | Tuple[type, ...]):
                     raise TypeError(f"at key {k!r}: invalid key: {e}") from e
             if vt_simple:
                 if not isinstance(v, vt):
-                    raise TypeError(f"at key {k!r}: expected ({vt.__name__}), got ({type(v).__name__})")
+                    raise TypeError(f"at key {k!r}: expected ({typename(vt)}), got ({typename(v)})")
             else:
                 try:
                     expect(v, vt)

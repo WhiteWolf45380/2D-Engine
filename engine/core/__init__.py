@@ -1,4 +1,5 @@
 # ======================================== IMPORTS ========================================
+from .math_object import MathObject
 from .shape import Shape
 from .component import Component
 from .system import System
@@ -7,6 +8,7 @@ from .world import World
 
 # ======================================== EXPORTS ========================================
 __all__ = [
+    "MathObject",
     "Shape",
     "Component",
     "System",

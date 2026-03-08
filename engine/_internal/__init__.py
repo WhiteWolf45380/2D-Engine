@@ -1,5 +1,8 @@
 # ======================================== IMPORTS ========================================
-from .validators import expect
+from .validators import typename, expect
 
 # ======================================== EXPORTS ========================================
-__all__ = ["expect"]
+__all__ = [
+    "typename",
+    "expect",
+]

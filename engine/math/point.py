@@ -2,13 +2,15 @@
 from __future__ import annotations
 
 from .._internal import expect
+from ..core import MathObject
+
 from .vector import Vector
 
 from numbers import Real
 from typing import Iterator
 
 # ======================================== OBJECT ========================================
-class Point:
+class Point(MathObject):
     """Objet mathématique 2D abstrait : Point"""
     __slots__ = ("_x", "_y")
     PRECISION = 8
@@ -18,8 +20,9 @@ class Point:
             x(Real): coordonnée horizontale
             y(Real): coordonnée verticale
         """
-        self._x = round(float(expect(x, Real)), self.PRECISION)
-        self._y = round(float(expect(y, Real)), self.PRECISION)
+        super().__init__()
+        self._x: float = round(float(expect(x, Real)), self.PRECISION)
+        self._y: float = round(float(expect(y, Real)), self.PRECISION)
 
     # ======================================== CONVERSIONS ========================================
     def __repr__(self) -> str:
@@ -148,7 +151,7 @@ class Point:
         vector0 = points[0] - self
         if not vector0:
             return all((point - points[0]).is_null() for point in points[1:])
-        return all(vector0.is_collinear(point - points[0] for point in points[1:]))
+        return all(vector0.is_collinear(point - points[0]) for point in points[1:])
     
     # ======================================== PUBLIC METHODS ========================================
     def copy(self) -> Point:

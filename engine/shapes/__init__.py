@@ -2,7 +2,7 @@
 from .capsule import Capsule
 from .circle import Circle
 from .ellipse import Ellipse
-from .line import Line
+from .segment import Segment
 from rect import Rect
 from .triangle import Triangle
 
@@ -11,7 +11,7 @@ __all__ = [
     "Capsule",
     "Circle",
     "Ellipse",
-    "Line",
+    "Segment",
     "Rect",
     "Triangle",
 ]
