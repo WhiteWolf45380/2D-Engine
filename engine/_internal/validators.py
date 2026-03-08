@@ -136,3 +136,37 @@ def expect(value: object, types: type | Tuple[type, ...]):
         return value
 
     raise TypeError(f"unsupported type annotation: {types!r}")
+
+# ======================================== VALUE CHECK ========================================
+def not_null(value: object, arg: str = "Argument"):
+    """
+    Vérifie que la valeur ne soit pas nulle
+
+    Args:
+        value(object): valeur à vérifier
+        arg(str): nom de l'argument à vérifier
+    """
+    # None
+    if value is None:
+        raise ValueError(f"{arg} cannot be None")
+
+    # Nombre
+    if isinstance(value, (int, float, complex)):
+        if value == 0:
+            raise ValueError(f"{arg} cannot be None")
+        return value
+    
+    # Types composés
+    if isinstance(value, (str, list, tuple, set, dict, frozenset)):
+        if len(value) == 0:
+            raise ValueError(f"{arg} cannot be empty")
+        return value
+        
+    # Objet possédant une méthode __len__
+    if hasattr(value, "__len__"):
+        if len(value) == 0:
+            raise ValueError(f"{arg} cannot be empty")
+        return value
+    
+    # Objet custom
+    return value
