@@ -52,5 +52,9 @@ class Sprite(Component):
         return [self._image, self._shape, self._width, self._height]
     
     # ======================================== GETTERS ========================================
+    @property
+    def image(self) -> pygame.Surface:
+        """Retourne l'image du sprite"""
+        return self._image
 
     # ======================================== SETTERS ========================================
