@@ -1,12 +1,12 @@
 # ======================================== IMPORTS ========================================
 from __future__ import annotations
 
-from .._internal import expect, not_null
+from .._internal import expect, not_null, positive
 from ..core import Shape
 
 from numbers import Real
 from typing import Iterator
-from math import pi
+import math
 
 # ======================================== SHAPE ========================================
 class Capsule(Shape):
@@ -23,13 +23,13 @@ class Capsule(Shape):
             height(Real): hauteur totale de la capsule
         """
         super().__init__()
-        self._height = abs(float(not_null(expect(height, Real), arg="height")))
-        self._radius = min(self._height / 2, abs(float(not_null(expect(radius, Real), arg="radius"))))
+        self._height: float = float(positive(not_null(expect(height, Real))))
+        self._radius: float = min(self._height / 2, float(positive(not_null(expect(radius, Real)))))
         
     # ======================================== CONVERSION ========================================
     def __repr__(self) -> str:
         """Renvoie une représentation de la capsule"""
-        return f"Capsule(radius: {self._radius}, height: {self._height})"
+        return f"Capsule(radius={self._radius}, height={self._height})"
     
     def __iter__(self) -> Iterator[float]:
         """Renvoie les composants dans un itérateur"""
@@ -72,23 +72,23 @@ class Capsule(Shape):
     @property
     def perimeter(self) -> float:
         """Renvoie le périmètre de la capsule"""
-        return 2 * self.spine + 2 * pi * self._radius
+        return 2 * self.spine + 2 * math.pi * self._radius
     
     @property
     def area(self) -> float:
         """Renvoie l'aire de la capsule"""
-        return self.width * self.spine + pi * self._radius**2
+        return self.width * self.spine + math.pi * self._radius**2
 
     # ======================================== SETTERS ========================================
     @radius.setter
     def radius(self, value: Real):
         """Fixe le rayon de la capsule"""
-        self._radius = min(self._height / 2, abs(float(not_null(expect(value, Real), arg="radius"))))
+        self._radius = min(self._height / 2, float(positive(not_null(expect(value, Real)))))
 
     @height.setter
     def height(self, value: Real):
         """Fixe la hauteur de la capsule"""
-        self._height = abs(float(not_null(expect(value, Real), arg="height")))
+        self._height = float(positive(not_null(expect(value, Real))))
         self._radius = min(self._height / 2, self._radius)
 
     # ======================================== COMPARATORS ========================================

@@ -3,3 +3,7 @@ from .image import Image
 from .text import Text
 
 # ======================================== EXPORTS ========================================
+__all__ = [
+    "Image",
+    "Text",
+]

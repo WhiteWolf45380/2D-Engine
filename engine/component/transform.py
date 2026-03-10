@@ -1,4 +1,6 @@
 # ======================================== IMPORTS ========================================
+from __future__ import annotations
+
 from .._internal import expect, positive, not_null
 from ..core import Component
 from ..math import Point
@@ -112,3 +114,8 @@ class Transform(Component):
     def scale(self, value: Real):
         """Fixe le facteur de redimensionnement"""
         self._scale = float(not_null(positive(expect(value, Real))))
+
+    # ======================================== PUBLIC METHODS ========================================
+    def copy(self) -> Transform:
+        """Renvoie une copie du composant"""
+        return Transform(self._pos.copy(), self._anchor, self._rotation, self._scale)

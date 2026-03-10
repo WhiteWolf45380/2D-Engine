@@ -29,7 +29,7 @@ class RigidBody(Component):
         """
         self._mass: float = float(positive(expect(mass, Real)))
         self._friction: float = float(clamped(expect(friction, Real)))
-        self._restitution: float = float(clamped(expect(restitution, Real)))
+        self._restitution: float = float(positive(expect(restitution, Real)))
         self._gravity: bool = expect(gravity, bool)
         self._gravity_scale: float = float(expect(gravity_scale, Real))
 
@@ -89,7 +89,7 @@ class RigidBody(Component):
     @restitution.setter
     def restitution(self, value: Real):
         """Fixe le facteur de restitution du corps"""
-        self._restitution = float(clamped(expect(value, Real)))
+        self._restitution = float(positive(expect(value, Real)))
     
     @gravity_scale.setter
     def gravity_scale(self, value: Real):

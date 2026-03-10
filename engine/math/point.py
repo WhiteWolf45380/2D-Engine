@@ -89,10 +89,12 @@ class Point(MathObject):
         self._y = round(float(expect(value, Real)), self.PRECISION)
 
     # ======================================== OPERATIONS ========================================
-    def __add__(self, other: Vector) -> Point:
+    def __add__(self, other: Vector | Point) -> Point:
         """Renvoie l'image du point par le vecteur donné"""
         if isinstance(other, Vector):
             return self._translate(other)
+        if isinstance(other, Point):
+            return self._translate(Vector(*other))
         return NotImplemented
     
     def __radd__(self, other: Vector) -> Point:
