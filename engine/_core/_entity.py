@@ -10,14 +10,18 @@ from typing import Type
 
 # ======================================== CLASSE ABSTRAITE ========================================
 class Entity:
-    """Classe représentant les entités en accumulant des composants"""
+    """
+    Classe représentant les entités en accumulant des composants
+
+    Args:
+        components (Component, optional): ensemble des composants de l'entité
+        tags (Iterable[str], optional): labels de l'entité
+    """
     __slots__ = ("_id", "_components", "_tags", "_active")
 
     def __init__(self, *components: Component, tags: tuple[str, ...] = ()):
         """
-        Args:
-            components(Component, optional): ensemble des composants de l'entité
-            tags(Iterable[str], optional): labels de l'entité
+
         """
         self._id: str = str(uuid.uuid4())
         self._components: dict[type, Component] = {}
