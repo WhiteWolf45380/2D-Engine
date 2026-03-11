@@ -1,10 +1,10 @@
 # ======================================== IMPORTS ========================================
-from .capsule import Capsule
-from .circle import Circle
-from .ellipse import Ellipse
-from .polygon import Polygon
-from .rect import Rect
-from .segment import Segment
+from ._capsule import Capsule
+from ._circle import Circle
+from ._ellipse import Ellipse
+from ._polygon import Polygon
+from ._rect import Rect
+from ._segment import Segment
 
 # ======================================== EXPORTS ========================================
 __all__ = [
