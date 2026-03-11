@@ -1,6 +1,6 @@
 # ======================================== IMPORTS ========================================
 from .._internal import expect, clamped, positive
-from .._core import Component
+from ..ecs import Component
 
 from numbers import Real
 from typing import Iterator

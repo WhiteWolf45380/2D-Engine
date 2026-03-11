@@ -2,8 +2,8 @@
 from __future__ import annotations
 
 from .._internal import expect, positive, not_null
-from .._core import Component
-from ..math import Point
+from ..ecs import Component
+from ..math import Point, Vector
 
 from typing import Iterator
 from numbers import Real
@@ -27,7 +27,7 @@ class Transform(Component):
             rotation(float, optional): angle de rotation en radians
             scale(float, otional): facteur de redimensionnement
         """
-        self._pos: Point = expect(pos, Point)
+        self._pos: Point = Point(pos)
         self._anchor: str = expect(anchor, str)
         self._rotation: float = float(expect(rotation, Real))
         self._scale: float = float(not_null(positive(expect(scale, Real))))
@@ -98,7 +98,7 @@ class Transform(Component):
     @pos.setter
     def pos(self, value: Point):
         """Fixe le point de posiiton"""
-        self._pos = expect(value, Point)
+        self._pos = Point(value)
 
     @anchor.setter
     def anchor(self, value: str):
@@ -119,3 +119,12 @@ class Transform(Component):
     def copy(self) -> Transform:
         """Renvoie une copie du composant"""
         return Transform(self._pos.copy(), self._anchor, self._rotation, self._scale)
+    
+    def translate(self, vector: Vector):
+        """
+        Applique une translation au transform
+
+        Args:
+            vector(Vector): vecteur de translation
+        """
+        self._pos += expect(vector, Vector)

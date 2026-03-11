@@ -189,7 +189,7 @@ def positive(value: object, arg: str = "Argument"):
     # Par défaut
     return  value
 
-def clamped(value: object, min: float = 0.0, max: float = 1.0, arg="Argument"):
+def clamped(value: object, min: float = 0.0, max: float = 1.0, arg: str ="Argument"):
     """
     Vérifie que la valeur soit comprise entre min et max
 
@@ -207,3 +207,41 @@ def clamped(value: object, min: float = 0.0, max: float = 1.0, arg="Argument"):
     
     # Par défaut
     return value
+
+# ======================================== CONVERSIONS ========================================
+def rgba(value: object, argument: str = "Argument") -> tuple[int, int, int, float]:
+    """
+    Renvoie, si cela est possible, la valeur en couleur rgba (255, 255, 255, 1.0)
+
+    Args:
+        value(object): valeur à convertir
+    """
+    # Type
+    if type(value) is not tuple:
+        raise TypeError(f"{argument} doit être un tuple")
+
+    # Taille
+    n = len(value)
+    if n == 3:
+        r, g, b = value
+        a = 1.0
+    elif n == 4:
+        r, g, b, a = value
+    elif n < 3:
+        v = value + (0, 0, 0, 1.0)
+        r, g, b, a = v[0], v[1], v[2], v[3]
+    else:
+        raise ValueError(f"{argument} doit être un tuple de longueur <= 4")
+
+    # RGB
+    if type(r) is float: r = int(r * 255 + 0.5)
+    if type(g) is float: g = int(g * 255 + 0.5)
+    if type(b) is float: b = int(b * 255 + 0.5)
+
+    # Alpha
+    if type(a) is int:
+        a = a / 255
+    else:
+        a = float(a)
+
+    return r, g, b, a

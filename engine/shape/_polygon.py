@@ -1,9 +1,9 @@
 # ======================================== IMPORTS ========================================
 from __future__ import annotations
 
-from .._internal import expect, not_null, positive
-from .._core import Shape
-from ..math import Point, Vector
+from .._internal import expect
+from ._shape import Shape
+from ..math import Point
 
 from numbers import Real
 from typing import Iterator
@@ -16,12 +16,8 @@ class Polygon(Shape):
             self,
             *points: Point, 
         ):
-        """
-        Args:
-            points(Point): points du polygone
-        """
         super().__init__()
-        self._points: tuple[Point, ...] = expect(points, tuple[Point])
+        self._points: tuple[Point, ...] = tuple(Point(point) for point in points)
         if len(self._points) < 3:
             raise ValueError("Polygon must have at least 3 points")
         if self._has_duplicate_points():
@@ -58,9 +54,7 @@ class Polygon(Shape):
         return self._points
     
     def get_edges(self) -> tuple[tuple[Point, Point], ...]:
-        """
-        Renvoie les arêtes du polygone sous forme de paires de points.
-        """
+        """Renvoie les arêtes du polygone sous forme de paires de points"""
         n = len(self._points)
         return tuple((self._points[i], self._points[(i + 1) % n]) for i in range(n))
     
@@ -79,27 +73,16 @@ class Polygon(Shape):
     
     @property
     def perimeter(self) -> float:
-        """
-        Renvoie le périmètre du polygone
-
-        Note:
-            Inclut l'arête entre le dernier et le premier sommet.
-        """
+        """Renvoie le périmètre du polygone"""
         n = len(self._points)
-        return sum(
-            self._points[i].distance_to(self._points[(i + 1) % n])
-            for i in range(n)
-        )
+        return sum(self._points[i].distance_to(self._points[(i + 1) % n]) for i in range(n))
 
     @property
     def area(self) -> float:
         """Renvoie l'aire du polygone"""
         pts = self._points
         n = len(pts)
-        return 0.5 * sum(
-            pts[i].x * pts[(i + 1) % n].y - pts[(i + 1) % n].x * pts[i].y
-            for i in range(n)
-        )
+        return 0.5 * sum(pts[i].x * pts[(i + 1) % n].y - pts[(i + 1) % n].x * pts[i].y for i in range(n))
 
     @property
     def is_convex(self) -> bool:
@@ -127,24 +110,15 @@ class Polygon(Shape):
 
     # ======================================== COMPARATORS ========================================
     def __eq__(self, other: object) -> bool:
-        """
-        Vérifie l'égalité géométrique de deux polygones
-
-        Note:
-            Deux polygones sont égaux s'ils partagent les mêmes sommets dans le même
-            ordre cyclique (rotation autorisée, réflexion non).
-        """
-        if not isinstance(other, Polygon):
-            return False
-        if len(self) != len(other):
-            return False
-        n = len(self._points)
-        sp = self._points
-        op = other._points
-        return any(
-            all(sp[i] == op[(i + offset) % n] for i in range(n))
-            for offset in range(n)
-        )
+        """Vérifie l'égalité géométrique de deux polygones"""
+        if isinstance(other, Polygon):
+            if len(self) != len(other):
+                return False
+            n = len(self._points)
+            sp = self._points
+            op = other._points
+            return any(all(sp[i] == op[(i + offset) % n] for i in range(n)) for offset in range(n))
+        return False
 
     # ======================================== PUBLIC METHODS ========================================
     def copy(self) -> Polygon:
@@ -153,10 +127,10 @@ class Polygon(Shape):
 
     def scale(self, factor: Real, origin: Point | None = None) -> Polygon:
         """
-        Redimensionne le polygone par rapport à un point d'origine.
+        Redimensionne le polygone par rapport à un point d'origine
 
         Args:
-            factor (Real): facteur de redimensionnement (> 0)
+            factor (Real): facteur de redimensionnement
             origin (Point | None): centre de la mise à l'échelle
         """
         factor = float(expect(factor, Real))
@@ -173,7 +147,7 @@ class Polygon(Shape):
         self._points = new_points
 
     def reverse(self) -> Polygon:
-        """Inverse l'ordre des sommets (change le sens de parcours)"""
+        """Inverse l'ordre des sommets"""
         return Polygon(*reversed(self._points))
 
     def normalize(self) -> Polygon:

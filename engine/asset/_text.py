@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from .._internal import expect, not_null, positive
-from .._core import Asset
+from ._asset import Asset
 
 # ======================================== OBJET ========================================
 class Text(Asset):

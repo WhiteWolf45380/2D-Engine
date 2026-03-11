@@ -8,21 +8,18 @@ from ._component import Component
 import uuid
 from typing import Type
 
-# ======================================== CLASSE ABSTRAITE ========================================
+# ======================================== OBJECT ========================================
 class Entity:
     """
     Classe représentant les entités en accumulant des composants
 
     Args:
-        components (Component, optional): ensemble des composants de l'entité
-        tags (Iterable[str], optional): labels de l'entité
+        components(Component, optional): ensemble des composants de l'entité
+        tags(Iterable[str], optional): labels de l'entité
     """
     __slots__ = ("_id", "_components", "_tags", "_active")
 
     def __init__(self, *components: Component, tags: tuple[str, ...] = ()):
-        """
-
-        """
         self._id: str = str(uuid.uuid4())
         self._components: dict[type, Component] = {}
         self._tags: set[str] = set(tags)

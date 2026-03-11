@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from .._internal import expect, not_null, positive
-from .._core import Shape
+from ._shape import Shape
 from ..math import Point, Vector
 
 from numbers import Real
@@ -25,8 +25,8 @@ class Segment(Shape):
             width(Real, optional): épaisseur
         """
         super().__init__()
-        self._A: Point = expect(A, Point)
-        self._B: Point = expect(B, Point)
+        self._A: Point = Point(A)
+        self._B: Point = Point(B)
         self._width: float = float(positive(not_null(expect(width, Real))))
         
     # ======================================== CONVERSION ========================================
@@ -97,12 +97,12 @@ class Segment(Shape):
     @A.setter
     def A(self, value: Point):
         """Fixe le point de départ"""
-        self._A = expect(value, Point)
+        self._A = Point(value)
 
     @B.setter
     def B(self, value: Point):
         """Fixe le point d'arrivé"""
-        self._B = expect(value, Point)
+        self._B = Point(value)
 
     @width.setter
     def width(self, value: Real):

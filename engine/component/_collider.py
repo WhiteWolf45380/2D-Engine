@@ -2,7 +2,8 @@
 from __future__ import annotations
 
 from .._internal import expect
-from .._core import Component, Shape
+from ..ecs import Component
+from ..shape import Shape
 
 from numbers import Real
 from typing import Iterator

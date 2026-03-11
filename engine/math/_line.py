@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from .._internal import expect
-from .._core import MathObject
+from ._math_object import MathObject
 
 from ._vector import Vector
 from ._point import Point
@@ -25,8 +25,8 @@ class Line(MathObject):
             vector(Vector): Vecteur directeur de la droite
         """
         super().__init__()
-        self._origin: Point = expect(point, Point)
-        self._vector: Vector = expect(vector, Vector)
+        self._origin: Point = Point(point)
+        self._vector: Vector = Vector(vector)
         if not self._vector:
             raise ValueError("Null vector cannot be direction vector")
 
@@ -101,12 +101,12 @@ class Line(MathObject):
     @origin.setter
     def origin(self, point: Point):
         """Fixe l'origine de la droite"""
-        self._origin = expect(point, Point)
+        self._origin = Point(point)
     
     @vector.setter
     def vector(self, vector: Vector):
         """Fixe le vecteur directeur de la droite"""
-        self._vector = expect(vector, Vector)
+        self._vector = Vector(vector)
         if not self._vector:
             raise ValueError("Null vector cannot be direction vector")
 
@@ -134,7 +134,7 @@ class Line(MathObject):
         """Vérifie qu'un point soit compris dans la droite"""
         if isinstance(other, Point):
             return self._contains(other)
-        return NotImplemented
+        return False
     
     # ======================================== PREDICATES ========================================
     def contains(self, point: Point) -> bool:
@@ -144,7 +144,7 @@ class Line(MathObject):
         Args:
             point(Point): point à vérifier
         """
-        return self._contains(expect(point, Point))
+        return self._contains(Point(point))
     
     def is_orthogonal(self, line: Line) -> bool:
         """
@@ -181,7 +181,7 @@ class Line(MathObject):
         Args:
             point(Point): point à vérifier
         """
-        return self._collidepoint(expect(point, Point))
+        return self._collidepoint(Point(point))
     
     def collideline(self, line: Line) -> bool:
         """
@@ -204,7 +204,7 @@ class Line(MathObject):
         Args:
             vector(Vector): vecteur de translation
         """
-        return self._translate(expect(vector, Vector))
+        return self._translate(Vector(vector))
     
     def point(self, t: Real) -> Point:
         """
@@ -222,7 +222,7 @@ class Line(MathObject):
         Args:
             point(Point): point à projeter
         """
-        return self._project(expect(point, Point))
+        return self._project(Point(point))
     
     def distance(self, point: Point) -> float:
         """
@@ -231,7 +231,7 @@ class Line(MathObject):
         Args:
             point(Point): point à vérifier
         """
-        return self._distance(expect(point, Point))
+        return self._distance(Point(point))
     
     def intersection(self, line: Line) -> None | Point | Line:
         """
@@ -249,7 +249,7 @@ class Line(MathObject):
         Args:
             point(Point): point original
         """
-        return self._symmetric(expect(point, Point))
+        return self._symmetric(Point(point))
 
     # ======================================== INTERNAL METHODS ========================================
     def _contains(self, point: Point) -> bool:

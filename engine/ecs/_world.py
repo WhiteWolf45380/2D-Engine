@@ -7,14 +7,25 @@ from ._system import System
 
 from typing import Type
 
-# ======================================== MONDE ========================================
+# ======================================== OBJECT ========================================
 class World:
     """Gère le monde virtuel et l'organisation des entités"""
     def __init__(self):
         self._all_entities: dict[str, Entity] = {}      # ensemble des entités
         self._all_systems: list = []                    # ensemble des systèmes
+
+    # ======================================== UPDATE ========================================
+    def update(self, dt: float):
+        """
+        Actualise le monde
+
+        Args:
+            dt(float): delta time, temps écoulé depuis la dernière frame en secondes
+        """
+        for system in self._all_systems:
+            system.update(self, dt)
     
-    # ======================================== ENTITES ========================================
+    # ======================================== ENTITIES ========================================
     def add_entity(self, entity: Entity):
         """
         Ajoute une entité au monde
@@ -23,7 +34,7 @@ class World:
             entity(Entity): entité à ajouter
         """
         expect(entity, Entity)
-        self._all_entities[entity.id] = Entity
+        self._all_entities[entity.id] = entity
     
     def remove_entity(self, entity: Entity):
         """
@@ -69,7 +80,7 @@ class World:
                 result.append(entity)
         return result
 
-    # ======================================== SYSTEMES ========================================
+    # ======================================== SYSTEMS ========================================
     def add_system(self, system: System):
         """
         Ajoute un système au monde
