@@ -1,9 +1,9 @@
 # ======================================== IMPORTS ========================================
 from .._internal import expect
 
-from .component import Component
-from .entity import Entity
-from .system import System
+from ._component import Component
+from ._entity import Entity
+from ._system import System
 
 from typing import Type
 

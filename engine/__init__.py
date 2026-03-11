@@ -1,4 +1,4 @@
-from window import Window
+from engine._window import Window
 
 from core import (
     Entity,

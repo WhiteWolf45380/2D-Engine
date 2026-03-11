@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from .._internal import expect
 
-from .component import Component
+from ._component import Component
 
 import uuid
 from typing import Type

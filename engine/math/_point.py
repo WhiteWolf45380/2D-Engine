@@ -4,7 +4,7 @@ from __future__ import annotations
 from .._internal import expect
 from ..core import MathObject
 
-from .vector import Vector
+from ._vector import Vector
 
 from numbers import Real
 from typing import Iterator

@@ -1,7 +1,7 @@
 # ======================================== IMPORTS ========================================
-from .collision import CollisionSystem
-from .gravity import GravitySystem
-from .render import RenderSystem
+from ._collision import CollisionSystem
+from ._gravity import GravitySystem
+from ._render import RenderSystem
 
 # ======================================== EXPORTS ========================================
 __all__ = [

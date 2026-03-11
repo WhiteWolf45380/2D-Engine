@@ -1,6 +1,6 @@
 # ======================================== IMPORTS ========================================
-from .image import Image
-from .text import Text
+from ._image import Image
+from ._text import Text
 
 # ======================================== EXPORTS ========================================
 __all__ = [

@@ -1,11 +1,11 @@
 # ======================================== IMPORTS ========================================
-from .math_object import MathObject
-from .shape import Shape
-from .asset import Asset
-from .component import Component
-from .system import System
-from .entity import Entity
-from .world import World
+from ._math_object import MathObject
+from ._shape import Shape
+from ._asset import Asset
+from ._component import Component
+from ._system import System
+from ._entity import Entity
+from ._world import World
 
 # ======================================== EXPORTS ========================================
 __all__ = [

@@ -4,8 +4,8 @@ from __future__ import annotations
 from .._internal import expect
 from ..core import MathObject
 
-from .vector import Vector
-from .point import Point
+from ._vector import Vector
+from ._point import Point
 
 from typing import Iterator
 from numbers import Real

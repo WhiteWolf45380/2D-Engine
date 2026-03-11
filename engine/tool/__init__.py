@@ -1,5 +1,5 @@
 # ======================================== IMPORTS ========================================
-from .walls_definer import WallsDefiner
+from ._walls_definer import WallsDefiner
 
 # ======================================== EXPORTS ========================================
 __all__ = [
