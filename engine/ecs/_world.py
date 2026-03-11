@@ -13,6 +13,15 @@ class World:
     def __init__(self):
         self._all_entities: dict[str, Entity] = {}      # ensemble des entités
         self._all_systems: list = []                    # ensemble des systèmes
+    
+    # ======================================== CONVERSIONS ========================================
+    def __repr__(self) -> str:
+        """Renvoie une représentation du monde"""
+        return f"World(entities=[{', '.join(self._all_entities.values())}], systems=[{', '.join(self._all_systems)}])"
+    
+    def __str__(self) -> str:
+        """Renvoie une description du monde"""
+        return f"World[entities: {self.entity_count}, systems: {self.system_count}]"
 
     # ======================================== UPDATE ========================================
     def update(self, dt: float):
@@ -47,7 +56,11 @@ class World:
     
     @property
     def entity_count(self) -> int:
-        """Retourne le nombre d'entités dans le monde"""
+        """Renvoie le nombre d'entités dans le monde"""
+        return len(self._all_entities)
+    
+    def __len__(self) -> int:
+        """Renvoie le nombre d'entités dans le monde"""
         return len(self._all_entities)
     
     def has_entity(self, entity: Entity) -> bool:
@@ -98,3 +111,29 @@ class World:
             system(System): système à supprimer
         """
         self._all_systems.remove(expect(system, System))
+
+    @property
+    def system_count(self) -> int:
+        """Renvoie le nombre de systèmes du monde"""
+        return len(self._all_systems)
+
+    def has_system(self, system_type: Type[System]) -> bool:
+        """
+        Vérifie que le monde comporte un système donné
+
+        Args:
+            system_type(Type[System]): type du système
+        """
+        return any(isinstance(s, system_type) for s in self._all_systems)
+
+    def get_system(self, system_type: Type[System]) -> System:
+        """
+        Renvoie un système du monde
+
+        Args:
+            system_type(Type[System]): type du système
+        """
+        for s in self._all_systems:
+            if isinstance(s, system_type):
+                return s
+        raise ValueError(f"World has no {system_type.__name__} system")

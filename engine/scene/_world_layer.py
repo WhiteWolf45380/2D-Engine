@@ -1,6 +1,8 @@
 # ======================================== IMPORTS ========================================
 from .._internal import expect
 from ..ecs import World
+from .._rendering import Renderer
+from ..system import RenderSystem
 
 from ._layer import Layer
 
@@ -10,10 +12,10 @@ class WorldLayer(Layer):
     Layer contenant un World
 
     Args:
-        world(World): monde assigné
+        world(World, optional): monde assigné
     """
     def __init__(self, world: World = None):
-        self._world = expect(world, (World, None))
+        self._world: World | None = expect(world, (World, None))
     
     # ======================================== GETTERS ========================================
     @property
@@ -42,6 +44,7 @@ class WorldLayer(Layer):
         if self._world is not None:
             self._world.update(dt)
 
-    def draw(self):
+    def draw(self, renderer: Renderer):
         """Affichage du layer"""
-        ...
+        if self._world is not None and self._world.has_system(RenderSystem):
+            self._world.get_system(RenderSystem).draw(renderer)

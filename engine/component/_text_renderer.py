@@ -9,14 +9,13 @@ from numbers import Real
 # ======================================== COMPONENT ========================================
 class TextRenderer(Component):
     """Composant gérant le rendu"""
-    __slots__ = ("_text", "_layer", "_z", "_visible", "_alpha")
+    __slots__ = ("_text", "_z", "_visible", "_alpha")
     requires = ("Transform",)
 
     def __init__(
             self,
             text: Text = None,
             offset: tuple[Real, Real] = (0.0, 0.0),
-            layer: int = 0,
             z: int = 0,
             visible: bool = True,
             alpha: float = 1.0,
@@ -25,14 +24,12 @@ class TextRenderer(Component):
         Args:
             text(Text, optional): texte du rendu
             offset(tuple[Real, Real], optional): décalage par rapport au Transform
-            layer(int, optional): couche de rendu
             z(int, optional): ordre de rendu
             visible(bool, optional): visibilité
             alpha(float, optional): facteur d'opacité de l'image
         """
         self._text: Text = expect(text, Text)
         self._offset: tuple[Real, Real] = offset
-        self._layer: int = expect(layer, int)
         self._z: int = expect(z, int)
         self._visible: bool = expect(visible, bool)
         self._alpha: float = clamped(expect(alpha, float))
@@ -40,7 +37,7 @@ class TextRenderer(Component):
     # ======================================== CONVERSIONS ========================================
     def __repr__(self) -> str:
         """Renvoie une représentation du composant"""
-        return f"TextRenderer(text={self._text}, offset={self._offset}, layer={self._layer}, z={self._z}, visible={self._visible}, alpha={self._alpha})"
+        return f"TextRenderer(text={self._text}, offset={self._offset}, z={self._z}, visible={self._visible}, alpha={self._alpha})"
     
     def __iter__(self) -> Iterator:
         """Renvoie le composant dans un itérateur"""
@@ -50,13 +47,13 @@ class TextRenderer(Component):
         """Renvoie l'entier hashé du composant"""
         return hash(self.to_tuple())
     
-    def to_tuple(self) -> tuple[Text, tuple[Real, Real], int, int, float]:
+    def to_tuple(self) -> tuple[Text, tuple[Real, Real], int, float]:
         """Renvoie le composant sous forme de tuple"""
-        return (self._text, self._offset, self._layer, self._z, self._alpha)
+        return (self._text, self._offset, self._z, self._alpha)
     
     def to_list(self) -> list:
         """Renvoie le composant sous forme de liste"""
-        return [self._text, self._offset, self._layer, self._z, self._alpha]
+        return [self._text, self._offset, self._z, self._alpha]
     
     # ======================================== GETTERS ========================================
     @property
@@ -68,11 +65,6 @@ class TextRenderer(Component):
     def offset(self) -> tuple[float, float]:
         """Renvoie le décalage par rapport au Transform"""
         return self._offset
-    
-    @property
-    def layer(self) -> int:
-        """Renvoie la couche de rendu"""
-        return self._layer
     
     @property
     def z(self) -> int:

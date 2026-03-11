@@ -1,111 +1,61 @@
 # ======================================== IMPORTS ========================================
 from __future__ import annotations
 
-from ..asset import Image, Text
-
 import pyglet
-import pyglet.image
-import pyglet.text
-import pyglet.font
-import pyglet.sprite
-from pyglet.window import Window
+import pyglet.gl as gl
+from pyglet.graphics import Batch, Group
 
-# ======================================== OBJET ========================================
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ..scene import Scene
+
+# ======================================== RENDERER ========================================
 class Renderer:
-    """Seul endroit qui touche pyglet"""
-    _image_cache: dict[str, pyglet.image.AbstractImage] = {}
-    _font_cache: dict[str, str | None] = {}
-    _label_cache: dict[tuple, pyglet.text.Label] = {}
+    """
+    Pipeline de rendu exploitant OpenGL
 
-    def __init__(self, window: Window):
-        self._window = window
+    Args:
+        virtual_width (int): largeur de l'espace virtuel
+        virtual_height (int): hauteur de l'espace virtuel
+    """
 
-    # ======================================== IMAGES ========================================
-    def _load_image(self, path: str) -> pyglet.image.AbstractImage | None:
-        """Charge et cache une image"""
-        if path in self._image_cache:
-            return self._image_cache[path]
-        try:
-            img = pyglet.image.load(path)
-            self._image_cache[path] = img
-            return img
-        except FileNotFoundError:
-            print(f"Cannot load image {path}")
-            return None
+    def __init__(self, virtual_width: int, virtual_height: int):
+        self._virtual_width: int = int(virtual_width)
+        self._virtual_height: int = int(virtual_height)
+        self._batch: Batch = Batch()
+        self._groups: dict[int, Group] = {}
 
-    def draw_image(self, image: Image, x: float, y: float, alpha: float = 1.0):
+    # ======================================== GETTERS ========================================
+    @property
+    def batch(self) -> Batch:
+        """Renvoie le batch global"""
+        return self._batch
+    
+    def get_group(self, z: int = 0) -> Group:
         """
-        Dessine une image
+        Renvoie le Group associé au z_order, le crée si inexistant
 
         Args:
-            image(Image): descripteur de l'image
-            x(float): position horizontale
-            y(float): position verticale
-            alpha(float): opacité
+            z (int): z_order du group
         """
-        raw = self._load_image(image.path)
-        if raw is None:
-            return
+        if z not in self._groups:
+            self._groups[z] = Group(order=z)
+        return self._groups[z]
 
-        transformed = raw.get_transform(
-            flip_x=image.flip_x,
-            flip_y=image.flip_y,
-            rotate=image.rotation
-        )
-
-        sprite = pyglet.sprite.Sprite(transformed, x=x, y=y)
-        sprite.scale = image.scale
-        sprite.opacity = int(alpha * 255)
-        sprite.draw()
-
-    # ======================================== TEXTES ========================================
-    def _resolve_font(self, font: str | None) -> str | None:
-        """Résout et cache le nom de la police"""
-        if font in self._font_cache:
-            return self._font_cache[font]
-
-        resolved = None
-        if font is not None:
-            if font in pyglet.font.get_font_names():
-                resolved = font
-            else:
-                try:
-                    pyglet.font.add_file(font)
-                    resolved = font
-                except Exception:
-                    print(f"Cannot load font {font}, falling back to default")
-
-        self._font_cache[font] = resolved
-        return resolved
-
-    def draw_text(self, text: Text, x: float, y: float, alpha: float = 1.0):
+    # ======================================== PIPELINE ========================================
+    def begin(self, scene: Scene):
         """
-        Dessine un texte
+        Configure le contexte de rendu depuis la scene active.
+        Applique la caméra et le viewport.
 
         Args:
-            text(Text): descripteur du texte
-            x(float): position horizontale
-            y(float): position verticale
-            alpha(float): opacité
+            scene (Scene): scene à rendre
         """
-        key = (text.text, text.font, text.fontsize, text.color)
+        x, y, w, h = scene.viewport.resolve(self._virtual_width, self._virtual_height)
+        gl.glViewport(int(x), int(y), int(w), int(h))
+        pyglet.get_default_window().view = scene.camera.view_matrix(self._virtual_width, self._virtual_height)
 
-        if key not in self._label_cache:
-            self._label_cache[key] = pyglet.text.Label(
-                text.text,
-                font_name=self._resolve_font(text.font),
-                font_size=text.fontsize,
-                color=text.color,
-            )
-
-        label = self._label_cache[key]
-        label.x, label.y = x, y
-        label.opacity = int(alpha * 255)
-        label.draw()
-
-    # ======================================== UTILITAIRES ========================================
-    def clear_cache(self):
-        """Vide tous les caches"""
-        self._image_cache.clear()
-        self._font_cache.clear()
-        self._label_cache.clear()
+    def flush(self):
+        """Envoie tout le batch au GPU"""
+        self._batch.draw()
