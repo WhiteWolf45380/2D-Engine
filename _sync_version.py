@@ -1,5 +1,5 @@
 # _sync_version_simple.py
-version_file = "engine/_version.py"
+version_file = "pyverse2d/_version.py"
 toml_file = "pyproject.toml"
 
 # lire la version

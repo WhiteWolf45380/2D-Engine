@@ -1,1 +1,2 @@
-pip install https://github.com/WhiteWolf45380/2D-Engine/archive/refs/heads/main.zip
+pip install https://github.com/WhiteWolf45380/PyVerse2D/archive/refs/heads/main.zip
+
