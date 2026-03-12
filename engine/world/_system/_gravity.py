@@ -8,11 +8,9 @@ from ...math import Vector
 from .._world import World
 from .._component import Transform, RigidBody
 
-from numbers import Real
-from typing import TYPE_CHECKING
+from ._physics import PhysicsSystem
 
-if TYPE_CHECKING:
-    from ._physics import PhysicsSystem
+from numbers import Real
 
 # ======================================== SYSTEM ========================================
 class GravitySystem(System):

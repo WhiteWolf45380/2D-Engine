@@ -9,11 +9,10 @@ from ...shape import Circle, Rect, Capsule, Ellipse, Segment, Polygon
 from .._world import World
 from .._component import Transform, RigidBody, Collider
 
-from math import sqrt, cos, sin, atan2, pi as _PI
-from typing import NamedTuple, TYPE_CHECKING
+from ._physics import PhysicsSystem
 
-if TYPE_CHECKING:
-    from ._physics import PhysicsSystem
+from math import sqrt, cos, sin, atan2, pi as _PI
+from typing import NamedTuple
 
 # ======================================== SYSTEM ========================================
 class CollisionSystem(System):
