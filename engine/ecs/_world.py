@@ -1,9 +1,12 @@
 # ======================================== IMPORTS ========================================
+from __future__ import annotations
+
 from .._internal import expect
 
 from ._component import Component
 from ._entity import Entity
 from ._system import System
+from ._update_phase import UpdatePhase
 
 from typing import Type
 
@@ -11,29 +14,35 @@ from typing import Type
 class World:
     """Gère le monde virtuel et l'organisation des entités"""
     def __init__(self):
-        self._all_entities: dict[str, Entity] = {}      # ensemble des entités
-        self._all_systems: list = []                    # ensemble des systèmes
-    
+        self._all_entities: dict[str, Entity] = {}
+        self._all_systems: list[System]       = []
+
     # ======================================== CONVERSIONS ========================================
     def __repr__(self) -> str:
         """Renvoie une représentation du monde"""
-        return f"World(entities=[{', '.join(self._all_entities.values())}], systems=[{', '.join(self._all_systems)}])"
-    
+        return f"World(entities=[{', '.join(str(e) for e in self._all_entities.values())}], systems=[{', '.join(str(s) for s in self._all_systems)}])"
+
     def __str__(self) -> str:
         """Renvoie une description du monde"""
         return f"World[entities: {self.entity_count}, systems: {self.system_count}]"
 
+    def __len__(self) -> int:
+        """Renvoie le nombre d'entités dans le monde"""
+        return len(self._all_entities)
+
     # ======================================== UPDATE ========================================
     def update(self, dt: float):
         """
-        Actualise le monde
+        Actualise le monde en respectant l'ordre des phases
 
         Args:
             dt(float): delta time, temps écoulé depuis la dernière frame en secondes
         """
-        for system in self._all_systems:
-            system.update(self, dt)
-    
+        for phase in UpdatePhase:
+            for system in self._all_systems:
+                if system.phase == phase:
+                    system.update(self, dt)
+
     # ======================================== ENTITIES ========================================
     def add_entity(self, entity: Entity):
         """
@@ -44,7 +53,7 @@ class World:
         """
         expect(entity, Entity)
         self._all_entities[entity.id] = entity
-    
+
     def remove_entity(self, entity: Entity):
         """
         Supprime une entité du monde
@@ -53,20 +62,16 @@ class World:
             entity(Entity): entité à supprimer
         """
         self._all_entities.pop(entity.id, None)
-    
+
     @property
     def entity_count(self) -> int:
         """Renvoie le nombre d'entités dans le monde"""
         return len(self._all_entities)
-    
-    def __len__(self) -> int:
-        """Renvoie le nombre d'entités dans le monde"""
-        return len(self._all_entities)
-    
+
     def has_entity(self, entity: Entity) -> bool:
         """Vérifie que le monde comporte une entité donnée"""
         return expect(entity, Entity).id in self._all_entities
-    
+
     def query(self, *component_types: Type[Component]) -> list[Entity]:
         """
         Recherche filtrée par composants des entités
@@ -79,7 +84,7 @@ class World:
             if entity.is_active() and all(entity.has(T) for T in component_types):
                 result.append(entity)
         return result
-    
+
     def query_tags(self, *tags: str) -> list[Entity]:
         """
         Recherche filtrée par labels des entités
@@ -102,7 +107,7 @@ class World:
             system(System): système à ajouter
         """
         self._all_systems.append(expect(system, System))
-    
+
     def remove_system(self, system: System):
         """
         Supprime un système du monde

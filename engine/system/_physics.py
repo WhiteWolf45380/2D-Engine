@@ -22,15 +22,13 @@ class PhysicsSystem(System):
             rb: RigidBody = entity.get(RigidBody)
             tr: Transform = entity.get(Transform)
 
+            # Actualisation de la vélocité
             if rb.is_static():
                 continue
-
-            # Intégration semi-implicite d'Euler
             rb.velocity = rb.velocity + rb.acceleration * dt
 
-            # Position = position + vélocité * dt
-            tr.x += rb.velocity.x * dt
-            tr.y += rb.velocity.y * dt
+            # Applicatin de la vélocité
+            tr.pos += rb.velocity * dt
 
-            # Reset accélération pour la prochaine frame
+            # Reset accélération
             rb.reset_acceleration()
