@@ -1,9 +1,9 @@
 # ======================================== IMPORTS ========================================
 from __future__ import annotations
 
-from .._internal import expect, positive, not_null
-from ..abc import Component
-from ..math import Point, Vector
+from ..._internal import expect, positive, not_null
+from ...abc import Component
+from ...math import Point, Vector
 
 from typing import Iterator
 from numbers import Real

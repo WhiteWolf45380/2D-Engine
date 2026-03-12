@@ -1,11 +1,12 @@
 # ======================================== IMPORTS ========================================
 from __future__ import annotations
 
-from .._flag import UpdatePhase
-from ..abc import System
-from ..ecs import World
-from ..component import Transform, SpriteRenderer, ShapeRenderer, TextRenderer
-from ..shape import Capsule, Circle, Rect, Ellipse, Segment, Polygon
+from ..._flag import UpdatePhase
+from ...abc import System
+from ...shape import Capsule, Circle, Rect, Ellipse, Segment, Polygon
+
+from .._world import World
+from .._component import Transform, SpriteRenderer, ShapeRenderer, TextRenderer
 
 import pyglet
 import pyglet.shapes
@@ -15,7 +16,7 @@ import pyglet.image
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .._rendering import Renderer
+    from ..._rendering._pipeline import Pipeline
 
 # ======================================== RENDER ORDER ========================================
 _ORDER_SHAPE  = 0
@@ -40,13 +41,13 @@ class RenderSystem(System):
         ...
 
     # ======================================== DRAW ========================================
-    def draw(self, world: World, renderer: Renderer):
+    def draw(self, world: World, pipeline: Pipeline):
         """
         Synchronise toutes les entités renderables avec le Batch de rendu
 
         Args:
             world(World): monde à rendre
-            renderer(Renderer): renderer actif
+            pipeline(Renderer): pipeline active
         """
         active_sprites = set()
         active_shapes  = set()
@@ -58,15 +59,15 @@ class RenderSystem(System):
 
             if entity.has(ShapeRenderer):
                 active_shapes.add(eid)
-                self._sync_shape(entity, tr, renderer)
+                self._sync_shape(entity, tr, pipeline)
 
             if entity.has(SpriteRenderer):
                 active_sprites.add(eid)
-                self._sync_sprite(entity, tr, renderer)
+                self._sync_sprite(entity, tr, pipeline)
 
             if entity.has(TextRenderer):
                 active_labels.add(eid)
-                self._sync_text(entity, tr, renderer)
+                self._sync_text(entity, tr, pipeline)
 
         for eid in list(self._sprites):
             if eid not in active_sprites:
@@ -81,7 +82,7 @@ class RenderSystem(System):
                 self._labels.pop(eid).delete()
 
     # ======================================== SYNC SPRITE ========================================
-    def _sync_sprite(self, entity, tr: Transform, renderer: Renderer):
+    def _sync_sprite(self, entity, tr: Transform, pipeline: Pipeline):
         """Crée ou met à jour le Sprite pyglet de l'entité"""
         sr: SpriteRenderer = entity.get(SpriteRenderer)
         eid = entity.id
@@ -96,8 +97,8 @@ class RenderSystem(System):
             return
 
         if eid not in self._sprites:
-            group = renderer.get_group(sr.z * 3 + _ORDER_SPRITE)
-            self._sprites[eid] = pyglet.sprite.Sprite(raw, batch=renderer.batch, group=group)
+            group = pipeline.get_group(sr.z * 3 + _ORDER_SPRITE)
+            self._sprites[eid] = pyglet.sprite.Sprite(raw, batch=pipeline.batch, group=group)
 
         sprite = self._sprites[eid]
         sprite.visible  = True
@@ -112,7 +113,7 @@ class RenderSystem(System):
             sprite.scale_y = -abs(sprite.scale_y) if sr.image.flip_y else abs(sprite.scale_y)
 
     # ======================================== SYNC SHAPE ========================================
-    def _sync_shape(self, entity, tr: Transform, renderer: Renderer):
+    def _sync_shape(self, entity, tr: Transform, pipeline: Pipeline):
         """Crée ou met à jour la Shape pyglet de l'entité"""
         sr: ShapeRenderer = entity.get(ShapeRenderer)
         eid = entity.id
@@ -126,8 +127,8 @@ class RenderSystem(System):
         y = tr.y + sr.offset[1]
 
         if eid not in self._shapes:
-            group = renderer.get_group(sr.z * 3 + _ORDER_SHAPE)
-            obj = self._create_shape(sr.shape, x, y, renderer.batch, group)
+            group = pipeline.get_group(sr.z * 3 + _ORDER_SHAPE)
+            obj = self._create_shape(sr.shape, x, y, pipeline.batch, group)
             if obj is None:
                 return
             self._shapes[eid] = obj
@@ -158,7 +159,7 @@ class RenderSystem(System):
         return None
 
     # ======================================== SYNC LABEL ========================================
-    def _sync_text(self, entity, tr: Transform, renderer: Renderer):
+    def _sync_text(self, entity, tr: Transform, pipeline: Pipeline):
         """Crée ou met à jour le Label pyglet de l'entité"""
         tc: TextRenderer = entity.get(TextRenderer)
         eid = entity.id
@@ -169,14 +170,14 @@ class RenderSystem(System):
             return
 
         if eid not in self._labels:
-            group = renderer.get_group(tc.z * 3 + _ORDER_LABEL)
+            group = pipeline.get_group(tc.z * 3 + _ORDER_LABEL)
             t = tc.text
             self._labels[eid] = pyglet.text.Label(
                 t.text,
                 font_name=t.font,
                 font_size=t.fontsize,
                 color=t.color,
-                batch=renderer.batch,
+                batch=pipeline.batch,
                 group=group,
             )
 

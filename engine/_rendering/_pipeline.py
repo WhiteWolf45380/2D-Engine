@@ -8,10 +8,10 @@ from pyglet.graphics import Batch, Group
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ..scene._scene import Scene
+    from ..scene import Scene
 
 # ======================================== RENDERER ========================================
-class Renderer:
+class Pipeline:
     """
     Pipeline de rendu exploitant OpenGL
 

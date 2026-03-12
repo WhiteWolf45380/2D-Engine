@@ -3,8 +3,7 @@ from __future__ import annotations
 
 from .._internal import expect, not_null, positive
 from ..math import Point, Vector
-from ..component import Transform
-from ..ecs import Entity
+from ..world import Entity, Transform
 
 from pyglet.math import Mat4, Vec3
 from numbers import Real

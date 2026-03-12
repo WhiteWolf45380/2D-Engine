@@ -1,19 +1,20 @@
 # ======================================== IMPORTS ========================================
-from .._internal import expect, clamped
-from ..abc import Component, Shape
+from ..._internal import expect, clamped
+from ...abc import Component
+from ...asset import Text
 
 from typing import Iterator
 from numbers import Real
 
 # ======================================== COMPONENT ========================================
-class ShapeRenderer(Component):
+class TextRenderer(Component):
     """Composant gérant le rendu"""
-    __slots__ = ("_shape", "_offset", "_z", "_visible", "_alpha")
+    __slots__ = ("_text", "_z", "_visible", "_alpha")
     requires = ("Transform",)
 
     def __init__(
             self,
-            shape: Shape = None,
+            text: Text = None,
             offset: tuple[Real, Real] = (0.0, 0.0),
             z: int = 0,
             visible: bool = True,
@@ -21,14 +22,14 @@ class ShapeRenderer(Component):
         ):
         """
         Args:
-            shape(Shape, optional): forme du rendu
+            text(Text, optional): texte du rendu
             offset(tuple[Real, Real], optional): décalage par rapport au Transform
             z(int, optional): ordre de rendu
             visible(bool, optional): visibilité
             alpha(float, optional): facteur d'opacité de l'image
         """
-        self._shape: Shape = expect(shape, Shape)
-        self._offset: tuple[Real, Real] = expect(offset, tuple[Real, Real])
+        self._text: Text = expect(text, Text)
+        self._offset: tuple[Real, Real] = offset
         self._z: int = expect(z, int)
         self._visible: bool = expect(visible, bool)
         self._alpha: float = clamped(expect(alpha, float))
@@ -36,7 +37,7 @@ class ShapeRenderer(Component):
     # ======================================== CONVERSIONS ========================================
     def __repr__(self) -> str:
         """Renvoie une représentation du composant"""
-        return f"ShapeRenderer(shape={self._shape}, offset={self._offset}, z={self._z}, visible={self._visible}, alpha={self._alpha})"
+        return f"TextRenderer(text={self._text}, offset={self._offset}, z={self._z}, visible={self._visible}, alpha={self._alpha})"
     
     def __iter__(self) -> Iterator:
         """Renvoie le composant dans un itérateur"""
@@ -46,19 +47,19 @@ class ShapeRenderer(Component):
         """Renvoie l'entier hashé du composant"""
         return hash(self.to_tuple())
     
-    def to_tuple(self) -> tuple[Shape, tuple[Real, Real], int, float]:
+    def to_tuple(self) -> tuple[Text, tuple[Real, Real], int, float]:
         """Renvoie le composant sous forme de tuple"""
-        return (self._shape, self._offset, self._z, self._alpha)
+        return (self._text, self._offset, self._z, self._alpha)
     
     def to_list(self) -> list:
         """Renvoie le composant sous forme de liste"""
-        return [self._shape, self._offset, self._z, self._alpha]
+        return [self._text, self._offset, self._z, self._alpha]
     
     # ======================================== GETTERS ========================================
     @property
-    def shape(self) -> Shape:
-        """Renvoie la forme du renderer"""
-        return self._shape
+    def text(self) -> Text:
+        """Renvoie le texte du renderer"""
+        return self._text
     
     @property
     def offset(self) -> tuple[float, float]:
@@ -86,9 +87,9 @@ class ShapeRenderer(Component):
 
     # ======================================== PUBLIC METHODS ========================================
     def show(self):
-        """Montre la forme"""
+        """Montre le texte"""
         self._visible = True
 
     def hide(self):
-        """Cache la forme"""
+        """Cache le texte"""
         self._visible = False

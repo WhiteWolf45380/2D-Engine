@@ -1,12 +1,13 @@
 # ======================================== IMPORTS ========================================
 from __future__ import annotations
 
-from .._flag import UpdatePhase
-from ..abc import System
-from ..ecs import World
-from ..component import Transform, RigidBody, Collider
-from ..math import Vector
-from ..shape import Circle, Rect, Capsule, Ellipse, Segment, Polygon
+from ..._flag import UpdatePhase
+from ...abc import System
+from ...math import Vector
+from ...shape import Circle, Rect, Capsule, Ellipse, Segment, Polygon
+
+from .._world import World
+from .._component import Transform, RigidBody, Collider
 
 from math import sqrt, cos, sin, atan2, pi as _PI
 from typing import NamedTuple, TYPE_CHECKING

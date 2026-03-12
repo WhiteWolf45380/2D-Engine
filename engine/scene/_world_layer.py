@@ -1,8 +1,7 @@
 # ======================================== IMPORTS ========================================
 from .._internal import expect
-from ..ecs import World
-from .._rendering import Renderer
-from ..system import RenderSystem
+from ..world import World, RenderSystem
+from .._rendering._pipeline import Pipeline
 from ..abc import Layer
 
 # ======================================== LAYER ========================================
@@ -43,7 +42,7 @@ class WorldLayer(Layer):
         if self._world is not None:
             self._world.update(dt)
 
-    def draw(self, renderer: Renderer):
+    def draw(self, pipeline: Pipeline):
         """Affichage du layer"""
         if self._world is not None and self._world.has_system(RenderSystem):
-            self._world.get_system(RenderSystem).draw(renderer)
+            self._world.get_system(RenderSystem).draw(pipeline)

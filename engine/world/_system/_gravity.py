@@ -1,11 +1,12 @@
 # ======================================== IMPORTS ========================================
 from __future__ import annotations
 
-from .._flag import UpdatePhase
-from ..abc import System
-from ..ecs import World
-from ..component import Transform, RigidBody
-from ..math import Vector
+from ..._flag import UpdatePhase
+from ...abc import System
+from ...math import Vector
+
+from .._world import World
+from .._component import Transform, RigidBody
 
 from numbers import Real
 from typing import TYPE_CHECKING

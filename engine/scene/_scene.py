@@ -2,8 +2,9 @@
 from __future__ import annotations
 
 from .._internal import expect
+from .._rendering import Camera, Viewport
+from .._rendering._pipeline import Pipeline
 from ..math import Point
-from .._rendering import Camera, Viewport, Renderer
 from ..abc import Layer
 
 import bisect
@@ -103,14 +104,14 @@ class Scene:
         for layer in self._layers:
             layer.update(dt)
 
-    def draw(self, renderer: Renderer):
+    def draw(self, pipeline: Pipeline):
         """
         Dessine tous les layers dans l'ordre de z_order
 
         Args:
-            renderer: renderer à utiliser pour le rendu
+            pipeline: pipeline à utiliser pour le rendu
         """
-        renderer.begin(self)
+        pipeline.begin(self)
         for layer in self._layers:
-            layer.draw(renderer)
-        renderer.flush()
+            layer.draw(pipeline)
+        pipeline.flush()

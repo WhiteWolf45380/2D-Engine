@@ -1,7 +1,7 @@
 # ======================================== IMPORTS ========================================
 from __future__ import annotations
 
-from . import abc, math, shape, asset, component, system, ecs, scene
+from . import abc, math, shape, asset, world, map, ui, scene
 
 from ._window import Window
 from ._rendering._camera import Camera
@@ -65,9 +65,9 @@ __all__ = [
     "math",
     "shape",
     "asset",
-    "component",
-    "system",
-    "ecs",
+    "world",
+    "map",
+    "ui",
     "scene",
 
     "set_window",

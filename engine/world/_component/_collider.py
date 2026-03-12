@@ -1,8 +1,8 @@
 # ======================================== IMPORTS ========================================
 from __future__ import annotations
 
-from .._internal import expect
-from ..abc import Component, Shape
+from ..._internal import expect
+from ...abc import Component, Shape
 
 from numbers import Real
 from typing import Iterator
