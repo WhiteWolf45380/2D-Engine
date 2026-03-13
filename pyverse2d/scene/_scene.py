@@ -2,10 +2,12 @@
 from __future__ import annotations
 
 from .._internal import expect
-from .._rendering import Camera, Viewport
 from .._rendering._pipeline import Pipeline
 from ..math import Point
 from ..abc import Layer
+
+from ._camera import Camera
+from ._viewport import Viewport
 
 import bisect
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from . import abc, math, shape, asset, world, map, ui, scene
 
-from ._rendering import Camera, Viewport, Screen, Window
+from ._rendering import Screen, Window
 
 import pyglet
 
@@ -52,8 +52,6 @@ def _update(dt: float):
 
 # ======================================== EXPORTS ========================================
 __all__ = [
-    "Camera",
-    "Viewport",
     "Screen",
     "Window",
 
