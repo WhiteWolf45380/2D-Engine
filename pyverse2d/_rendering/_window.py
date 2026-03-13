@@ -210,7 +210,6 @@ class Window:
 
         # Matrice de projection
         self._viewport = (x, y, w, h)
-        gl.glViewport(x, y, w, h)
 
         self._window.projection = Mat4.orthogonal_projection(
             left=-self._screen.half_width,

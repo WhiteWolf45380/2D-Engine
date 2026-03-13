@@ -128,3 +128,7 @@ class Camera:
         translate = Mat4.from_translation(Vec3(-fx, -fy, 0))
         scale = Mat4.from_scale(Vec3(self._zoom, self._zoom, 1))
         return translate @ scale
+    
+    def zoom_matrix(self) -> Mat4:
+        """Produit uniquement la matrice de zoom à appliquer à l'écran"""
+        return Mat4.from_scale(Vec3(self._zoom, self._zoom, 1))

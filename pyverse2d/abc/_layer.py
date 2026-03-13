@@ -16,6 +16,11 @@ class Layer(ABC):
     def __init__(self, camera_mode: CameraMode = CameraMode.WORLD):
         self._camera_mode: CameraMode = camera_mode
 
+    @property
+    def camera_mode(self) -> CameraMode:
+        """Renvoie le mode de caméra"""
+        return self._camera_mode
+
     @abstractmethod
     def on_start(self): ...
 

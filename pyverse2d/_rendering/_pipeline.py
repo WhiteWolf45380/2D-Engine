@@ -1,9 +1,9 @@
 # ======================================== IMPORTS ========================================
 from __future__ import annotations
 
-import pyglet
 import pyglet.gl as gl
 from pyglet.graphics import Batch, Group
+from pyglet.math import Mat4
 
 from typing import TYPE_CHECKING
 
@@ -47,6 +47,16 @@ class Pipeline:
         if z not in self._groups:
             self._groups[z] = Group(order=z)
         return self._groups[z]
+    
+    # ======================================== SETTERS ========================================
+    def set_view(self, matrix: Mat4 = None):
+        """
+        Applique une matrice de vue — identité si None (layers fixed)
+
+        Args:
+            matrix(Mat4): matrice de vue, ou None pour annuler la caméra
+        """
+        self._window.native.view = matrix if matrix is not None else Mat4()
 
     # ======================================== PIPELINE ========================================
     def begin(self, scene: Scene):
@@ -72,7 +82,6 @@ class Pipeline:
         ph = int(lh * sy)
 
         gl.glViewport(px, py, pw, ph)
-        self._window.native.view = scene.camera.view_matrix()
 
     def flush(self):
         """Envoie tout le batch au GPU"""
