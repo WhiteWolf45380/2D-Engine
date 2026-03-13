@@ -23,10 +23,11 @@ def set_window(window: Window):
         window (Window): fenêtre à utiliser
     """
     global _window
+    global _pipeline
     if not isinstance(window, Window):
         raise TypeError("Expected a Window instance")
     _window = window
-    _pipeline = Pipeline(Window)
+    _pipeline = Pipeline(window)
 
     @_window.native.event
     def on_draw():

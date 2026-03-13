@@ -19,7 +19,7 @@ class Viewport:
         border_width(int): épaisseur de la bordure
         border_color(Color): couleur de la bordure
     """
-    __slots__ = ("_x", "_y", "_width", "_height", "_border", "border_width", "_border_color")
+    __slots__ = ("_x", "_y", "_width", "_height", "_border", "_border_width", "_border_color")
 
     def __init__(
         self,

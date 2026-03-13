@@ -83,6 +83,6 @@ print("[+] Upload PyPI terminé")
 # Git commit & push
 # ------------------------------
 subprocess.run(["git", "add", "."])
-subprocess.run(["git", "commit", "-m", f"chore(version): bump to version {new_version}"])
+subprocess.run(["git", "commit", "-m", f"chore: bump to version {new_version}"])
 subprocess.run(["git", "push", "origin", "main"])
 print(f"[+] Version {new_version} commitée et pushée sur main")
