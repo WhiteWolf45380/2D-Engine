@@ -35,6 +35,9 @@ class PhysicsSystem(System):
             # Intégration semi-implicite d'Euler
             rb.velocity = rb.velocity + rb.acceleration * dt
 
+            # Résistance de l'air (après intégration, avant position)
+            rb._apply_damping(dt)
+
             # Intégration de la position
             tr.x += rb.velocity.x * dt
             tr.y += rb.velocity.y * dt
