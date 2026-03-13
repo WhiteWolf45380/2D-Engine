@@ -18,7 +18,7 @@ class Window:
         screen(Screen): space logique de référence
         width(int): largeur initiale de la fenêtre
         height(int): hauteur initiale de la fenêtre
-        title(str): titre de la fenêtre
+        caption(str): titre de la fenêtre
         fullscreen(bool): démarre en plein écran
         resizable(bool): autorise le redimensionnement
         vsync(bool): synchronisation verticale
@@ -32,7 +32,8 @@ class Window:
         screen: Screen = None,
         width: int = 1280,
         height: int = 720,
-        title: str = "",
+        caption: str = "",
+        icon_path: str = None,
         fullscreen: bool = False,
         resizable: bool = True,
         vsync: bool = True,
@@ -46,17 +47,18 @@ class Window:
             screen = Screen()
         self._screen = screen
 
-        # Fenêtre OS
+        # Style de la fenêtre
         style = (
             pyglet.window.Window.WINDOW_STYLE_BORDERLESS
             if borderless
             else pyglet.window.Window.WINDOW_STYLE_DEFAULT
         )
 
+        # Fenêtre OS
         self._window = pyglet.window.Window(
             width=width,
             height=height,
-            caption=title,
+            caption=caption,
             fullscreen=fullscreen,
             resizable=resizable,
             vsync=vsync,
@@ -64,6 +66,15 @@ class Window:
             visible=visible,
         )
 
+        # Icon
+        if icon_path is not None:
+            try:
+                icon = pyglet.image.load(icon_path)
+                self._window.set_icon(icon)
+            except Exception:
+                pass
+
+        # Dimensions minimales
         if resizable and (min_width is not None or min_height is not None):
             self._window.set_minimum_size(
                 min_width  or 1,
@@ -77,6 +88,10 @@ class Window:
         @self._window.event
         def on_resize(w: int, h: int):
             self._apply_projection(w, h)
+
+    # ======================================== GETTERS ========================================
+    def __repr__(self) -> str:
+        return (f"Window({self._window.width}x{self._window.height}, screen={self._screen})")
 
     # ======================================== GETTERS ========================================
     @property
@@ -136,12 +151,8 @@ class Window:
         return (x - vx) * sx, (y - vy) * sy
 
     # ======================================== SETTERS ========================================
-    def clear(self):
-        """Efface le contenu de la fenêtre"""
-        self._window.clear()
-
-    def set_title(self, title: str):
-        self._window.set_caption(title)
+    def set_caption(self, caption: str):
+        self._window.set_caption(caption)
 
     def set_fullscreen(self, value: bool):
         self._window.set_fullscreen(value)
@@ -156,6 +167,11 @@ class Window:
     def set_position(self, x: int, y: int):
         """Déplace la fenêtre sur le bureau"""
         self._window.set_location(x, y)
+    
+    # ======================================== PUBLIC METHODS ========================================
+    def clear(self):
+        """Efface le contenu de la fenêtre"""
+        self._window.clear()
 
     def center(self):
         """Centre la fenêtre sur l'écran principal"""
@@ -168,9 +184,6 @@ class Window:
 
     def close(self):
         self._window.close()
-
-    def __repr__(self) -> str:
-        return (f"Window({self._window.width}x{self._window.height}, screen={self._screen})")
     
     # ======================================== PROJECTION ========================================
     def _apply_projection(self, win_w: int, win_h: int):
