@@ -1,8 +1,10 @@
 # ======================================== IMPORTS ========================================
 from __future__ import annotations
 
+from math import sqrt, cos, sin, atan2, pi as _PI
+
 from ....math import Vector
-from ....shape import Ellipse, Rect, Capsule, Polygon, Segment
+from ....shape import Ellipse, Circle, Rect, Capsule, Polygon, Segment
 
 from ._registry import (
     Contact, register,
@@ -10,8 +12,28 @@ from ._registry import (
     _closest_pt_on_ellipse, _closest_pt_on_seg,
     _rect_corners, _seg_corners,
 )
+from ....shape import Circle as _Circle
 
-from math import sqrt, cos, sin, atan2, pi as _PI
+# ======================================== Ellipse × Circle ========================================
+@register(Ellipse, _Circle)
+def ellipse_circle(sa: Ellipse, ax, ay, sb: _Circle, cx, cy) -> Contact | None:
+    """Ellipse vs Circle"""
+    lx = (cx - ax) / sa.rx
+    ly = (cy - ay) / sa.ry
+    inside = lx * lx + ly * ly <= 1.0
+
+    qx, qy = _closest_pt_on_ellipse(ax, ay, sa.rx, sa.ry, cx, cy)
+    dx = cx - qx
+    dy = cy - qy
+    dist = sqrt(dx * dx + dy * dy) or 1e-8
+    nx, ny = -dx / dist, -dy / dist
+
+    if inside:
+        return Contact(Vector(nx, ny), sb.radius + dist)
+    if dist >= sb.radius:
+        return None
+    return Contact(Vector(nx, ny), sb.radius - dist)
+
 
 # ======================================== Ellipse × Ellipse ========================================
 @register(Ellipse, Ellipse)
@@ -25,6 +47,7 @@ def ellipse_ellipse(sa: Ellipse, ax, ay, sb: Ellipse, bx, by) -> Contact | None:
     if cdx == 0.0 and cdy == 0.0:
         return Contact(Vector(1.0, 0.0), rx_a + rx_b)
 
+    # Balayage initial sur 24 angles
     _STEP = _PI / 24
     best_ov = float("inf")
     best_theta = atan2(cdy, cdx) % _PI
@@ -84,7 +107,7 @@ def ellipse_ellipse(sa: Ellipse, ax, ay, sb: Ellipse, bx, by) -> Contact | None:
         return None
 
     sign_c = 1.0 if c_proj >= 0.0 else -1.0
-    return Contact(Vector(ct * sign_c, st * sign_c), overlap)
+    return Contact(Vector(-ct * sign_c, -st * sign_c), overlap)
 
 
 # ======================================== Ellipse × Rect ========================================
@@ -105,9 +128,11 @@ def ellipse_capsule(sa: Ellipse, ax, ay, sb: Capsule, bx, by) -> Contact | None:
     spine_inside = lx * lx + ly * ly <= 1.0
 
     qx, qy = _closest_pt_on_ellipse(ax, ay, sa.rx, sa.ry, cpx, cpy)
+
     dx = cpx - qx
     dy = cpy - qy
     dist = sqrt(dx * dx + dy * dy) or 1e-8
+
     nx, ny = -dx / dist, -dy / dist
 
     if spine_inside:
@@ -120,11 +145,12 @@ def ellipse_capsule(sa: Ellipse, ax, ay, sb: Capsule, bx, by) -> Contact | None:
 # ======================================== Ellipse × Polygon ========================================
 @register(Ellipse, Polygon)
 def ellipse_polygon(sa: Ellipse, ax, ay, sb: Polygon, bx, by) -> Contact | None:
-    """Ellipse vs Polygone convexe"""
+    """Ellipse vs Polygone"""
     return _ellipse_vs_convex_pts(
         ax, ay, sa.rx, sa.ry,
         [(bx + p.x, by + p.y) for p in sb.points],
     )
+
 
 # ======================================== Ellipse × Segment ========================================
 @register(Ellipse, Segment)
@@ -135,6 +161,7 @@ def ellipse_segment(sa: Ellipse, ax, ay, sb: Segment, bx, by) -> Contact | None:
     if c is not None:
         return c
 
+    # Fallback ligne centrale si l'OBB plat a raté
     seg_ax = bx + sb.A.x
     seg_ay = by + sb.A.y
     seg_bx = bx + sb.B.x
