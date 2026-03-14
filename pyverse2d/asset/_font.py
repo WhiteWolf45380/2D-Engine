@@ -158,8 +158,10 @@ class Font(Asset):
     def _load_default_font(self) -> PygletFont:
         """Charge la police interne par défaut"""
         with resources.path("pyverse2d._assets", "freesansbold.ttf") as path:
-            pyglet.font.add_file(str(path))
-            return pyglet.font.load("FreeSansBold", self._size)
+            base_name = os.path.splitext(os.path.basename(path))[0]
+            font_obj = pyglet.font.load(base_name, self._size)
+            self._name = font_obj.name
+            return font_obj
 
     def _get_glyph(self, char: str) -> Glyph:
         """Renvoie un _Glyph"""
