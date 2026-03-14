@@ -23,8 +23,8 @@ class Font(Asset):
     __slots__ = ("_name", "_size", "_glyph_cache", "_pyglet_font", "_initialized")
     _font_cache: dict[tuple[str, int], Font] = {}
 
-    def __new__(cls, font: str, size: int=16):
-        key = (font, size)
+    def __new__(cls, name: str = None, size: int=16):
+        key = (name, size)
         if key in cls._font_cache:
             return cls._font_cache[key]
         obj = super().__new__(cls)
