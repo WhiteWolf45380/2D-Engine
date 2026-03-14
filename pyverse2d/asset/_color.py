@@ -6,9 +6,9 @@ from typing import Union, Tuple
 
 class Color(tuple, Asset):
     """
-    Descripteur de couleur immuable
-    Stockée en float [0.0; 1.0] en interne
-    Accepte les composantes soit en float [0.0; 1.0], soit en int [0; 255]
+    Descripteur de couleur immuable.
+    Stockée en float [0.0; 1.0] en interne.
+    Accepte les composantes soit en float [0.0; 1.0], soit en int [0; 255].
 
     Supports:
         Color(Color)
@@ -42,6 +42,9 @@ class Color(tuple, Asset):
         a = cls._to_float(a, "alpha", argument)
 
         return tuple.__new__(cls, (r, g, b, a))
+
+    def __init__(self, *args, **kwargs):
+        ...
 
     # ======================================== CONVERSIONS ========================================
     def __repr__(self) -> str:
