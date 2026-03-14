@@ -1,7 +1,9 @@
 # ======================================== IMPORTS ========================================
+from __future__ import annotations
+
 from ..._internal import expect, clamped
 from ...abc import Component
-from ...asset import Text
+from ...asset import Text, Color
 from ...math import Vector
 
 from typing import Iterator
@@ -9,95 +11,182 @@ from numbers import Real
 
 # ======================================== COMPONENT ========================================
 class TextRenderer(Component):
-    """Composant gérant le rendu"""
-    __slots__ = ("_text", "_offset", "_opacity", "_z", "_visible")
+    """
+    Composant gérant le rendu d'un texte
+
+    Args:
+        text(Text): descripteur de texte
+        offset(Vector, optional): décalage par rapport au Transform
+        color(Color, optional): couleur RGBA
+        opacity(Real, optional): opacité multiplicative [0.0 – 1.0]
+        bold(bool, optional): graisse
+        italic(bool, optional): italique
+        multiline(bool, optional): active le retour à la ligne automatique
+        align(str, optional): alignement du texte multiline ("left"|"center"|"right")
+        width(int, optional): largeur max en pixels (requis pour multiline)
+        z(int, optional): ordre de rendu
+        visible(bool, optional): visibilité
+    """
+    __slots__ = (
+        "_text", "_offset", "_color", "_opacity",
+        "_bold", "_italic",
+        "_multiline", "_align", "_width",
+        "_z", "_visible",
+    )
     requires = ("Transform",)
 
     def __init__(
-            self,
-            text: Text = None,
-            offset: Vector = (0.0, 0.0),
-            opacity: Real = 1.0,
-            z: int = 0,
-            visible: bool = True,
-        ):
-        """
-        Args:
-            text(Text, optional): texte du rendu
-            offset(Vector, optional): décalage par rapport au Transform
-            opacity(Real, optional): facteur d'opacité de l'image
-            z(int, optional): ordre de rendu
-            visible(bool, optional): visibilité
-        """
+        self,
+        text: Text = None,
+        offset: Vector = (0.0, 0.0),
+        color: Color = (255, 255, 255, 1.0),
+        opacity: Real = 1.0,
+        bold: bool = False,
+        italic: bool = False,
+        multiline: bool = False,
+        align: str = "left",
+        width: int = None,
+        z: int = 0,
+        visible: bool = True,
+    ):
         self._text: Text = expect(text, Text)
         self._offset: Vector = Vector(offset)
+        self._color: Color = Color(color)
         self._opacity: float = float(clamped(expect(opacity, Real)))
+        self._bold: bool = expect(bold, bool)
+        self._italic: bool = expect(italic, bool)
+        self._multiline: bool = expect(multiline, bool)
+        self._align: str = expect(align, str)
+        self._width: int | None = expect(width, int) if width is not None else None
         self._z: int = expect(z, int)
         self._visible: bool = expect(visible, bool)
-    
+
     # ======================================== CONVERSIONS ========================================
     def __repr__(self) -> str:
         """Renvoie une représentation du composant"""
-        return f"TextRenderer(text={self._text}, opacity={self._opacity}, z={self._z}, visible={self._visible})"
-    
+        return (
+            f"TextRenderer(text={self._text}, color={self._color}, "
+            f"opacity={self._opacity}, z={self._z}, visible={self._visible})"
+        )
+
     def __iter__(self) -> Iterator:
         """Renvoie le composant dans un itérateur"""
         return iter(self.to_tuple())
-    
+
     def __hash__(self) -> int:
         """Renvoie l'entier hashé du composant"""
         return hash(self.to_tuple())
-    
-    def to_tuple(self) -> tuple[Text, Vector, float, int]:
+
+    def to_tuple(self) -> tuple:
         """Renvoie le composant sous forme de tuple"""
-        return (self._text, self._offset, self._opacity, self._z)
-    
+        return (self._text, self._offset, self._color, self._opacity, self._z)
+
     def to_list(self) -> list:
         """Renvoie le composant sous forme de liste"""
-        return [self._text, self._offset, self._opacity, self._z]
-    
+        return [self._text, self._offset, self._color, self._opacity, self._z]
+
     # ======================================== GETTERS ========================================
     @property
     def text(self) -> Text:
-        """Renvoie le texte du renderer"""
+        """Renvoie le descripteur de texte"""
         return self._text
-    
+
     @property
     def offset(self) -> Vector:
         """Renvoie le décalage par rapport au Transform"""
         return self._offset
-    
+
+    @property
+    def color(self) -> Color:
+        """Renvoie la couleur de rendu"""
+        return self._color
+
     @property
     def opacity(self) -> float:
         """Renvoie le facteur d'opacité"""
         return self._opacity
-    
+
+    @property
+    def bold(self) -> bool:
+        """Renvoie la graisse du texte"""
+        return self._bold
+
+    @property
+    def italic(self) -> bool:
+        """Renvoie l'italique du texte"""
+        return self._italic
+
+    @property
+    def multiline(self) -> bool:
+        """Renvoie l'état du retour à la ligne automatique"""
+        return self._multiline
+
+    @property
+    def align(self) -> str:
+        """Renvoie l'alignement du texte multiline"""
+        return self._align
+
+    @property
+    def width(self) -> int | None:
+        """Renvoie la largeur maximale en pixels"""
+        return self._width
+
     @property
     def z(self) -> int:
         """Renvoie l'ordre de rendu"""
         return self._z
-    
+
     # ======================================== SETTERS ========================================
+    @text.setter
+    def text(self, value: Text) -> None:
+        """Fixe le descripteur de texte"""
+        self._text = expect(value, Text)
+
     @offset.setter
-    def offset(self, value: Vector):
+    def offset(self, value: Vector) -> None:
         """Fixe le décalage par rapport au Transform"""
         self._offset = Vector(value)
 
+    @color.setter
+    def color(self, value: Color) -> None:
+        """Fixe la couleur de rendu"""
+        self._color = Color(value)
+
     @opacity.setter
-    def opacity(self, value: Real):
+    def opacity(self, value: Real) -> None:
         """Fixe le facteur d'opacité"""
         self._opacity = float(clamped(expect(value, Real)))
-    
+
+    @bold.setter
+    def bold(self, value: bool) -> None:
+        """Fixe la graisse du texte"""
+        self._bold = expect(value, bool)
+
+    @italic.setter
+    def italic(self, value: bool) -> None:
+        """Fixe l'italique du texte"""
+        self._italic = expect(value, bool)
+
+    @align.setter
+    def align(self, value: str) -> None:
+        """Fixe l'alignement du texte multiline"""
+        self._align = expect(value, str)
+
+    @width.setter
+    def width(self, value: int | None) -> None:
+        """Fixe la largeur maximale en pixels"""
+        self._width = expect(value, int) if value is not None else None
+
     # ======================================== PREDICATES ========================================
     def is_visible(self) -> bool:
         """Vérifie la visibilité"""
         return self._visible
 
     # ======================================== PUBLIC METHODS ========================================
-    def show(self):
+    def show(self) -> None:
         """Montre le texte"""
         self._visible = True
 
-    def hide(self):
+    def hide(self) -> None:
         """Cache le texte"""
         self._visible = False

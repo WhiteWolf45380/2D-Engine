@@ -9,7 +9,7 @@ from numbers import Real
 
 # ======================================== COMPONENT ========================================
 class SpriteRenderer(Component):
-    """Composant gérant le rendu"""
+    """Composant gérant le rendu d'une image"""
     __slots__ = ("_image", "_offset", "_z", "_visible", "_opacity")
     requires = ("Transform",)
 

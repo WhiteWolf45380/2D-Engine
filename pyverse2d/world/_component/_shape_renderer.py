@@ -9,7 +9,7 @@ from numbers import Real
 
 # ======================================== COMPONENT ========================================
 class ShapeRenderer(Component):
-    """Composant gérant le rendu"""
+    """Composant gérant le rendu d'une forme"""
     __slots__ = ("_shape", "_offset", "_filling", "_filling_color", "_border_width", "_border_color", "_z", "_visible")
     requires = ("Transform",)
 

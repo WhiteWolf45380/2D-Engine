@@ -1,116 +1,118 @@
 # ======================================== IMPORTS ========================================
 from __future__ import annotations
-
 from ..abc import Asset
+from typing import Union, Tuple
 
-# ======================================== ASSET ========================================
-class Color(tuple[int, int, int, float], Asset):
-    """Descripteur de Couleur RGBA"""
-    __slots__ = ()
+class Color(tuple, Asset):
+    """
+    Descripteur de couleur
+    Accepte les composantes soit en float [0.0; 1.0], soit en int [0; 255]
 
-    def __new__(cls, value, argument: str = "Argument"):
-        if isinstance(value, cls):
-            return value
+    Supports:
+        Color(Color)
+        Color(r, g, b, a)
+        Color(r, g, b)
+        Color((r, g, b, a))
+        Color((r, g, b))
+    """
+    __slots__ = ("_r", "_g", "_b", "_a")
 
-        if type(value) is not tuple:
-            raise TypeError(f"{argument} must be a tuple")
+    def __new__(cls, *args, argument: str = "Argument"):
+        # Color(Color)
+        if len(args) == 1 and isinstance(args[0], cls):
+            return args[0]
 
-        n = len(value)
-        if n == 3:
-            r, g, b = value
-            a = 1.0
-        elif n == 4:
-            r, g, b, a = value
-        elif n < 3:
-            r, g, b, a = (*value, 0, 0, 0, 1.0)[:4]
+        # Tuple ou séquence
+        if len(args) == 1 and isinstance(args[0], tuple):
+            value = args[0]
+            n = len(value)
+            if n < 3:
+                raise ValueError(f"{argument} must have at least 3 elements")
+            r, g, b = value[:3]
+            a = value[3] if n >= 4 else 1.0
+
+        # Color(r, g, b) ou Color(r, g, b, a)
+        elif 3 <= len(args) <= 4:
+            r, g, b = args[:3]
+            a = args[3] if len(args) == 4 else 1.0
         else:
-            raise ValueError(f"{argument} must have 4 elements or less")
+            raise TypeError(f"{argument}: invalid arguments {args}")
 
-        tr = type(r)
-        if tr is int:
-            if not (0 <= r <= 255):
-                raise ValueError(f"{argument}: red component out of range ({r})")
-        elif tr is float:
-            if not (0.0 <= r <= 1.0):
-                raise ValueError(f"{argument}: invalid red component ({r})")
-            r = int(r * 255 + 0.5)
-        else:
-            raise TypeError(f"{argument}: invalid red component ({r})")
+        # Conversion en float
+        r = cls._to_float(r, "red", argument)
+        g = cls._to_float(g, "green", argument)
+        b = cls._to_float(b, "blue", argument)
+        a = cls._to_float(a, "alpha", argument)
 
-        tg = type(g)
-        if tg is int:
-            if not (0 <= g <= 255):
-                raise ValueError(f"{argument}: green component out of range ({g})")
-        elif tg is float:
-            if not (0.0 <= g <= 1.0):
-                raise ValueError(f"{argument}: invalid green component ({g})")
-            g = int(g * 255 + 0.5)
-        else:
-            raise TypeError(f"{argument}: invalid green component ({g})")
-
-        tb = type(b)
-        if tb is int:
-            if not (0 <= b <= 255):
-                raise ValueError(f"{argument}: blue component out of range ({b})")
-        elif tb is float:
-            if not (0.0 <= b <= 1.0):
-                raise ValueError(f"{argument}: invalid blue component ({b})")
-            b = int(b * 255 + 0.5)
-        else:
-            raise TypeError(f"{argument}: invalid blue component ({b})")
-
-        ta = type(a)
-        if ta is float:
-            if not (0.0 <= a <= 1.0):
-                raise ValueError(f"{argument}: alpha component out of range ({a})")
-        elif ta is int:
-            if not (0 <= a <= 255):
-                raise ValueError(f"{argument}: alpha component out of range ({a})")
-            a = a / 255
-        else:
-            raise TypeError(f"{argument}: invalid alpha component ({a})")
-
-        return tuple.__new__(cls, (r, g, b, a))
+        self = tuple.__new__(cls, (r, g, b, a))
+        self._r, self._g, self._b, self._a = r, g, b, a
+        return self
     
-    def __init__(self, value, argument: str = "Argument"):
-        ...
+    # ======================================== CONVERSIONS ========================================
+    def __repr__(self) -> str:
+        """Renvoie une représentation de la couleur"""
+        return f"Color(r={self._r:.3f}, g={self._g:.3f}, b={self._b:.3f}, a={self._a:.3f})"
 
     # ======================================== GETTERS ========================================
     @property
-    def r(self) -> int:
+    def r(self) -> float:
         """Renvoie la composante rouge"""
-        return self[0]
+        return self._r
 
     @property
-    def g(self) -> int:
+    def g(self) -> float:
         """Renvoie la composante verte"""
-        return self[1]
+        return self._g
 
     @property
-    def b(self) -> int:
+    def b(self) -> float:
         """Renvoie la composante bleu"""
-        return self[2]
+        return self._b
 
     @property
     def a(self) -> float:
         """Renvoie la composante alpha"""
-        return self[3]
+        return self._a
 
     @property
-    def rgb(self) -> tuple[int, int, int]:
-        """Renvoie la couleur en RGB"""
-        return self.r, self.g, self.b
-    
+    def rgb(self) -> Tuple[float, float, float]:
+        """Renvoie les composantes RGB avec composantes float[0.0; 1.0]"""
+        return self._r, self._g, self._b
+
     @property
-    def rgba(self) -> tuple[int, int, int, int]:
-        """Renvoie la couleur en RGBA"""
-        return self.r, self.g, self.b, self.a
+    def rgba(self) -> Tuple[float, float, float, float]:
+        """Renvoie les composantes RGBA avec composantes float[0.0; 1.0]"""
+        return self._r, self._g, self._b, self._a
+
+    @property
+    def rgb8(self) -> Tuple[int, int, int]:
+        """Renvoie la couleur RGB avec composantes int[0; 255]"""
+        return int(round(self._r * 255)), int(round(self._g * 255)), int(round(self._b * 255))
+
+    @property
+    def rgba8(self) -> Tuple[int, int, int, int]:
+        """Renvoie la couleur RGBA avec composantes int[0; 255]"""
+        return int(round(self._r * 255)), int(round(self._g * 255)), int(round(self._b * 255)), int(round(self._a * 255))
 
     # ======================================== PUBLIC METHODS ========================================
     def __copy__(self) -> Color:
         """Renvoie une copie de la couleur"""
-        return Color(*self)
+        return Color(self._r, self._g, self._b, self._a)
 
     def copy(self) -> Color:
         """Renvoie une copie de la couleur"""
-        return Color(*self)
+        return self.__copy__()
+
+    # ======================================== INTERNALS ========================================
+    @staticmethod
+    def _to_float(v: Union[int, float], name: str, argument: str) -> float:
+        if isinstance(v, int):
+            if not (0 <= v <= 255):
+                raise ValueError(f"{argument}: {name} out of range ({v})")
+            return v / 255.0
+        elif isinstance(v, float):
+            if not (0.0 <= v <= 1.0):
+                raise ValueError(f"{argument}: {name} out of range ({v})")
+            return v
+        else:
+            raise TypeError(f"{argument}: invalid {name} type {type(v).__name__}")

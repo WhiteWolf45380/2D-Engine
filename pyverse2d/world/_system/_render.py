@@ -4,6 +4,7 @@ from __future__ import annotations
 from ..._flag import UpdatePhase
 from ...abc import System, Shape
 from ...shape import Capsule, Circle, Rect, Ellipse, Segment, Polygon
+from ...asset import Text, Font
 
 from .._world import World, Entity
 from .._component import Transform, SpriteRenderer, ShapeRenderer, TextRenderer
@@ -141,8 +142,8 @@ class RenderSystem(System):
         obj.update(x, y, scale, sr)
 
     # ======================================== SYNC LABEL ========================================
-    def _sync_text(self, entity: Entity, tr: Transform, pipeline: Pipeline):
-        """Crée ou met à jour le Label pyglet de l'entité"""
+    def _sync_text(self, entity: Entity, tr: Transform, pipeline: Pipeline) -> None:
+        """Crée ou met à jour le Label pyglet de l'entité."""
         tc: TextRenderer = entity.get(TextRenderer)
         eid = entity.id
 
@@ -151,26 +152,43 @@ class RenderSystem(System):
                 self._labels[eid].visible = False
             return
 
+        t: Text = tc.text
+        f: Font = t.font
+
+        # Création du label
         if eid not in self._labels:
             group = pipeline.get_group(tc.z * 3 + _ORDER_LABEL)
-            t = tc.text
             self._labels[eid] = pyglet.text.Label(
                 t.text,
-                font_name=t.font,
-                font_size=t.fontsize,
-                color=t.color,
+                font_name=f.name,
+                font_size=f.size,
+                bold=tc.bold,
+                italic=tc.italic,
+                color=_final_color(tc),
+                multiline=tc.multiline or tc.width is not None,
+                align=tc.align,
+                width=tc.width,
                 anchor_x="left",
                 anchor_y="bottom",
                 batch=pipeline.batch,
                 group=group,
             )
+            return
 
+        # Mise à jour
         label = self._labels[eid]
         label.visible = True
+        label.text = t.text
         label.x = tr.x + tc.offset[0]
         label.y = tr.y + tc.offset[1]
-        label.font_size = tc.text.fontsize * tr.scale
-        label.opacity = int(tc.opacity * 255)
+        label.font_name = f.name
+        label.font_size = f.size * tr.scale
+        label.bold = tc.bold
+        label.italic = tc.italic
+        label.color = _final_color(tc)
+        label.width = tc.width
+        label.multiline = tc.multiline or tc.width is not None
+        label.align = tc.align
 
     # ======================================== IMAGE CACHE ========================================
     def _load_image(self, path: str) -> pyglet.image.AbstractImage | None:
@@ -291,14 +309,12 @@ class _ShapeObject:
 
 # ======================================== BORDER OBJECT ========================================
 class _BorderObject:
-    """
-    Bordure d'une shape via GL_LINE_LOOP sur ses vertices().
-    Utilise une vertex list mise à jour en place pour éviter les réallocations.
-    """
+    """Bordure d'une shape via GL_LINE_LOOP sur ses vertices()"""
 
     def __init__(self, shape, x, y, scale, color, width, batch, group):
         self._vlist = None
         self._visible = True
+        self._color = color   # stocké pour pouvoir restaurer après un hide()
         self._width = width
         self._n = 0
         self._batch = batch
@@ -318,6 +334,7 @@ class _BorderObject:
     def update(self, shape, x, y, scale, color, width, opacity):
         if self._vlist is None:
             return
+        self._color = color
         pts = shape.vertices(scale)
         flat = []
         for px, py in pts:
@@ -336,10 +353,14 @@ class _BorderObject:
 
     @visible.setter
     def visible(self, v):
+        if self._vlist is None:
+            return
         self._visible = v
-        if self._vlist is not None:
-            if not v:
-                self._vlist.colors[:] = (0, 0, 0, 0) * self._n
+        if v:
+            r, g, b = self._color
+            self._vlist.colors[:] = (r, g, b, 255) * self._n
+        else:
+            self._vlist.colors[:] = (0, 0, 0, 0) * self._n
 
     def delete(self):
         if self._vlist is not None:
@@ -347,16 +368,12 @@ class _BorderObject:
             self._vlist = None
 
 
-# ======================================== FILL POSITION HELPER ========================================
+# ======================================== INTERNALS ========================================
 def _apply_fill_position(obj, shape, x, y, scale: float):
-    """
-    Met à jour la position et les dimensions du fill pyglet.
-    Pyglet ne touche au vertex buffer que si la valeur change.
-    """
-    if isinstance(shape, (Circle, Rect, Ellipse)):
+    """Met à jour la position et les dimensions du fill pyglet"""
+    if isinstance(shape, Circle):
         obj.x = x
         obj.y = y
-    if isinstance(shape, Circle):
         obj.radius = shape.radius * scale
     elif isinstance(shape, Rect):
         obj.x = x
@@ -364,6 +381,8 @@ def _apply_fill_position(obj, shape, x, y, scale: float):
         obj.width = shape.width * scale
         obj.height = shape.height * scale
     elif isinstance(shape, Ellipse):
+        obj.x = x
+        obj.y = y
         obj.a = shape.rx * scale
         obj.b = shape.ry * scale
     elif isinstance(shape, Capsule):
@@ -378,11 +397,16 @@ def _apply_fill_position(obj, shape, x, y, scale: float):
         obj.y2 = y + shape.B.y * s
         obj.thickness = shape.width * s
 
+def _final_color(tc: TextRenderer) -> tuple[int, int, int, int]:
+    """Fusionne color et opacity en un seul RGBA8"""
+    r, g, b, a = tc.color.rgba8()
+    return (r, g, b, int(a * tc.opacity))
+
 # ======================================== CAPSULE SHAPE ========================================
 class _CapsuleShape:
     """
-    Capsule pyglet composite : rect central + deux demi-cercles.
-    Origine = centre du demi-cercle bas = bas de la spine.
+    Capsule pyglet composite : rect central + deux demi-cercles
+    Origine = centre du demi-cercle bas = bas de la spine
     """
     def __init__(self, x, y, radius, spine, color=(255, 255, 255), batch=None, group=None):
         self._base_radius = radius
