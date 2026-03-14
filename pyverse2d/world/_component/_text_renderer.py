@@ -41,7 +41,7 @@ class TextRenderer(Component):
         offset: Vector = (0.0, 0.0),
         color: Color = (255, 255, 255, 1.0),
         opacity: Real = 1.0,
-        bold: bool = False,
+        wheight: str = "regular",
         italic: bool = False,
         multiline: bool = False,
         align: str = "left",
@@ -53,7 +53,7 @@ class TextRenderer(Component):
         self._offset: Vector = Vector(offset)
         self._color: Color = Color(color)
         self._opacity: float = float(clamped(expect(opacity, Real)))
-        self._bold: bool = expect(bold, bool)
+        self._weight: bool = expect(wheight, str)
         self._italic: bool = expect(italic, bool)
         self._multiline: bool = expect(multiline, bool)
         self._align: str = expect(align, str)
@@ -64,10 +64,7 @@ class TextRenderer(Component):
     # ======================================== CONVERSIONS ========================================
     def __repr__(self) -> str:
         """Renvoie une représentation du composant"""
-        return (
-            f"TextRenderer(text={self._text}, color={self._color}, "
-            f"opacity={self._opacity}, z={self._z}, visible={self._visible})"
-        )
+        return (f"TextRenderer(text={self._text}, color={self._color}, opacity={self._opacity}, z={self._z}, visible={self._visible})")
 
     def __iter__(self) -> Iterator:
         """Renvoie le composant dans un itérateur"""
@@ -107,9 +104,9 @@ class TextRenderer(Component):
         return self._opacity
 
     @property
-    def bold(self) -> bool:
-        """Renvoie la graisse du texte"""
-        return self._bold
+    def weight(self) -> str:
+        """Renvoie l'épaisseur du texte"""
+        return self._weight
 
     @property
     def italic(self) -> bool:
@@ -157,10 +154,10 @@ class TextRenderer(Component):
         """Fixe le facteur d'opacité"""
         self._opacity = float(clamped(expect(value, Real)))
 
-    @bold.setter
-    def bold(self, value: bool) -> None:
+    @weight.setter
+    def weight(self, value: bool) -> None:
         """Fixe la graisse du texte"""
-        self._bold = expect(value, bool)
+        self._weight = expect(value, str)
 
     @italic.setter
     def italic(self, value: bool) -> None:

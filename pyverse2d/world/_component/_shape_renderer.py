@@ -10,7 +10,7 @@ from numbers import Real
 # ======================================== COMPONENT ========================================
 class ShapeRenderer(Component):
     """Composant gérant le rendu d'une forme"""
-    __slots__ = ("_shape", "_offset", "_filling", "_filling_color", "_border_width", "_border_color", "_z", "_visible")
+    __slots__ = ("_shape", "_offset", "_filling", "_filling_color", "_border_width", "_border_color", "_opacity", "_z", "_visible")
     requires = ("Transform",)
 
     def __init__(
@@ -50,7 +50,7 @@ class ShapeRenderer(Component):
     # ======================================== CONVERSIONS ========================================
     def __repr__(self) -> str:
         """Renvoie une représentation du composant"""
-        return f"ShapeRenderer(shape={self._shape}, alpha={self._alpha}, z={self._z}, visible={self._visible})"
+        return f"ShapeRenderer(shape={self._shape}, opacity={self._opacity}, z={self._z}, visible={self._visible})"
     
     def __iter__(self) -> Iterator:
         """Renvoie le composant dans un itérateur"""

@@ -106,11 +106,15 @@ class RenderSystem(System):
 
         sprite = self._sprites[eid]
         sprite.visible = True
-        sprite.x = tr.x + sr.offset[0]
-        sprite.y = tr.y + sr.offset[1]
+        sprite.x = tr.x + sr.offset[0] * tr.scale
+        sprite.y = tr.y + sr.offset[1] * tr.scale
         sprite.rotation = tr.rotation
         sprite.scale = tr.scale * sr.image.scale
         sprite.opacity = int(sr.opacity * 255)
+
+        if sprite.image.anchor_x != tr.anchor.x * raw.width or sprite.image.anchor_y != tr.anchor.y * raw.height:
+            sprite.image.anchor_x = tr.anchor.x * raw.width
+            sprite.image.anchor_y = tr.anchor.y * raw.height
 
         if sr.image.flip_x or sr.image.flip_y:
             sprite.scale_x = -abs(sprite.scale_x) if sr.image.flip_x else abs(sprite.scale_x)
@@ -162,8 +166,9 @@ class RenderSystem(System):
             self._labels[eid] = pyglet.text.Label(
                 t.text,
                 font_name=f.name,
-                font_size=f.size,
-                bold=tc.bold,
+                font_size=int(f.size * tr.scale),
+                rotation=tr.rotation,
+                weight=tc.weight,
                 italic=tc.italic,
                 color=_final_color(tc),
                 multiline=tc.multiline or tc.width is not None,
@@ -174,17 +179,20 @@ class RenderSystem(System):
                 batch=pipeline.batch,
                 group=group,
             )
+            self._labels[eid].x = tr.x - (tr.anchor[0] * label.content_width  + tc.offset[0]) * tr.scale
+            self._labels[eid].y = tr.y - (tr.anchor[1] * label.content_height + tc.offset[1]) * tr.scale
             return
 
         # Mise à jour
         label = self._labels[eid]
         label.visible = True
         label.text = t.text
-        label.x = tr.x + tc.offset[0]
-        label.y = tr.y + tc.offset[1]
+        label.font_size = int(f.size * tr.scale)
+        label.rotation = tr.rotation
+        label.x = tr.x - (tr.anchor[0] * label.content_width + tc.offset[0]) * tr.scale
+        label.y = tr.y - (tr.anchor[1] * label.content_height + tc.offset[1]) * tr.scale
         label.font_name = f.name
-        label.font_size = f.size * tr.scale
-        label.bold = tc.bold
+        label.weight = tc.weight
         label.italic = tc.italic
         label.color = _final_color(tc)
         label.width = tc.width
@@ -463,11 +471,11 @@ class _CapsuleShape:
 
     @property
     def opacity(self):
-        return self._rect.opacity / 255
+        return self._rect.opacity
 
     @opacity.setter
     def opacity(self, value: float):
-        self._rect.opacity = self._top.opacity = self._bottom.opacity = int(round(255 * value))
+        self._rect.opacity = self._top.opacity = self._bottom.opacity = value
 
     def delete(self):
         self._rect.delete()
