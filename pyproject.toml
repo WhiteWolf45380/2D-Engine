@@ -21,3 +21,6 @@ Homepage = "https://github.com/WhiteWolf45380/pyverse2d"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["pyverse2d*"]
+
+[tool.setuptools.package-data]
+"pyverse2d" = ["_assets/**/*"]
