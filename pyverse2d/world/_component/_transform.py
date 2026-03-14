@@ -15,20 +15,20 @@ class Transform(Component):
 
     def __init__(
             self,
-            pos: Point,
-            anchor: str = "center",
+            pos: Point = (0.0, 0.0),
+            anchor: Point = (0.5, 0.5),
             rotation: float = 0.0,
             scale: float = 1.0,
         ):
         """
         Args:
             pos(Point): position
-            anchor(str, optional): ancre de positionnement
+            anchor(Point, optional): ancre de positionnement (écart normalisé à l'origine)
             rotation(float, optional): angle de rotation en radians
             scale(float, otional): facteur de redimensionnement
         """
         self._pos: Point = Point(pos)
-        self._anchor: str = expect(anchor, str)
+        self._anchor: Point = Point(anchor)
         self._rotation: float = float(expect(rotation, Real))
         self._scale: float = float(not_null(positive(expect(scale, Real))))
 
@@ -45,7 +45,7 @@ class Transform(Component):
         """Renvoie l'entier hashé du composant"""
         return hash(self.to_tuple())
     
-    def to_tuple(self) -> tuple[Point, str, float, float]:
+    def to_tuple(self) -> tuple[Point, Point, float, float]:
         """Renvoie le composant sous forme tuple"""
         return (self._pos, self._anchor, self._rotation, self._scale)
     
@@ -70,7 +70,7 @@ class Transform(Component):
         return self._pos
     
     @property
-    def anchor(self) -> str:
+    def anchor(self) -> Point:
         """Renvoie l'ancre de positionnement"""
         return self._anchor
     
@@ -101,9 +101,9 @@ class Transform(Component):
         self._pos = Point(value)
 
     @anchor.setter
-    def anchor(self, value: str):
+    def anchor(self, value: Point):
         """Fixe l'ancre de positionnement"""
-        self._anchor = expect(value, str)
+        self._anchor = Point(value)
     
     @rotation.setter
     def rotation(self, value: Real):
