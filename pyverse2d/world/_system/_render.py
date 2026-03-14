@@ -110,6 +110,7 @@ class RenderSystem(System):
         sprite.y = tr.y + sr.offset[1] * tr.scale
         sprite.rotation = tr.rotation
         sprite.scale = tr.scale * sr.image.scale
+        sprite.color = sr.tint
         sprite.opacity = int(sr.opacity * 255)
 
         if sprite.image.anchor_x != tr.anchor.x * raw.width or sprite.image.anchor_y != tr.anchor.y * raw.height:
@@ -269,12 +270,13 @@ class _ShapeObject:
         if self._fill is not None:
             self._fill.visible = True
             self._fill.opacity = opacity
-            self._fill.color   = sr.filling_color.rgba8
+            self._fill.color = sr.filling_color.rgba8
             if isinstance(shape, Polygon):
                 if self._poly_scale != s:
                     self._fill.delete()
                     pts = [(x + p.x * s, y + p.y * s) for p in shape.points]
                     self._fill = pyglet.shapes.Polygon(*pts, color=sr.filling_color.rgba8, batch=self._batch, group=self._group)
+                    self._fill.opacity = opacity
                     self._poly_scale = s
                 else:
                     ox = self._fill.x - x
@@ -283,6 +285,7 @@ class _ShapeObject:
                         self._fill.delete()
                         pts = [(x + p.x * s, y + p.y * s) for p in shape.points]
                         self._fill = pyglet.shapes.Polygon(*pts, color=sr.filling_color.rgba8, batch=self._batch, group=self._group)
+                        self._fill.opacity = opacity
             else:
                 _apply_fill_position(self._fill, shape, x, y, s)
 
@@ -402,10 +405,10 @@ def _apply_fill_position(obj, shape, x, y, scale: float):
         obj.y2 = y + shape.B.y * s
         obj.thickness = shape.width * s
 
-def _final_color(tc: TextRenderer) -> tuple[int, int, int, int]:
+def _final_color(renderer: TextRenderer) -> tuple[int, int, int, int]:
     """Fusionne color et opacity en un seul RGBA8"""
-    r, g, b, a = tc.color.rgba8
-    return (r, g, b, int(a * tc.opacity))
+    r, g, b, a = renderer.color.rgba8
+    return (r, g, b, int(a * renderer.opacity))
 
 # ======================================== CAPSULE SHAPE ========================================
 class _CapsuleShape:

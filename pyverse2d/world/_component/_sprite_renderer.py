@@ -1,7 +1,7 @@
 # ======================================== IMPORTS ========================================
 from ..._internal import expect, clamped
 from ...abc import Component
-from ...asset import Image
+from ...asset import Image, Color
 from ...math import Vector
 
 from typing import Iterator
@@ -17,6 +17,7 @@ class SpriteRenderer(Component):
             self,
             image: Image,
             offset: Vector = (0.0, 0.0),
+            tint: Color = (0.0, 0.0, 0.0, 0.0),
             opacity: Real = 1.0,
             z: int = 0,
             visible: bool = True,
@@ -25,12 +26,14 @@ class SpriteRenderer(Component):
         Args:
             image(Image): image de rendu
             offset(Vector, optional): décalage par rapport au Transform
+            tint(Color, optional): couleur de teinte
             opacity(float, optional): facteur d'opacité de l'image
             z(int, optional): ordre de rendu
             visible(bool, optional): visibilité
         """
         self._image: Image = expect(image, Image)
         self._offset: Vector = Vector(offset)
+        self._tint: Color = Color(tint)
         self._opacity: float = clamped(expect(opacity, Real))
         self._z: int = expect(z, int)
         self._visible: bool = expect(visible, bool)
@@ -68,6 +71,11 @@ class SpriteRenderer(Component):
         return self._offset
     
     @property
+    def tint(self) -> Color:
+        """Renvoie la couleur de teinte"""
+        return self._tint
+    
+    @property
     def opacity(self) -> float:
         """Renvoie le facteur d'opacité"""
         return self._opacity
@@ -82,6 +90,11 @@ class SpriteRenderer(Component):
     def offset(self, value: Vector):
         """Fixe le décalage par rapport au Transform"""
         self._offset = Vector(value)
+
+    @tint.setter
+    def tint(self, value: Color):
+        """Fixe la couleur de teinte"""
+        self._tint = Color(value)
 
     @opacity.setter
     def opacity(self, value: Real):
