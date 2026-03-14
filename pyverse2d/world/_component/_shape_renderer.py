@@ -120,7 +120,7 @@ class ShapeRenderer(Component):
         """Fixe l'état du remplissage"""
         self._filling = expect(value, bool)
 
-    @filling_color
+    @filling_color.setter
     def filling_color(self, value: Color):
         """Fixe la couleur de remplissage"""
         self._filling_color = expect(value, Color)

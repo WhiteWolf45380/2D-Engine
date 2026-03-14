@@ -10,7 +10,7 @@ from numbers import Real
 # ======================================== COMPONENT ========================================
 class TextRenderer(Component):
     """Composant gérant le rendu"""
-    __slots__ = ("_text", "_opacity", "_z", "_visible")
+    __slots__ = ("_text", "_offset", "_opacity", "_z", "_visible")
     requires = ("Transform",)
 
     def __init__(

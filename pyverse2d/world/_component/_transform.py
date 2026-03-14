@@ -35,7 +35,7 @@ class Transform(Component):
     # ======================================== CONVERSIONS ========================================
     def __repr__(self) -> str:
         """Renvoie une représentation du composant"""
-        return f"Transform(x={self._pos.x}, y={self._pos.x}, anchor={self._anchor}, rotation={self._rotation}, scale={self._scale})"
+        return f"Transform(x={self._pos.x}, y={self._pos.y}, anchor={self._anchor}, rotation={self._rotation}, scale={self._scale})"
     
     def __iter__(self) -> Iterator:
         """Renvoie le composant dans un itérateur"""
