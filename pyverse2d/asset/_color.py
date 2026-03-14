@@ -4,7 +4,7 @@ from __future__ import annotations
 from ..abc import Asset
 
 # ======================================== ASSET ========================================
-class Color(tuple, Asset):
+class Color(tuple[int, int, int, float], Asset):
     """Descripteur de Couleur RGBA"""
     __slots__ = ()
 
@@ -77,16 +77,34 @@ class Color(tuple, Asset):
 
     # ======================================== GETTERS ========================================
     @property
-    def r(self): return self[0]
+    def r(self) -> int:
+        """Renvoie la composante rouge"""
+        return self[0]
 
     @property
-    def g(self): return self[1]
+    def g(self) -> int:
+        """Renvoie la composante verte"""
+        return self[1]
 
     @property
-    def b(self): return self[2]
+    def b(self) -> int:
+        """Renvoie la composante bleu"""
+        return self[2]
 
     @property
-    def a(self): return self[3]
+    def a(self) -> float:
+        """Renvoie la composante alpha"""
+        return self[3]
+
+    @property
+    def rgb(self) -> tuple[int, int, int]:
+        """Renvoie la couleur en RGB"""
+        return self.r, self.g, self.b
+    
+    @property
+    def rgba(self) -> tuple[int, int, int, int]:
+        """Renvoie la couleur en RGBA"""
+        return self.r, self.g, self.b, self.a
 
     # ======================================== PUBLIC METHODS ========================================
     def __copy__(self) -> Color:
