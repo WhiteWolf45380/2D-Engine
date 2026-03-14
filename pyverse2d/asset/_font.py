@@ -6,6 +6,8 @@ from ..abc import Asset
 
 import pyglet
 import os
+import sys
+import winreg
 import importlib.resources as resources
 
 from numbers import Real
@@ -102,9 +104,51 @@ class Font(Asset):
     @classmethod
     def get_fonts(cls) -> list[str]:
         """Retourne la liste des polices disponibles sur le système"""
-        fonts = pyglet.font.get_fonts()
-        names = {f.name for f in fonts}
-        return sorted(names)
+        found = {}
+        def _scan_dir(directory):
+            if not os.path.isdir(directory):
+                return
+            for _, _, files in os.walk(directory):
+                for f in files:
+                    if f.lower().endswith((".ttf", ".otf")):
+                        name = os.path.splitext(f)[0]
+                        found[name.lower().replace(" ", "")] = name
+
+        if sys.platform == "win32":            
+            try:
+                key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts")
+                i = 0
+                while True:
+                    try:
+                        name, _, _ = winreg.EnumValue(key, i)
+                        clean = name.split("(")[0].strip()
+                        found[clean.lower().replace(" ", "")] = clean
+                        i += 1
+                    except OSError:
+                        break
+            except OSError:
+                _scan_dir(os.path.join(os.environ.get("WINDIR", "C:\\Windows"), "Fonts"))
+
+        elif sys.platform == "darwin":
+            for d in [
+                "/Library/Fonts",
+                "/System/Library/Fonts",
+                "/Network/Library/Fonts",
+                os.path.expanduser("~/Library/Fonts"),
+            ]:
+                _scan_dir(d)
+
+        else:  # Linux
+            for d in [
+                "/usr/share/fonts",
+                "/usr/local/share/fonts",
+                "/usr/X11R6/lib/X11/fonts",
+                os.path.expanduser("~/.fonts"),
+                os.path.expanduser("~/.local/share/fonts"),
+            ]:
+                _scan_dir(d)
+
+        return sorted(found.values())
 
     # ======================================== PUBLIC METHODS ========================================
     def text_width(self, text: str) -> int:
@@ -156,12 +200,9 @@ class Font(Asset):
 
     # ======================================== INTERNALS ========================================
     def _load_default_font(self) -> PygletFont:
-        """Charge la police interne par défaut"""
         with resources.path("pyverse2d._assets", "freesansbold.ttf") as path:
-            base_name = os.path.splitext(os.path.basename(path))[0]
-            font_obj = pyglet.font.load(base_name, self._size)
-            self._name = font_obj.name
-            return font_obj
+            pyglet.font.add_file(str(path))
+            return pyglet.font.load("FreeSans", self._size)
 
     def _get_glyph(self, char: str) -> Glyph:
         """Renvoie un _Glyph"""
