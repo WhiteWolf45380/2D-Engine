@@ -16,39 +16,44 @@ from . import _circle, _rect, _capsule, _polygon, _segment, _ellipse  # noqa: F4
 from math import sqrt
 
 # ======================================== CONSTANTES ========================================
-_SLOP = 0.5         # pénétration ignorée (px)
-_BAUMGARTE = 0.2    # fraction de correction de position par frame
-_WARM_BIAS = 0.8    # fraction des impulsions précédentes ré-appliquées au warm start
-
-_MAX_CORRECTION = 8.0           # px/frame pour éviter les sauts à gros dt
-_EXTRA_ITER_THRESHOLD = 4.0
+_SLOP = 0.5                     # pénétration ignorée (px)
+_BAUMGARTE = 0.2                # fraction de correction de position par frame
+_WARM_BIAS = 0.8                # fraction des impulsions précédentes ré-appliquées au warm start
+_MAX_CORRECTION = 8.0           # correction de position max par frame (px) — évite sauts à gros dt
+_EXTRA_ITER_THRESHOLD = 4.0     # depth (px) au-delà duquel on ajoute des passes
 _EXTRA_ITER = 4
-_MAX_MASS_RATIO = 0.95          # corps léger reçoit au plus 95% de la correction
+_MAX_MASS_RATIO = 0.95          # ratio max pour la correction de position
 
 # ======================================== HELPERS ========================================
 def _shape_world_origin(tr: Transform, col: Collider) -> tuple[float, float]:
-    """Retourne la position de l'origine locale de la shape dans l'espace monde"""
     ox, oy, bw, bh = col.shape.bounding_box()
     x = tr.x + (-ox - tr.anchor.x * bw) + col.offset[0]
     y = tr.y + (-oy - tr.anchor.y * bh) + col.offset[1]
     return x, y
 
 def _bbox_center_world(tr: Transform, col: Collider) -> tuple[float, float, float, float]:
-    """Centre monde du bounding box + demi-dimensions"""
     ox, oy, bw, bh = col.shape.bounding_box()
     wx = tr.x + (-ox - tr.anchor.x * bw) + col.offset[0]
     wy = tr.y + (-oy - tr.anchor.y * bh) + col.offset[1]
     return wx + ox + bw * 0.5, wy + oy + bh * 0.5, bw * 0.5, bh * 0.5
 
+
 # ======================================== CONTACT CACHE ========================================
 class _CachedContact:
-    """Impulsions accumulées + normale lissée pour une paire de contacts persistante"""
+    """
+    Impulsions accumulées + normale lissée pour une paire de contacts persistante.
+
+    Args:
+        jn : impulsion normale accumulée (≥ 0)
+        jt : impulsion tangentielle accumulée (cône de Coulomb)
+        normal : normale lissée entre frames (amortit les flips SAT aux coins)
+    """
     __slots__ = ("jn", "jt", "normal")
 
     def __init__(self):
         self.jn: float = 0.0
         self.jt: float = 0.0
-        self.normal: tuple | None = None  # (nx, ny) de la frame précédente
+        self.normal: tuple | None = None
 
 
 # ======================================== SYSTEM ========================================
@@ -61,7 +66,7 @@ class CollisionSystem(System):
     def __init__(self, broadphase: bool = True, iterations: int = 6):
         self._hash: _SpatialHash | None = _SpatialHash() if broadphase else None
         self._iterations: int = max(1, int(iterations))
-        self._cache: dict[tuple[int, int], _CachedContact] = {}     # {(id_a, id_b): _CachedContact}
+        self._cache: dict[tuple[int, int], _CachedContact] = {}
 
     # ======================================== UPDATE ========================================
     def update(self, world: World, dt: float):
@@ -76,8 +81,7 @@ class CollisionSystem(System):
             n = len(entities)
             pairs = [(entities[i], entities[j]) for i in range(n) for j in range(i + 1, n)]
 
-        # Détection + warm start
-        active_contacts: list[tuple] = []  # (a, b, contact_lissé, cached)
+        active_contacts: list[tuple] = []
         active_keys: set[tuple[int, int]] = set()
         max_depth = 0.0
 
@@ -102,8 +106,10 @@ class CollisionSystem(System):
 
             if key not in self._cache:
                 self._cache[key] = _CachedContact()
+
             cached = self._cache[key]
 
+            # Lissage de la normale SAT entre frames
             nx, ny = contact.normal.x, contact.normal.y
             if cached.normal is not None:
                 pnx, pny = cached.normal
@@ -123,7 +129,6 @@ class CollisionSystem(System):
             active_contacts.append((a, b, contact, cached))
             self._warm_start(a, b, contact, cached)
 
-        # Purge des contacts disparus
         for key in list(self._cache):
             if key not in active_keys:
                 del self._cache[key]
@@ -132,17 +137,14 @@ class CollisionSystem(System):
         if max_depth > _EXTRA_ITER_THRESHOLD:
             iterations += _EXTRA_ITER
 
-        # Itérations du solveur
         for _ in range(iterations):
             for a, b, contact, cached in active_contacts:
-                self._resolve(a, b, contact, cached)
+                self._resolve(a, b, contact, cached, dt)
 
     # ======================================== WARM START ========================================
     def _warm_start(self, a, b, contact: Contact, cached: _CachedContact):
-        """Ré-applique une fraction des impulsions de la frame précédente"""
         if not a.has(RigidBody) or not b.has(RigidBody):
             return
-
         rb_a: RigidBody = a.get(RigidBody)
         rb_b: RigidBody = b.get(RigidBody)
         static_a = rb_a.is_static()
@@ -152,14 +154,10 @@ class CollisionSystem(System):
 
         nx, ny = contact.normal.x, contact.normal.y
         tx, ty = -ny, nx
-
-        # Impulsions warm-startées
         jn = cached.jn * _WARM_BIAS
         jt = cached.jt * _WARM_BIAS
-
         ix = nx * jn + tx * jt
         iy = ny * jn + ty * jt
-
         inv_a = 0.0 if static_a else 1.0 / rb_a.mass
         inv_b = 0.0 if static_b else 1.0 / rb_b.mass
 
@@ -169,10 +167,9 @@ class CollisionSystem(System):
             rb_b.velocity = Vector(rb_b.velocity.x - ix * inv_b, rb_b.velocity.y - iy * inv_b)
 
     # ======================================== DÉTECTION ========================================
-    def _detect(self, col_a: Collider, tr_a: Transform, col_b: Collider, tr_b: Transform) -> Contact | None:
+    def _detect(self, col_a, tr_a, col_b, tr_b) -> Contact | None:
         ax, ay = _shape_world_origin(tr_a, col_a)
         bx, by = _shape_world_origin(tr_b, col_b)
-
         a_cx, a_cy, ahw, ahh = _bbox_center_world(tr_a, col_a)
         b_cx, b_cy, bhw, bhh = _bbox_center_world(tr_b, col_b)
         if abs(a_cx - b_cx) > ahw + bhw or abs(a_cy - b_cy) > ahh + bhh:
@@ -180,8 +177,8 @@ class CollisionSystem(System):
         return dispatch(col_a.shape, ax, ay, col_b.shape, bx, by)
 
     # ======================================== RÉSOLUTION ========================================
-    def _resolve(self, a, b, contact: Contact, cached: _CachedContact):
-        """Solveur d'impulsion avec accumulation (Sequential Impulse Solver)"""
+    def _resolve(self, a, b, contact: Contact, cached: _CachedContact, dt: float):
+        """Sequential Impulse Solver avec vitesse prédictive"""
         has_rb_a = a.has(RigidBody)
         has_rb_b = b.has(RigidBody)
         rb_a: RigidBody | None = a.get(RigidBody) if has_rb_a else None
@@ -200,19 +197,17 @@ class CollisionSystem(System):
         tr_a: Transform = a.get(Transform)
         tr_b: Transform = b.get(Transform)
         normal = contact.normal
-        depth  = contact.depth
+        depth = contact.depth
         nx, ny = normal.x, normal.y
         tx, ty = -ny, nx
 
         if not has_rb_a or not has_rb_b:
-            correction = max(depth - _SLOP, 0.0) * _BAUMGARTE
+            correction = min(max(depth - _SLOP, 0.0) * _BAUMGARTE, _MAX_CORRECTION)
             if correction > 0:
                 if static_a:
-                    tr_b.x -= nx * correction
-                    tr_b.y -= ny * correction
+                    tr_b.x -= nx * correction; tr_b.y -= ny * correction
                 else:
-                    tr_a.x += nx * correction
-                    tr_a.y += ny * correction
+                    tr_a.x += nx * correction; tr_a.y += ny * correction
             return
 
         inv_a = 0.0 if static_a else 1.0 / rb_a.mass
@@ -221,53 +216,45 @@ class CollisionSystem(System):
         if inv_sum == 0:
             return
 
-        rel_vx = rb_a.velocity.x - rb_b.velocity.x
-        rel_vy = rb_a.velocity.y - rb_b.velocity.y
+        # Vitesse prédictive : vel + acc*dt
+        vax = rb_a.velocity.x + (rb_a._acceleration.x * dt if not static_a else 0.0)
+        vay = rb_a.velocity.y + (rb_a._acceleration.y * dt if not static_a else 0.0)
+        vbx = rb_b.velocity.x + (rb_b._acceleration.x * dt if not static_b else 0.0)
+        vby = rb_b.velocity.y + (rb_b._acceleration.y * dt if not static_b else 0.0)
+        rel_vx = vax - vbx
+        rel_vy = vay - vby
         vel_along = rel_vx * nx + rel_vy * ny
 
         # Correction de position (Baumgarte)
         if vel_along < 0:
-            correction = min(
-                max(depth - _SLOP, 0.0) * _BAUMGARTE,
-                _MAX_CORRECTION,
-            )
+            correction = min(max(depth - _SLOP, 0.0) * _BAUMGARTE, _MAX_CORRECTION)
             if correction > 0:
                 if static_a:
-                    tr_b.x -= nx * correction
-                    tr_b.y -= ny * correction
+                    tr_b.x -= nx * correction; tr_b.y -= ny * correction
                 elif static_b:
-                    tr_a.x += nx * correction
-                    tr_a.y += ny * correction
+                    tr_a.x += nx * correction; tr_a.y += ny * correction
                 else:
-                    ra = inv_a / inv_sum
-                    rb = inv_b / inv_sum
-                    ra = min(ra, _MAX_MASS_RATIO)
-                    rb = min(rb, _MAX_MASS_RATIO)
-                    tr_a.x += nx * correction * ra
-                    tr_a.y += ny * correction * ra
-                    tr_b.x -= nx * correction * rb
-                    tr_b.y -= ny * correction * rb
+                    ra = min(inv_a / inv_sum, _MAX_MASS_RATIO)
+                    rb = min(inv_b / inv_sum, _MAX_MASS_RATIO)
+                    tr_a.x += nx * correction * ra; tr_a.y += ny * correction * ra
+                    tr_b.x -= nx * correction * rb; tr_b.y -= ny * correction * rb
 
         # Impulsion normale avec accumulation
         restitution = min(rb_a.restitution, rb_b.restitution)
-        bias = _BAUMGARTE * max(depth - _SLOP, 0.0)
-        dv_n = vel_along + bias
-
-        j_delta_n = -dv_n / inv_sum
         if vel_along < -0.5:
             j_delta_n = -(1.0 + restitution) * vel_along / inv_sum
+        else:
+            bias = _BAUMGARTE * max(depth - _SLOP, 0.0)
+            j_delta_n = -(vel_along + bias) / inv_sum
 
-        # Clamp de l'accumulateur : jn ≥ 0
         old_jn = cached.jn
         cached.jn = max(0.0, old_jn + j_delta_n)
         j_delta_n = cached.jn - old_jn
 
-        # Friction tangentielle avec accumulation
+        # Friction tangentielle avec accumulation (cône de Coulomb)
         friction = (rb_a.friction + rb_b.friction) * 0.5
         vel_tan = rel_vx * tx + rel_vy * ty
         j_delta_t = -vel_tan / inv_sum
-
-        # Clamp de l'accumulateur : cône de Coulomb |jt| ≤ μ·jn
         old_jt = cached.jt
         max_jt = friction * cached.jn
         cached.jt = max(-max_jt, min(max_jt, old_jt + j_delta_t))
@@ -282,19 +269,8 @@ class CollisionSystem(System):
         if not static_b:
             rb_b.velocity = Vector(rb_b.velocity.x - ix * inv_b, rb_b.velocity.y - iy * inv_b)
 
-        # Annulation de l'accélération dans la direction du contact
-        if not static_a:
-            proj = rb_a._acceleration.x * nx + rb_a._acceleration.y * ny
-            if proj < 0:
-                rb_a._acceleration = Vector(rb_a._acceleration.x - proj * nx, rb_a._acceleration.y - proj * ny)
-        if not static_b:
-            proj = rb_b._acceleration.x * (-nx) + rb_b._acceleration.y * (-ny)
-            if proj < 0:
-                rb_b._acceleration = Vector(rb_b._acceleration.x + proj * nx, rb_b._acceleration.y + proj * ny)
-
     # ======================================== PUBLIC ========================================
     def reset_calibration(self):
-        """Force une recalibration au prochain update"""
         if self._hash is not None:
             self._hash._cell_size = None
             self._hash.clear_static()
@@ -303,10 +279,9 @@ class CollisionSystem(System):
         """Vide le cache d'impulsions (changement de scène, etc.)"""
         self._cache.clear()
 
+
 # ======================================== SPATIAL HASH ========================================
 class _SpatialHash:
-    """Grille spatiale broadphase"""
-
     def __init__(self):
         self._cell_size: float | None = None
         self._dynamic_cells: dict[tuple[int, int], list] = {}
@@ -346,34 +321,25 @@ class _SpatialHash:
     def _insert(self, cells, entity, col: Collider, tr: Transform, rb):
         ox, oy, bw, bh = col.shape.bounding_box()
         cs = self._cell_size
-
         wx = tr.x + (-ox - tr.anchor.x * bw) + col.offset[0]
         wy = tr.y + (-oy - tr.anchor.y * bh) + col.offset[1]
-
         if rb is not None and not rb.is_static():
             pwx = rb.prev_x + (-ox - tr.anchor.x * bw) + col.offset[0]
             pwy = rb.prev_y + (-oy - tr.anchor.y * bh) + col.offset[1]
-            min_x = min(wx + ox, pwx + ox)
-            max_x = max(wx + ox + bw, pwx + ox + bw)
-            min_y = min(wy + oy, pwy + oy)
-            max_y = max(wy + oy + bh, pwy + oy + bh)
+            min_x = min(wx + ox, pwx + ox); max_x = max(wx + ox + bw, pwx + ox + bw)
+            min_y = min(wy + oy, pwy + oy); max_y = max(wy + oy + bh, pwy + oy + bh)
         else:
-            min_x = wx + ox
-            max_x = wx + ox + bw
-            min_y = wy + oy
-            max_y = wy + oy + bh
-
+            min_x = wx + ox; max_x = wx + ox + bw
+            min_y = wy + oy; max_y = wy + oy + bh
         for cx in range(int(min_x // cs), int(max_x // cs) + 1):
             for cy in range(int(min_y // cs), int(max_y // cs) + 1):
                 key = (cx, cy)
-                if key not in cells:
-                    cells[key] = []
+                if key not in cells: cells[key] = []
                 cells[key].append(entity)
 
     def get_pairs(self) -> list[tuple]:
         seen: set[tuple[int, int]] = set()
         pairs: list[tuple] = []
-
         for cell in self._dynamic_cells.values():
             n = len(cell)
             for i in range(n):
@@ -384,11 +350,9 @@ class _SpatialHash:
                     if key not in seen:
                         seen.add(key)
                         pairs.append((a, b))
-
         for ck, dyn in self._dynamic_cells.items():
             stat = self._static_cells.get(ck)
-            if not stat:
-                continue
+            if not stat: continue
             for d in dyn:
                 for s in stat:
                     id_d, id_s = id(d), id(s)

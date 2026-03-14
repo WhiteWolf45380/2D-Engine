@@ -143,4 +143,4 @@ class Segment(Shape):
     
     def bounding_box(self) -> tuple[float, float, float, float]:
         """Renvoie le AABB de la shape"""
-        return min(self._A.x, self._B.x), min(self._A.y, self._B.y), abs(self._A.x - self._B.x), abs(self._A.y - self._B.y)
+        return min(self._A.x, self._B.x) - self.half_width, min(self._A.y, self._B.y) - self.half_width, abs(self._A.x - self._B.x) + self.half_width, abs(self._A.y - self._B.y) + self.half_width
