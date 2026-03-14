@@ -10,10 +10,14 @@ from ..._component import Transform, RigidBody, Collider
 
 from .._physics import PhysicsSystem
 
-from ._registry import dispatch, _half_extents, Contact
+from ._registry import dispatch, Contact
 from . import _circle, _rect, _capsule, _polygon, _segment, _ellipse  # noqa: F401
 
 from math import sqrt
+
+# ======================================== CONSTANTES ========================================
+_SLOP        = 1.0
+_BAUMGARTE   = 0.8
 
 # ======================================== SYSTEM ========================================
 class CollisionSystem(System):
@@ -71,16 +75,20 @@ class CollisionSystem(System):
         sb = col_b.shape
 
         # Pre-reject AABB
-        ahw, ahh = _half_extents(sa)
-        bhw, bhh = _half_extents(sb)
-        if abs(ax - bx) > ahw + bhw or abs(ay - by) > ahh + bhh:
+        aox, aoy, aw, ah = sa.bounding_box()
+        box, boy, bw, bh = sb.bounding_box()
+        a_cx = ax + aox + aw * 0.5
+        a_cy = ay + aoy + ah * 0.5
+        b_cx = bx + box + bw * 0.5
+        b_cy = by + boy + bh * 0.5
+        if abs(a_cx - b_cx) > (aw + bw) * 0.5 or abs(a_cy - b_cy) > (ah + bh) * 0.5:
             return None
 
         return dispatch(sa, ax, ay, sb, bx, by)
 
     # ======================================== RÉSOLUTION ========================================
     def _resolve(self, a, b, contact: Contact):
-        """Correction de position, impulsion, friction tangentielle"""
+        """Correction de position (Baumgarte + slop), impulsion, friction, annulation acc"""
         has_rb_a = a.has(RigidBody)
         has_rb_b = b.has(RigidBody)
         rb_a: RigidBody | None = a.get(RigidBody) if has_rb_a else None
@@ -99,47 +107,49 @@ class CollisionSystem(System):
         tr_a: Transform = a.get(Transform)
         tr_b: Transform = b.get(Transform)
         normal = contact.normal
-        depth = contact.depth
+        depth  = contact.depth
 
-        # ---- Correction de position ----
-        if static_a:
-            tr_b.x -= normal.x * depth
-            tr_b.y -= normal.y * depth
-        elif static_b:
-            tr_a.x += normal.x * depth
-            tr_a.y += normal.y * depth
-        else:
-            inv_a = 1.0 / rb_a.mass
-            inv_b = 1.0 / rb_b.mass
-            inv_sum = inv_a + inv_b
-            if inv_sum > 0:
-                ra = inv_a / inv_sum
-                rb = inv_b / inv_sum
-                tr_a.x += normal.x * depth * ra
-                tr_a.y += normal.y * depth * ra
-                tr_b.x -= normal.x * depth * rb
-                tr_b.y -= normal.y * depth * rb
+        # Correction de position
+        correction = max(depth - _SLOP, 0.0) * _BAUMGARTE
+        if correction > 0:
+            if static_a:
+                tr_b.x -= normal.x * correction
+                tr_b.y -= normal.y * correction
+            elif static_b:
+                tr_a.x += normal.x * correction
+                tr_a.y += normal.y * correction
+            else:
+                inv_a   = 1.0 / rb_a.mass
+                inv_b   = 1.0 / rb_b.mass
+                inv_sum = inv_a + inv_b
+                if inv_sum > 0:
+                    ra = inv_a / inv_sum
+                    rb = inv_b / inv_sum
+                    tr_a.x += normal.x * correction * ra
+                    tr_a.y += normal.y * correction * ra
+                    tr_b.x -= normal.x * correction * rb
+                    tr_b.y -= normal.y * correction * rb
 
         if not has_rb_a or not has_rb_b:
             return
 
-        rel_vx = rb_a.velocity.x - rb_b.velocity.x
-        rel_vy = rb_a.velocity.y - rb_b.velocity.y
+        rel_vx   = rb_a.velocity.x - rb_b.velocity.x
+        rel_vy   = rb_a.velocity.y - rb_b.velocity.y
         vel_along = rel_vx * normal.x + rel_vy * normal.y
 
         if vel_along > 0:
             return
 
         restitution = min(rb_a.restitution, rb_b.restitution)
-        inv_a = 0.0 if static_a else 1.0 / rb_a.mass
-        inv_b = 0.0 if static_b else 1.0 / rb_b.mass
+        inv_a   = 0.0 if static_a else 1.0 / rb_a.mass
+        inv_b   = 0.0 if static_b else 1.0 / rb_b.mass
         inv_sum = inv_a + inv_b
 
         if inv_sum == 0:
             return
 
-        # ---- Impulsion normale ----
-        j = -(1.0 + restitution) * vel_along / inv_sum
+        # Impulsion normale
+        j  = -(1.0 + restitution) * vel_along / inv_sum
         ix = normal.x * j
         iy = normal.y * j
 
@@ -148,7 +158,7 @@ class CollisionSystem(System):
         if not static_b:
             rb_b.velocity = Vector(rb_b.velocity.x - ix * inv_b, rb_b.velocity.y - iy * inv_b)
 
-        # ---- Friction tangentielle ----
+        # Friction tangentielle
         friction = (rb_a.friction + rb_b.friction) * 0.5
         tx = rel_vx - vel_along * normal.x
         ty = rel_vy - vel_along * normal.y
@@ -169,13 +179,28 @@ class CollisionSystem(System):
                 rb_b.velocity.y - ty * jt * inv_b,
             )
 
+        # Annulation de l'accélération dans la direction du contact
+        if not static_a:
+            proj = rb_a._acceleration.x * normal.x + rb_a._acceleration.y * normal.y
+            if proj < 0:
+                rb_a._acceleration = Vector(
+                    rb_a._acceleration.x - proj * normal.x,
+                    rb_a._acceleration.y - proj * normal.y,
+                )
+        if not static_b:
+            proj = rb_b._acceleration.x * (-normal.x) + rb_b._acceleration.y * (-normal.y)
+            if proj < 0:
+                rb_b._acceleration = Vector(
+                    rb_b._acceleration.x + proj * normal.x,
+                    rb_b._acceleration.y + proj * normal.y,
+                )
+
     # ======================================== PUBLIC ========================================
     def reset_calibration(self):
         """Force une recalibration au prochain update"""
         if self._hash is not None:
             self._hash._cell_size = None
             self._hash.clear_static()
-
 
 # ======================================== SPATIAL HASH ========================================
 class _SpatialHash:
@@ -194,7 +219,8 @@ class _SpatialHash:
     def calibrate(self, entities: list):
         max_extent = 0.0
         for e in entities:
-            hw, hh = _half_extents(e.get(Collider).shape)
+            _, _, w, h = e.get(Collider).shape.bounding_box()
+            hw, hh = w * 0.5, h * 0.5
             if hw > max_extent:
                 max_extent = hw
             if hh > max_extent:
@@ -221,16 +247,22 @@ class _SpatialHash:
     def _insert(self, cells, entity, col: Collider, tr: Transform, rb):
         x = tr.x + col.offset[0]
         y = tr.y + col.offset[1]
-        hw, hh = _half_extents(col.shape)
         cs = self._cell_size
+
+        # Bbox : origine locale + dimensions
+        ox, oy, w, h = col.shape.bounding_box()
         if rb is not None and not rb.is_static():
             px = rb.prev_x + col.offset[0]
             py = rb.prev_y + col.offset[1]
-            min_x, max_x = min(x, px) - hw, max(x, px) + hw
-            min_y, max_y = min(y, py) - hh, max(y, py) + hh
+            min_x = min(x + ox, px + ox)
+            max_x = max(x + ox + w, px + ox + w)
+            min_y = min(y + oy, py + oy)
+            max_y = max(y + oy + h, py + oy + h)
         else:
-            min_x, max_x = x - hw, x + hw
-            min_y, max_y = y - hh, y + hh
+            min_x = x + ox
+            max_x = x + ox + w
+            min_y = y + oy
+            max_y = y + oy + h
 
         for cx in range(int(min_x // cs), int(max_x // cs) + 1):
             for cy in range(int(min_y // cs), int(max_y // cs) + 1):
