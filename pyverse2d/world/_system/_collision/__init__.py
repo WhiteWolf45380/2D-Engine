@@ -16,12 +16,15 @@ from . import _circle, _rect, _capsule, _polygon, _segment, _ellipse  # noqa: F4
 from math import sqrt
 
 # ======================================== CONSTANTES ========================================
-_SLOP      = 1.0   # pénétration ignorée (pixels)
-_BAUMGARTE = 0.8   # fraction de correction appliquée par frame
+_SLOP = 0.5
+_BAUMGARTE = 0.3
+_REST_THRESHOLD = 0.2
 
 # ======================================== HELPERS ========================================
 def _shape_world_origin(tr: Transform, col: Collider) -> tuple[float, float]:
-    """Retourne la position de l'origine locale de la shape dans l'espace monde"""
+    """
+    Retourne la position de l'origine locale de la shape dans l'espace monde
+    """
     ox, oy, bw, bh = col.shape.bounding_box()
     x = tr.x + (-ox - tr.anchor.x * bw) + col.offset[0]
     y = tr.y + (-oy - tr.anchor.y * bh) + col.offset[1]
@@ -29,11 +32,9 @@ def _shape_world_origin(tr: Transform, col: Collider) -> tuple[float, float]:
 
 
 def _bbox_center_world(tr: Transform, col: Collider) -> tuple[float, float, float, float]:
-    """
-    Retourne le centre monde du bounding box et ses demi-dimensions.
-    Utilisé pour le pre-reject AABB.
-    """
+    """Retourne le centre monde du bounding box et ses demi-dimensions"""
     ox, oy, bw, bh = col.shape.bounding_box()
+    # Origine monde + offset bbox
     wx = tr.x + (-ox - tr.anchor.x * bw) + col.offset[0]
     wy = tr.y + (-oy - tr.anchor.y * bh) + col.offset[1]
     cx = wx + ox + bw * 0.5
@@ -93,7 +94,6 @@ class CollisionSystem(System):
         col_a: Collider, tr_a: Transform,
         col_b: Collider, tr_b: Transform,
     ) -> Contact | None:
-        # Origine monde de chaque shape
         ax, ay = _shape_world_origin(tr_a, col_a)
         bx, by = _shape_world_origin(tr_b, col_b)
 
@@ -126,10 +126,13 @@ class CollisionSystem(System):
         tr_a: Transform = a.get(Transform)
         tr_b: Transform = b.get(Transform)
         normal = contact.normal
-        depth = contact.depth
+        depth  = contact.depth
 
-        # Correction de position
-        correction = max(depth - _SLOP, 0.0) * _BAUMGARTE
+        # Correction de position (Baumgarte avec slop)
+        if abs(vel_along) >= _REST_THRESHOLD:
+            correction = max(depth - _SLOP, 0.0) * _BAUMGARTE
+        else:
+            correction = 0.0
 
         if correction > 0:
             if static_a:
@@ -139,8 +142,8 @@ class CollisionSystem(System):
                 tr_a.x += normal.x * correction
                 tr_a.y += normal.y * correction
             else:
-                inv_a = 1.0 / rb_a.mass
-                inv_b = 1.0 / rb_b.mass
+                inv_a   = 1.0 / rb_a.mass
+                inv_b   = 1.0 / rb_b.mass
                 inv_sum = inv_a + inv_b
                 if inv_sum > 0:
                     ra = inv_a / inv_sum
@@ -153,16 +156,16 @@ class CollisionSystem(System):
         if not has_rb_a or not has_rb_b:
             return
 
-        rel_vx = rb_a.velocity.x - rb_b.velocity.x
-        rel_vy = rb_a.velocity.y - rb_b.velocity.y
+        rel_vx    = rb_a.velocity.x - rb_b.velocity.x
+        rel_vy    = rb_a.velocity.y - rb_b.velocity.y
         vel_along = rel_vx * normal.x + rel_vy * normal.y
 
         if vel_along > 0:
             return
 
         restitution = min(rb_a.restitution, rb_b.restitution)
-        inv_a = 0.0 if static_a else 1.0 / rb_a.mass
-        inv_b = 0.0 if static_b else 1.0 / rb_b.mass
+        inv_a   = 0.0 if static_a else 1.0 / rb_a.mass
+        inv_b   = 0.0 if static_b else 1.0 / rb_b.mass
         inv_sum = inv_a + inv_b
 
         if inv_sum == 0:
@@ -226,7 +229,6 @@ class CollisionSystem(System):
 # ======================================== SPATIAL HASH ========================================
 class _SpatialHash:
     """Grille spatiale broadphase"""
-
     def __init__(self):
         self._cell_size: float | None = None
         self._dynamic_cells: dict[tuple[int, int], list] = {}
