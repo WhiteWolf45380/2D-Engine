@@ -8,5 +8,5 @@ from ._registry import register, Contact, _sat, _seg_corners
 # ======================================== Segment × Segment ========================================
 @register(Segment, Segment)
 def segment_segment(sa: Segment, ax, ay, sb: Segment, bx, by) -> Contact | None:
-    """Segment vs Segment"""
+    """Segment vs Segment — SAT sur les deux OBB"""
     return _sat(_seg_corners(ax, ay, sa), _seg_corners(bx, by, sb))
