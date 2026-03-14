@@ -194,7 +194,7 @@ class RigidBody(Component):
 
     def apply_force(self, force: Vector):
         """
-        Applique une force au corps et le réveille si nécessaire.
+        Applique une force au corps et le réveille si nécessaire
 
         Args:
             force(Vector): force à appliquer en N

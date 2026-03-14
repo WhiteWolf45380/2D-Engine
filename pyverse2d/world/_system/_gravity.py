@@ -50,6 +50,6 @@ class GravitySystem(System):
         """
         for entity in world.query(RigidBody, Transform):
             rb: RigidBody = entity.get(RigidBody)
-            if rb.is_static() or not rb.is_gravitational() or rb.is_sleeping():
+            if rb.is_static() or not rb.is_gravitational():
                 continue
-            rb.apply_force(Vector(0.0, -self._gravity * rb.gravity_scale))
+            rb.apply_force(Vector(0.0, -self._gravity * rb.mass * rb.gravity_scale))
