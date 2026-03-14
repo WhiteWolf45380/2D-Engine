@@ -152,7 +152,7 @@ class RenderSystem(System):
         if isinstance(shape, Segment):
             ax, ay = shape.A
             bx, by = shape.B
-            return pyglet.shapes.Line(ax, ay, bx, by, width=shape.width, batch=batch, group=group)
+            return pyglet.shapes.Line(ax, ay, bx, by, thickness=shape.width, batch=batch, group=group)
         if isinstance(shape, Polygon):
             pts = [(p.x, p.y) for p in shape.points]
             return pyglet.shapes.Polygon(*pts, batch=batch, group=group)

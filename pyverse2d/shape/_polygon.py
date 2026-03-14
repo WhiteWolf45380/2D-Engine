@@ -159,3 +159,11 @@ class Polygon(Shape):
         """Vérifie la présence de points consécutifs identiques"""
         n = len(self._points)
         return any(self._points[i] == self._points[(i + 1) % n] for i in range(n))
+    
+    def bounding_box(self) -> tuple[float, float, float, float]:
+        """Renvoie le AABB de la shape"""
+        min_x = min(p.x for p in self._points)
+        min_y = min(p.y for p in self._points)
+        max_x = max(p.x for p in self._points)
+        max_y = max(p.y for p in self._points)
+        return min_x, min_y, max_x - min_x, max_y - min_y

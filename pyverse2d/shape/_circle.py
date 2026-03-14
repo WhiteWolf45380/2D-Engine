@@ -94,3 +94,7 @@ class Circle(Shape):
         if factor <= 0:
             raise ValueError("factor cannot be negative or null")
         self._radius *= factor
+
+    def bounding_box(self) -> tuple[float, float, float, float]:
+        """Renvoie le AABB de la shape"""
+        return -self.radius, -self._radius, self.perimeter, self.perimeter

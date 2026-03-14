@@ -115,3 +115,7 @@ class Capsule(Shape):
             raise ValueError("factor cannot be negative or null")
         self._radius *= factor
         self._height *= factor
+
+    def bounding_box(self) -> tuple[float, float, float, float]:
+        """Renvoie le AABB de la shape"""
+        return -self._radius, -self._radius, self.width, self.height

@@ -43,3 +43,6 @@ class Shape(ABC):
 
     @abstractmethod
     def scale(self, factor: float): ...
+
+    @abstractmethod
+    def bounding_box(self) -> tuple[float, float, float, float]: ...

@@ -2,6 +2,7 @@
 from ..._internal import expect, clamped
 from ...abc import Component
 from ...asset import Text
+from ...math import Vector
 
 from typing import Iterator
 from numbers import Real
@@ -9,35 +10,35 @@ from numbers import Real
 # ======================================== COMPONENT ========================================
 class TextRenderer(Component):
     """Composant gérant le rendu"""
-    __slots__ = ("_text", "_z", "_visible", "_alpha")
+    __slots__ = ("_text", "_opacity", "_z", "_visible")
     requires = ("Transform",)
 
     def __init__(
             self,
             text: Text = None,
-            offset: tuple[Real, Real] = (0.0, 0.0),
+            offset: Vector = (0.0, 0.0),
+            opacity: Real = 1.0,
             z: int = 0,
             visible: bool = True,
-            alpha: float = 1.0,
         ):
         """
         Args:
             text(Text, optional): texte du rendu
-            offset(tuple[Real, Real], optional): décalage par rapport au Transform
+            offset(Vector, optional): décalage par rapport au Transform
+            opacity(Real, optional): facteur d'opacité de l'image
             z(int, optional): ordre de rendu
             visible(bool, optional): visibilité
-            alpha(float, optional): facteur d'opacité de l'image
         """
         self._text: Text = expect(text, Text)
-        self._offset: tuple[Real, Real] = offset
+        self._offset: Vector = Vector(offset)
+        self._opacity: float = float(clamped(expect(opacity, Real)))
         self._z: int = expect(z, int)
         self._visible: bool = expect(visible, bool)
-        self._alpha: float = clamped(expect(alpha, float))
     
     # ======================================== CONVERSIONS ========================================
     def __repr__(self) -> str:
         """Renvoie une représentation du composant"""
-        return f"TextRenderer(text={self._text}, offset={self._offset}, z={self._z}, visible={self._visible}, alpha={self._alpha})"
+        return f"TextRenderer(text={self._text}, opacity={self._opacity}, z={self._z}, visible={self._visible})"
     
     def __iter__(self) -> Iterator:
         """Renvoie le composant dans un itérateur"""
@@ -47,13 +48,13 @@ class TextRenderer(Component):
         """Renvoie l'entier hashé du composant"""
         return hash(self.to_tuple())
     
-    def to_tuple(self) -> tuple[Text, tuple[Real, Real], int, float]:
+    def to_tuple(self) -> tuple[Text, Vector, float, int]:
         """Renvoie le composant sous forme de tuple"""
-        return (self._text, self._offset, self._z, self._alpha)
+        return (self._text, self._offset, self._opacity, self._z)
     
     def to_list(self) -> list:
         """Renvoie le composant sous forme de liste"""
-        return [self._text, self._offset, self._z, self._alpha]
+        return [self._text, self._offset, self._opacity, self._z]
     
     # ======================================== GETTERS ========================================
     @property
@@ -62,23 +63,30 @@ class TextRenderer(Component):
         return self._text
     
     @property
-    def offset(self) -> tuple[float, float]:
+    def offset(self) -> Vector:
         """Renvoie le décalage par rapport au Transform"""
         return self._offset
+    
+    @property
+    def opacity(self) -> float:
+        """Renvoie le facteur d'opacité"""
+        return self._opacity
     
     @property
     def z(self) -> int:
         """Renvoie l'ordre de rendu"""
         return self._z
     
-    def get_alpha(self) -> float:
-        """Renvoie le facteur d'opacité"""
-        return self._alpha
-    
     # ======================================== SETTERS ========================================
-    def set_alpha(self, value: Real):
+    @offset.setter
+    def offset(self, value: Vector):
+        """Fixe le décalage par rapport au Transform"""
+        self._offset = Vector(value)
+
+    @opacity.setter
+    def opacity(self, value: Real):
         """Fixe le facteur d'opacité"""
-        self._alpha = clamped(float(expect(value, Real)))
+        self._opacity = float(clamped(expect(value, Real)))
     
     # ======================================== PREDICATES ========================================
     def is_visible(self) -> bool:

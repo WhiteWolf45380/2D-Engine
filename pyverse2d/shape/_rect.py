@@ -108,3 +108,7 @@ class Rect(Shape):
             raise ValueError("factor cannot be negative or null")
         self._width *= factor
         self._height *= factor
+
+    def bounding_box(self) -> tuple[float, float, float, float]:
+        """Renvoie le AABB de la shape"""
+        return 0.0, 0.0, self._width, self._height

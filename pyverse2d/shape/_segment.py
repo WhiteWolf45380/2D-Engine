@@ -69,6 +69,11 @@ class Segment(Shape):
         return self._width
     
     @property
+    def half_width(self) -> float:
+        """Renvoie la demi-largeur de segment"""
+        return 0.5 * self._width
+    
+    @property
     def center(self) -> Point:
         """Renvoie le centre local du segment"""
         return self._A + 0.5 * self.vector
@@ -135,3 +140,7 @@ class Segment(Shape):
         self._A = C + factor * (self._A - C)
         self._B = C + factor * (self._B - C)
         self._width *= factor
+    
+    def bounding_box(self) -> tuple[float, float, float, float]:
+        """Renvoie le AABB de la shape"""
+        return min(self._A.x, self._B.x) - self.half_width, min(self._A.y, self._B.y) - self.half_width, abs(self._A.x - self._B.x) + self.half_width, abs(self._A.y - self._B.y) + self.half_width

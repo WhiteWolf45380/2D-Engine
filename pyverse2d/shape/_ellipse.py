@@ -115,3 +115,7 @@ class Ellipse(Shape):
             raise ValueError("factor cannot be negative or null")
         self._rx *= factor
         self._ry *= factor
+
+    def bounding_box(self) -> tuple[float, float, float, float]:
+        """Renvoie le AABB de la shape"""
+        return -self._rx, -self._ry, self.width, self.height
