@@ -16,30 +16,39 @@ from . import _circle, _rect, _capsule, _polygon, _segment, _ellipse  # noqa: F4
 from math import sqrt
 
 # ======================================== CONSTANTES ========================================
-_SLOP = 0.5
-_BAUMGARTE = 0.3
-_REST_THRESHOLD = 0.2
+_SLOP = 0.5         # pénétration ignorée (px)
+_BAUMGARTE = 0.2    # fraction de correction de position par frame
+_WARM_BIAS = 0.8    # fraction des impulsions précédentes ré-appliquées au warm start
+
+_MAX_CORRECTION = 8.0           # px/frame pour éviter les sauts à gros dt
+_EXTRA_ITER_THRESHOLD = 4.0
+_EXTRA_ITER = 4
+_MAX_MASS_RATIO = 0.95          # corps léger reçoit au plus 95% de la correction
 
 # ======================================== HELPERS ========================================
 def _shape_world_origin(tr: Transform, col: Collider) -> tuple[float, float]:
-    """
-    Retourne la position de l'origine locale de la shape dans l'espace monde
-    """
+    """Retourne la position de l'origine locale de la shape dans l'espace monde"""
     ox, oy, bw, bh = col.shape.bounding_box()
     x = tr.x + (-ox - tr.anchor.x * bw) + col.offset[0]
     y = tr.y + (-oy - tr.anchor.y * bh) + col.offset[1]
     return x, y
 
-
 def _bbox_center_world(tr: Transform, col: Collider) -> tuple[float, float, float, float]:
-    """Retourne le centre monde du bounding box et ses demi-dimensions"""
+    """Centre monde du bounding box + demi-dimensions"""
     ox, oy, bw, bh = col.shape.bounding_box()
-    # Origine monde + offset bbox
     wx = tr.x + (-ox - tr.anchor.x * bw) + col.offset[0]
     wy = tr.y + (-oy - tr.anchor.y * bh) + col.offset[1]
-    cx = wx + ox + bw * 0.5
-    cy = wy + oy + bh * 0.5
-    return cx, cy, bw * 0.5, bh * 0.5
+    return wx + ox + bw * 0.5, wy + oy + bh * 0.5, bw * 0.5, bh * 0.5
+
+# ======================================== CONTACT CACHE ========================================
+class _CachedContact:
+    """Impulsions accumulées + normale lissée pour une paire de contacts persistante"""
+    __slots__ = ("jn", "jt", "normal")
+
+    def __init__(self):
+        self.jn: float = 0.0
+        self.jt: float = 0.0
+        self.normal: tuple | None = None  # (nx, ny) de la frame précédente
 
 
 # ======================================== SYSTEM ========================================
@@ -49,9 +58,10 @@ class CollisionSystem(System):
     exclusive = True
     requires = (PhysicsSystem,)
 
-    def __init__(self, broadphase: bool = True, iterations: int = 3):
+    def __init__(self, broadphase: bool = True, iterations: int = 6):
         self._hash: _SpatialHash | None = _SpatialHash() if broadphase else None
         self._iterations: int = max(1, int(iterations))
+        self._cache: dict[tuple[int, int], _CachedContact] = {}     # {(id_a, id_b): _CachedContact}
 
     # ======================================== UPDATE ========================================
     def update(self, world: World, dt: float):
@@ -64,50 +74,114 @@ class CollisionSystem(System):
             pairs = self._hash.get_pairs()
         else:
             n = len(entities)
-            pairs = [
-                (entities[i], entities[j])
-                for i in range(n)
-                for j in range(i + 1, n)
-            ]
+            pairs = [(entities[i], entities[j]) for i in range(n) for j in range(i + 1, n)]
 
-        for _ in range(self._iterations):
-            for a, b in pairs:
-                col_a: Collider = a.get(Collider)
-                col_b: Collider = b.get(Collider)
+        # Détection + warm start
+        active_contacts: list[tuple] = []  # (a, b, contact_lissé, cached)
+        active_keys: set[tuple[int, int]] = set()
+        max_depth = 0.0
 
-                if not col_a.is_active() or not col_b.is_active():
-                    continue
-                if not col_a.collides_with(col_b):
-                    continue
+        for a, b in pairs:
+            col_a: Collider = a.get(Collider)
+            col_b: Collider = b.get(Collider)
 
-                contact = self._detect(col_a, a.get(Transform), col_b, b.get(Transform))
-                if contact is None:
-                    continue
-                if col_a.is_trigger() or col_b.is_trigger():
-                    continue
+            if not col_a.is_active() or not col_b.is_active():
+                continue
+            if not col_a.collides_with(col_b):
+                continue
 
-                self._resolve(a, b, contact)
+            contact = self._detect(col_a, a.get(Transform), col_b, b.get(Transform))
+            if contact is None:
+                continue
+            if col_a.is_trigger() or col_b.is_trigger():
+                continue
+
+            ia, ib = id(a), id(b)
+            key = (ia, ib) if ia < ib else (ib, ia)
+            active_keys.add(key)
+
+            if key not in self._cache:
+                self._cache[key] = _CachedContact()
+            cached = self._cache[key]
+
+            nx, ny = contact.normal.x, contact.normal.y
+            if cached.normal is not None:
+                pnx, pny = cached.normal
+                dot = nx * pnx + ny * pny
+                if dot > 0.95:
+                    mix = 0.7
+                    mnx = nx * mix + pnx * (1.0 - mix)
+                    mny = ny * mix + pny * (1.0 - mix)
+                    n_len = sqrt(mnx * mnx + mny * mny) or 1.0
+                    nx, ny = mnx / n_len, mny / n_len
+            cached.normal = (nx, ny)
+            contact = Contact(type(contact.normal)(nx, ny), contact.depth)
+
+            if contact.depth > max_depth:
+                max_depth = contact.depth
+
+            active_contacts.append((a, b, contact, cached))
+            self._warm_start(a, b, contact, cached)
+
+        # Purge des contacts disparus
+        for key in list(self._cache):
+            if key not in active_keys:
+                del self._cache[key]
+
+        iterations = self._iterations
+        if max_depth > _EXTRA_ITER_THRESHOLD:
+            iterations += _EXTRA_ITER
+
+        # Itérations du solveur
+        for _ in range(iterations):
+            for a, b, contact, cached in active_contacts:
+                self._resolve(a, b, contact, cached)
+
+    # ======================================== WARM START ========================================
+    def _warm_start(self, a, b, contact: Contact, cached: _CachedContact):
+        """Ré-applique une fraction des impulsions de la frame précédente"""
+        if not a.has(RigidBody) or not b.has(RigidBody):
+            return
+
+        rb_a: RigidBody = a.get(RigidBody)
+        rb_b: RigidBody = b.get(RigidBody)
+        static_a = rb_a.is_static()
+        static_b = rb_b.is_static()
+        if static_a and static_b:
+            return
+
+        nx, ny = contact.normal.x, contact.normal.y
+        tx, ty = -ny, nx
+
+        # Impulsions warm-startées
+        jn = cached.jn * _WARM_BIAS
+        jt = cached.jt * _WARM_BIAS
+
+        ix = nx * jn + tx * jt
+        iy = ny * jn + ty * jt
+
+        inv_a = 0.0 if static_a else 1.0 / rb_a.mass
+        inv_b = 0.0 if static_b else 1.0 / rb_b.mass
+
+        if not static_a:
+            rb_a.velocity = Vector(rb_a.velocity.x + ix * inv_a, rb_a.velocity.y + iy * inv_a)
+        if not static_b:
+            rb_b.velocity = Vector(rb_b.velocity.x - ix * inv_b, rb_b.velocity.y - iy * inv_b)
 
     # ======================================== DÉTECTION ========================================
-    def _detect(
-        self,
-        col_a: Collider, tr_a: Transform,
-        col_b: Collider, tr_b: Transform,
-    ) -> Contact | None:
+    def _detect(self, col_a: Collider, tr_a: Transform, col_b: Collider, tr_b: Transform) -> Contact | None:
         ax, ay = _shape_world_origin(tr_a, col_a)
         bx, by = _shape_world_origin(tr_b, col_b)
 
-        # Pre-reject AABB
         a_cx, a_cy, ahw, ahh = _bbox_center_world(tr_a, col_a)
         b_cx, b_cy, bhw, bhh = _bbox_center_world(tr_b, col_b)
         if abs(a_cx - b_cx) > ahw + bhw or abs(a_cy - b_cy) > ahh + bhh:
             return None
-
         return dispatch(col_a.shape, ax, ay, col_b.shape, bx, by)
 
     # ======================================== RÉSOLUTION ========================================
-    def _resolve(self, a, b, contact: Contact):
-        """Correction de position (Baumgarte+slop), impulsion, friction, annulation acc"""
+    def _resolve(self, a, b, contact: Contact, cached: _CachedContact):
+        """Solveur d'impulsion avec accumulation (Sequential Impulse Solver)"""
         has_rb_a = a.has(RigidBody)
         has_rb_b = b.has(RigidBody)
         rb_a: RigidBody | None = a.get(RigidBody) if has_rb_a else None
@@ -127,96 +201,96 @@ class CollisionSystem(System):
         tr_b: Transform = b.get(Transform)
         normal = contact.normal
         depth  = contact.depth
-
-        # Correction de position (Baumgarte avec slop)
-        if abs(vel_along) >= _REST_THRESHOLD:
-            correction = max(depth - _SLOP, 0.0) * _BAUMGARTE
-        else:
-            correction = 0.0
-
-        if correction > 0:
-            if static_a:
-                tr_b.x -= normal.x * correction
-                tr_b.y -= normal.y * correction
-            elif static_b:
-                tr_a.x += normal.x * correction
-                tr_a.y += normal.y * correction
-            else:
-                inv_a   = 1.0 / rb_a.mass
-                inv_b   = 1.0 / rb_b.mass
-                inv_sum = inv_a + inv_b
-                if inv_sum > 0:
-                    ra = inv_a / inv_sum
-                    rb = inv_b / inv_sum
-                    tr_a.x += normal.x * correction * ra
-                    tr_a.y += normal.y * correction * ra
-                    tr_b.x -= normal.x * correction * rb
-                    tr_b.y -= normal.y * correction * rb
+        nx, ny = normal.x, normal.y
+        tx, ty = -ny, nx
 
         if not has_rb_a or not has_rb_b:
+            correction = max(depth - _SLOP, 0.0) * _BAUMGARTE
+            if correction > 0:
+                if static_a:
+                    tr_b.x -= nx * correction
+                    tr_b.y -= ny * correction
+                else:
+                    tr_a.x += nx * correction
+                    tr_a.y += ny * correction
             return
 
-        rel_vx    = rb_a.velocity.x - rb_b.velocity.x
-        rel_vy    = rb_a.velocity.y - rb_b.velocity.y
-        vel_along = rel_vx * normal.x + rel_vy * normal.y
-
-        if vel_along > 0:
-            return
-
-        restitution = min(rb_a.restitution, rb_b.restitution)
-        inv_a   = 0.0 if static_a else 1.0 / rb_a.mass
-        inv_b   = 0.0 if static_b else 1.0 / rb_b.mass
+        inv_a = 0.0 if static_a else 1.0 / rb_a.mass
+        inv_b = 0.0 if static_b else 1.0 / rb_b.mass
         inv_sum = inv_a + inv_b
-
         if inv_sum == 0:
             return
 
-        # Impulsion normale
-        j  = -(1.0 + restitution) * vel_along / inv_sum
-        ix = normal.x * j
-        iy = normal.y * j
+        rel_vx = rb_a.velocity.x - rb_b.velocity.x
+        rel_vy = rb_a.velocity.y - rb_b.velocity.y
+        vel_along = rel_vx * nx + rel_vy * ny
+
+        # Correction de position (Baumgarte)
+        if vel_along < 0:
+            correction = min(
+                max(depth - _SLOP, 0.0) * _BAUMGARTE,
+                _MAX_CORRECTION,
+            )
+            if correction > 0:
+                if static_a:
+                    tr_b.x -= nx * correction
+                    tr_b.y -= ny * correction
+                elif static_b:
+                    tr_a.x += nx * correction
+                    tr_a.y += ny * correction
+                else:
+                    ra = inv_a / inv_sum
+                    rb = inv_b / inv_sum
+                    ra = min(ra, _MAX_MASS_RATIO)
+                    rb = min(rb, _MAX_MASS_RATIO)
+                    tr_a.x += nx * correction * ra
+                    tr_a.y += ny * correction * ra
+                    tr_b.x -= nx * correction * rb
+                    tr_b.y -= ny * correction * rb
+
+        # Impulsion normale avec accumulation
+        restitution = min(rb_a.restitution, rb_b.restitution)
+        bias = _BAUMGARTE * max(depth - _SLOP, 0.0)
+        dv_n = vel_along + bias
+
+        j_delta_n = -dv_n / inv_sum
+        if vel_along < -0.5:
+            j_delta_n = -(1.0 + restitution) * vel_along / inv_sum
+
+        # Clamp de l'accumulateur : jn ≥ 0
+        old_jn = cached.jn
+        cached.jn = max(0.0, old_jn + j_delta_n)
+        j_delta_n = cached.jn - old_jn
+
+        # Friction tangentielle avec accumulation
+        friction = (rb_a.friction + rb_b.friction) * 0.5
+        vel_tan = rel_vx * tx + rel_vy * ty
+        j_delta_t = -vel_tan / inv_sum
+
+        # Clamp de l'accumulateur : cône de Coulomb |jt| ≤ μ·jn
+        old_jt = cached.jt
+        max_jt = friction * cached.jn
+        cached.jt = max(-max_jt, min(max_jt, old_jt + j_delta_t))
+        j_delta_t = cached.jt - old_jt
+
+        # Application des deltas
+        ix = nx * j_delta_n + tx * j_delta_t
+        iy = ny * j_delta_n + ty * j_delta_t
 
         if not static_a:
             rb_a.velocity = Vector(rb_a.velocity.x + ix * inv_a, rb_a.velocity.y + iy * inv_a)
         if not static_b:
             rb_b.velocity = Vector(rb_b.velocity.x - ix * inv_b, rb_b.velocity.y - iy * inv_b)
 
-        # Friction tangentielle
-        friction = (rb_a.friction + rb_b.friction) * 0.5
-        tx = rel_vx - vel_along * normal.x
-        ty = rel_vy - vel_along * normal.y
-        t_len = sqrt(tx * tx + ty * ty) or 1e-8
-        tx /= t_len
-        ty /= t_len
-        jt = -(rel_vx * tx + rel_vy * ty) / inv_sum
-        jt = max(-abs(j) * friction, min(abs(j) * friction, jt))
-
-        if not static_a:
-            rb_a.velocity = Vector(
-                rb_a.velocity.x + tx * jt * inv_a,
-                rb_a.velocity.y + ty * jt * inv_a,
-            )
-        if not static_b:
-            rb_b.velocity = Vector(
-                rb_b.velocity.x - tx * jt * inv_b,
-                rb_b.velocity.y - ty * jt * inv_b,
-            )
-
         # Annulation de l'accélération dans la direction du contact
         if not static_a:
-            proj = rb_a._acceleration.x * normal.x + rb_a._acceleration.y * normal.y
+            proj = rb_a._acceleration.x * nx + rb_a._acceleration.y * ny
             if proj < 0:
-                rb_a._acceleration = Vector(
-                    rb_a._acceleration.x - proj * normal.x,
-                    rb_a._acceleration.y - proj * normal.y,
-                )
+                rb_a._acceleration = Vector(rb_a._acceleration.x - proj * nx, rb_a._acceleration.y - proj * ny)
         if not static_b:
-            proj = rb_b._acceleration.x * (-normal.x) + rb_b._acceleration.y * (-normal.y)
+            proj = rb_b._acceleration.x * (-nx) + rb_b._acceleration.y * (-ny)
             if proj < 0:
-                rb_b._acceleration = Vector(
-                    rb_b._acceleration.x + proj * normal.x,
-                    rb_b._acceleration.y + proj * normal.y,
-                )
+                rb_b._acceleration = Vector(rb_b._acceleration.x + proj * nx, rb_b._acceleration.y + proj * ny)
 
     # ======================================== PUBLIC ========================================
     def reset_calibration(self):
@@ -225,10 +299,14 @@ class CollisionSystem(System):
             self._hash._cell_size = None
             self._hash.clear_static()
 
+    def clear_cache(self):
+        """Vide le cache d'impulsions (changement de scène, etc.)"""
+        self._cache.clear()
 
 # ======================================== SPATIAL HASH ========================================
 class _SpatialHash:
     """Grille spatiale broadphase"""
+
     def __init__(self):
         self._cell_size: float | None = None
         self._dynamic_cells: dict[tuple[int, int], list] = {}
@@ -269,12 +347,10 @@ class _SpatialHash:
         ox, oy, bw, bh = col.shape.bounding_box()
         cs = self._cell_size
 
-        # Position monde de l'origine locale
         wx = tr.x + (-ox - tr.anchor.x * bw) + col.offset[0]
         wy = tr.y + (-oy - tr.anchor.y * bh) + col.offset[1]
 
         if rb is not None and not rb.is_static():
-            # Swept AABB
             pwx = rb.prev_x + (-ox - tr.anchor.x * bw) + col.offset[0]
             pwy = rb.prev_y + (-oy - tr.anchor.y * bh) + col.offset[1]
             min_x = min(wx + ox, pwx + ox)
