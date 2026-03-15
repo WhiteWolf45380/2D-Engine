@@ -158,8 +158,8 @@ class CollisionSystem(System):
     # ======================================== DÉTECTION ========================================
     def _detect(self, col_a: Collider, tr_a: Transform, col_b: Collider, tr_b: Transform) -> Contact | None:
         """Broadphase AABB puis dispatch narrowphase"""
-        cx_a, cy_a = world_center(col_a.shape, tr_a)
-        cx_b, cy_b = world_center(col_b.shape, tr_b)
+        cx_a, cy_a = world_center(col_a.shape, tr_a, col_a.offset)
+        cx_b, cy_b = world_center(col_b.shape, tr_b, col_b.offset)
 
         x_min_a, y_min_a, x_max_a, y_max_a = col_a.shape.bounding_box
         x_min_b, y_min_b, x_max_b, y_max_b = col_b.shape.bounding_box
@@ -172,14 +172,8 @@ class CollisionSystem(System):
             return None
 
         return dispatch(
-            col_a.shape,
-            cx_a + col_a.offset[0] * tr_a.scale,
-            cy_a + col_a.offset[1] * tr_a.scale,
-            tr_a.scale, tr_a.rotation,
-            col_b.shape,
-            cx_b + col_b.offset[0] * tr_b.scale,
-            cy_b + col_b.offset[1] * tr_b.scale,
-            tr_b.scale, tr_b.rotation,
+            col_a.shape, cx_a, cy_a, tr_a.scale, tr_a.rotation,
+            col_b.shape, cx_b, cy_b, tr_b.scale, tr_b.rotation,
         )
 
     # ======================================== RÉSOLUTION ========================================

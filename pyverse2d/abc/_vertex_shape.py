@@ -122,13 +122,13 @@ class VertexShape(Shape):
 
     def world_vertices(self, x: float = 0.0, y: float = 0.0, scale: float = 1.0, rotation: float = 0.0) -> NDArray[np.float32]:
         """
-        Renvoie les sommets en coordonnées monde avec cache à deux niveaux.
+        Renvoie les sommets en coordonnées monde
 
         Args:
-            x (float): coordonnée horizontale
-            y (float): coordonnée verticale
-            scale (float): facteur d'échelle
-            rotation (float): angle en radians
+            x(float, optional): coordonnée horizontale
+            y(float, optional): coordonnée verticale
+            scale(float, optional): facteur d'échelle
+            rotation(float, optional): angle en degrés
         """
         same_sr = self._cache_sr == (scale, rotation)
         same_pos = self._cache_pos == (x, y)
@@ -137,8 +137,9 @@ class VertexShape(Shape):
             return self._cache_world
 
         if not same_sr:
-            cos_r = math.cos(rotation)
-            sin_r = math.sin(rotation)
+            rad = math.radians(rotation)
+            cos_r = math.cos(rad)
+            sin_r = math.sin(rad)
             R = np.array([[cos_r, -sin_r], [sin_r, cos_r]], dtype=np.float32)
             self._cache_transformation = self._vertices * scale @ R
             self._cache_sr = (scale, rotation)

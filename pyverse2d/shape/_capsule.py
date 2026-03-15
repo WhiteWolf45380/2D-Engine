@@ -167,10 +167,11 @@ class Capsule(CompositeShape):
     def _compute_world(self, x: float, y: float, scale: float, rotation: float) -> tuple[float, float, float, float, float]:
         """Calcule les paramètres monde de la capsule"""
         half_spine = self.spine * 0.5 * scale
-        cos_r = math.cos(rotation)
-        sin_r = math.sin(rotation)
+        rad = math.radians(rotation)
+        cos_r = math.cos(rad)
+        sin_r = math.sin(rad)
         ax = x - sin_r * half_spine
-        ay = y - cos_r * half_spine
+        ay = y + cos_r * half_spine
         bx = x + sin_r * half_spine
-        by = y + cos_r * half_spine
+        by = y - cos_r * half_spine
         return (ax, ay, bx, by, self._radius * scale)

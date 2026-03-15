@@ -58,12 +58,14 @@ def dispatch(sa, ax, ay, scale_a, rot_a, sb, bx, by, scale_b, rot_b) -> Contact 
     return None
 
 # ======================================== WORLD CENTER ========================================
-def world_center(shape, tr) -> tuple[float, float]:
-    """Calcule le centre géométrique monde depuis transform et bounding_box"""
+def world_center(shape, tr, offset=(0.0, 0.0)) -> tuple[float, float]:
+    """Calcule le centre géométrique monde depuis transform, bounding_box et offset"""
     x_min, y_min, x_max, y_max = shape.bounding_box
     anchor_x = x_min + tr.anchor.x * (x_max - x_min)
     anchor_y = y_min + tr.anchor.y * (y_max - y_min)
-    return tr.x - anchor_x * tr.scale, tr.y - anchor_y * tr.scale
+    cx = tr.x - anchor_x * tr.scale + offset[0] * tr.scale
+    cy = tr.y - anchor_y * tr.scale + offset[1] * tr.scale
+    return cx, cy
 
 # ======================================== HELPERS GÉOMÉTRIQUES ========================================
 def closest_pt_on_seg(sx, sy, sdx, sdy, px, py) -> tuple[float, float]:
