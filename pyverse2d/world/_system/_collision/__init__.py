@@ -149,6 +149,10 @@ class CollisionSystem(System):
         tx, ty = -ny, nx
         jn = cached.jn * _WARM_BIAS
         jt = cached.jt * _WARM_BIAS
+
+        if abs(jn) < 1e-4 and abs(jt) < 1e-4:
+            return
+
         ix = nx * jn + tx * jt
         iy = ny * jn + ty * jt
         inv_a = 0.0 if static_a else 1.0 / rb_a.mass
@@ -190,9 +194,11 @@ class CollisionSystem(System):
             return
 
         if has_rb_a and rb_a.is_sleeping():
-            rb_a.wake()
+            if contact.depth > _SLOP * 2:
+                rb_a.wake()
         if has_rb_b and rb_b.is_sleeping():
-            rb_b.wake()
+            if contact.depth > _SLOP * 2:
+                rb_b.wake()
 
         tr_a: Transform = a.get(Transform)
         tr_b: Transform = b.get(Transform)
