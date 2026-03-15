@@ -7,12 +7,19 @@ from . import abc, math, shape, asset, world, map, ui, scene
 from ._rendering import Screen, Window
 from ._rendering._pipeline import Pipeline
 
+from ._flag import Key as key
+
+from ._managers import InputsManager
+
 import pyglet
 
 # ======================================== STATE ========================================
 _window: Window | None = None
 _pipeline: Pipeline | None = None
 _fps: int = 60
+
+# ======================================== MANAGERS ========================================
+inputs: InputsManager = InputsManager()
 
 # ======================================== SETTERS ========================================
 def set_window(window: Window):
@@ -28,6 +35,7 @@ def set_window(window: Window):
         raise TypeError("Expected a Window instance")
     _window = window
     _pipeline = Pipeline(window)
+    inputs.bind(window)
 
     @_window.native.event
     def on_draw():
@@ -54,6 +62,7 @@ def run(update: callable = None):
         scene.update(dt)
         if update is not None:
             update(dt)
+        inputs.flush()
 
     pyglet.clock.schedule_interval(_update, 1 / _fps)
     pyglet.app.run()
@@ -71,6 +80,10 @@ __all__ = [
     "map",
     "ui",
     "scene",
+
+    "key",
+
+    "inputs",
 
     "set_window",
     "set_fps",
