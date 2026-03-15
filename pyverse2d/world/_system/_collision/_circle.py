@@ -1,80 +1,64 @@
 # ======================================== IMPORTS ========================================
 from __future__ import annotations
 
+from math import sqrt
+
 from ....math import Vector
-from ....shape import Circle, Rect, Capsule, Ellipse, Segment, Polygon
+from ....shape import Circle, Ellipse, Capsule
 
 from ._registry import (
     Contact, register,
-    _circle_pts, _closest_pt_on_seg, _closest_pt_on_ellipse
+    closest_pt_on_seg, closest_pt_on_ellipse,
 )
-
-from math import sqrt
 
 # ======================================== Circle × Circle ========================================
 @register(Circle, Circle)
-def circle_circle(sa: Circle, ax, ay, sb: Circle, bx, by) -> Contact | None:
+def circle_circle(sa: Circle, ax, ay, scale_a, rot_a, sb: Circle, bx, by, scale_b, rot_b) -> Contact | None:
     """Cercle vs Cercle"""
+    _, _, ra = sa.world_transform(ax, ay, scale_a, rot_a)
+    _, _, rb = sb.world_transform(bx, by, scale_b, rot_b)
     dx = ax - bx
     dy = ay - by
     dist_sq = dx * dx + dy * dy
-    radii = sa.radius + sb.radius
+    radii = ra + rb
     if dist_sq >= radii * radii:
         return None
     dist = sqrt(dist_sq) or 1e-8
     return Contact(Vector(dx / dist, dy / dist), radii - dist)
 
-# ======================================== Circle × Rect ========================================
-@register(Circle, Rect)
-def circle_rect(sa: Circle, cx, cy, sb: Rect, rx, ry) -> Contact | None:
-    """Cercle vs Rect"""
-    half_w = sb.width * 0.5
-    half_h = sb.height * 0.5
-    rc_x = rx + half_w
-    rc_y = ry + half_h
-    dx = cx - rc_x
-    dy = cy - rc_y
-    near_x = rc_x + max(-half_w, min(half_w, dx))
-    near_y = rc_y + max(-half_h, min(half_h, dy))
-    ddx = cx - near_x
-    ddy = cy - near_y
-    dist_sq = ddx * ddx + ddy * ddy
-    if dist_sq >= sa.radius * sa.radius:
+# ======================================== Circle × Ellipse ========================================
+@register(Circle, Ellipse)
+def circle_ellipse(sa: Circle, ax, ay, scale_a, rot_a, sb: Ellipse, bx, by, scale_b, rot_b) -> Contact | None:
+    """Cercle vs Ellipse"""
+    _, _, r = sa.world_transform(ax, ay, scale_a, rot_a)
+    ex, ey, rx, ry, _ = sb.world_transform(bx, by, scale_b, rot_b)
+    lx = (ax - ex) / rx
+    ly = (ay - ey) / ry
+    inside = lx * lx + ly * ly <= 1.0
+    qx, qy = closest_pt_on_ellipse(ex, ey, rx, ry, ax, ay)
+    dx = ax - qx
+    dy = ay - qy
+    dist = sqrt(dx * dx + dy * dy) or 1e-8
+    if inside:
+        return Contact(Vector(dx / dist, dy / dist), r + dist)
+    if dist >= r:
         return None
-    dist = sqrt(dist_sq) or 1e-8
-    return Contact(Vector(ddx / dist, ddy / dist), sa.radius - dist)
-
+    return Contact(Vector(dx / dist, dy / dist), r - dist)
 
 # ======================================== Circle × Capsule ========================================
 @register(Circle, Capsule)
-def circle_capsule(sa: Circle, cx, cy, sb: Capsule, capx, capy) -> Contact | None:
+def circle_capsule(sa: Circle, ax, ay, scale_a, rot_a, sb: Capsule, bx, by, scale_b, rot_b) -> Contact | None:
     """Cercle vs Capsule"""
-    closest_x = capx
-    closest_y = max(capy, min(capy + sb.spine, cy))
-    return circle_circle(sa, cx, cy, Circle(sb.radius), closest_x, closest_y)
-
-
-# ======================================== Circle × Polygon ========================================
-@register(Circle, Polygon)
-def circle_polygon(sa: Circle, cx, cy, sb: Polygon, px, py) -> Contact | None:
-    """Cerlce vs Polygone"""
-    return _circle_pts(cx, cy, sa.radius, [(px + p.x, py + p.y) for p in sb.points])
-
-# ======================================== Circle × Ellipse ========================================
-@register(Circle, Ellipse)
-def circle_ellipse(sa: Circle, cx, cy, sb: Ellipse, ex, ey) -> Contact | None:
-    """Cercle vs Ellipse"""
-    lx = (cx - ex) / sb.rx
-    ly = (cy - ey) / sb.ry
-    inside = lx * lx + ly * ly <= 1.0
-
-    qx, qy = _closest_pt_on_ellipse(ex, ey, sb.rx, sb.ry, cx, cy)
-    dx = cx - qx
-    dy = cy - qy
-    dist = sqrt(dx * dx + dy * dy) or 1e-8
-
-    if inside:
-        return Contact(Vector(dx / dist, dy / dist), sa.radius + dist)
-    if dist >= sa.radius:
+    _, _, r = sa.world_transform(ax, ay, scale_a, rot_a)
+    cap_ax, cap_ay, cap_bx, cap_by, cap_r = sb.world_transform(bx, by, scale_b, rot_b)
+    spine_dx = cap_bx - cap_ax
+    spine_dy = cap_by - cap_ay
+    qx, qy = closest_pt_on_seg(cap_ax, cap_ay, spine_dx, spine_dy, ax, ay)
+    dx = ax - qx
+    dy = ay - qy
+    dist_sq = dx * dx + dy * dy
+    radii = r + cap_r
+    if dist_sq >= radii * radii:
         return None
-    return Contact(Vector(dx / dist, dy / dist), sa.radius - dist)
+    dist = sqrt(dist_sq) or 1e-8
+    return Contact(Vector(dx / dist, dy / dist), radii - dist)

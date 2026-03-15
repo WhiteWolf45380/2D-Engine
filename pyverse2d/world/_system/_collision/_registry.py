@@ -1,16 +1,17 @@
 # ======================================== IMPORTS ========================================
 from __future__ import annotations
 
-from math import sqrt, cos, sin, atan2, pi as _PI
-from typing import NamedTuple, Callable
+from typing import Callable, NamedTuple
+from math import cos, sin, atan2
 
 from ....math import Vector
-from ....shape import Circle, Rect, Capsule, Ellipse, Segment, Polygon
+from ....abc import VertexShape
 
 # ======================================== CONTACT ========================================
 class Contact(NamedTuple):
     """
     Résultat d'une détection de collision
+
     Convention : normal pointe de B vers A (pousse A hors de B)
     """
     normal: Vector
@@ -26,208 +27,46 @@ def register(type_a: type, type_b: type):
         return fn
     return decorator
 
-def dispatch(sa, ax: float, ay: float, sb, bx: float, by: float) -> Contact | None:
+def dispatch(sa, ax, ay, scale_a, rot_a, sb, bx, by, scale_b, rot_b) -> Contact | None:
     """Dispatche vers le bon handler de narrowphase"""
+    from ._narrowphase import sat_vertex_vertex, dispatch_vertex_primitive
+
+    a_is_vertex = isinstance(sa, VertexShape)
+    b_is_vertex = isinstance(sb, VertexShape)
+
+    if a_is_vertex and b_is_vertex:
+        return sat_vertex_vertex(sa, ax, ay, scale_a, rot_a, sb, bx, by, scale_b, rot_b)
+
+    if a_is_vertex:
+        return dispatch_vertex_primitive(sa, ax, ay, scale_a, rot_a, sb, bx, by, scale_b, rot_b)
+
+    if b_is_vertex:
+        c = dispatch_vertex_primitive(sb, bx, by, scale_b, rot_b, sa, ax, ay, scale_a, rot_a)
+        return Contact(Vector(-c.normal.x, -c.normal.y), c.depth) if c is not None else None
+
     key = (type(sa), type(sb))
     fn = _handlers.get(key)
     if fn is not None:
-        return fn(sa, ax, ay, sb, bx, by)
+        return fn(sa, ax, ay, scale_a, rot_a, sb, bx, by, scale_b, rot_b)
 
     key_flip = (type(sb), type(sa))
     fn = _handlers.get(key_flip)
     if fn is not None:
-        c = fn(sb, bx, by, sa, ax, ay)
-        return Contact(-c.normal, c.depth) if c is not None else None
+        c = fn(sb, bx, by, scale_b, rot_b, sa, ax, ay, scale_a, rot_a)
+        return Contact(Vector(-c.normal.x, -c.normal.y), c.depth) if c is not None else None
 
-    return _aabb_fallback(sa, ax, ay, sb, bx, by)
+    return None
 
-# ======================================== NARROWPHASE PARTAGÉE ========================================
-def _circle_pts(cx: float, cy: float, cr: float, pts: list) -> Contact | None:
-    """Cercle vs polygone convexe (SAT)"""
-    n = len(pts)
-    min_depth = float("inf")
-    best_nx, best_ny = 0.0, 1.0
-
-    # Axes des arêtes
-    for i in range(n):
-        x1, y1 = pts[i]
-        x2, y2 = pts[(i + 1) % n]
-        ex, ey = x2 - x1, y2 - y1
-        le = sqrt(ex * ex + ey * ey)
-        if le < 1e-10:
-            continue
-        nx, ny = -ey / le, ex / le
-
-        min_p = min(qx * nx + qy * ny for qx, qy in pts)
-        max_p = max(qx * nx + qy * ny for qx, qy in pts)
-        pc = cx * nx + cy * ny
-
-        ov = min(pc + cr, max_p) - max(pc - cr, min_p)
-        if ov <= 0:
-            return None
-        if ov < min_depth:
-            min_depth = ov
-            if pc < (min_p + max_p) * 0.5:
-                best_nx, best_ny = -nx, -ny
-            else:
-                best_nx, best_ny = nx, ny
-
-    # Axe du sommet le plus proche
-    near_x, near_y = min(pts, key=lambda p: (p[0] - cx) ** 2 + (p[1] - cy) ** 2)
-    ddx, ddy = cx - near_x, cy - near_y
-    le = sqrt(ddx * ddx + ddy * ddy) or 1e-8
-    nx, ny = ddx / le, ddy / le
-
-    min_p = min(qx * nx + qy * ny for qx, qy in pts)
-    max_p = max(qx * nx + qy * ny for qx, qy in pts)
-    pc = cx * nx + cy * ny
-
-    ov = min(pc + cr, max_p) - max(pc - cr, min_p)
-    if ov <= 0:
-        return None
-    if ov < min_depth:
-        min_depth = ov
-        best_nx, best_ny = nx, ny
-
-    return Contact(Vector(best_nx, best_ny), min_depth)
-
-
-def _sat(pts_a: list, pts_b: list) -> Contact | None:
-    """SAT pour deux polygones convexess."""
-    min_depth = float("inf")
-    best_nx, best_ny = 0.0, 1.0
-
-    for pts, other in ((pts_a, pts_b), (pts_b, pts_a)):
-        n = len(pts)
-        for i in range(n):
-            x1, y1 = pts[i]
-            x2, y2 = pts[(i + 1) % n]
-            ex, ey = x2 - x1, y2 - y1
-            le = sqrt(ex * ex + ey * ey)
-            if le < 1e-10:
-                continue
-            nx, ny = -ey / le, ex / le
-
-            min_a = min(px * nx + py * ny for px, py in pts)
-            max_a = max(px * nx + py * ny for px, py in pts)
-            min_b = min(px * nx + py * ny for px, py in other)
-            max_b = max(px * nx + py * ny for px, py in other)
-
-            ov = min(max_a, max_b) - max(min_a, min_b)
-            if ov <= 0:
-                return None
-            if ov < min_depth:
-                min_depth = ov
-                best_nx, best_ny = nx, ny
-
-    # Orienter de B vers A via centroïdes
-    ca_x = sum(p[0] for p in pts_a) / len(pts_a)
-    ca_y = sum(p[1] for p in pts_a) / len(pts_a)
-    cb_x = sum(p[0] for p in pts_b) / len(pts_b)
-    cb_y = sum(p[1] for p in pts_b) / len(pts_b)
-    if (ca_x - cb_x) * best_nx + (ca_y - cb_y) * best_ny < 0:
-        best_nx, best_ny = -best_nx, -best_ny
-
-    return Contact(Vector(best_nx, best_ny), min_depth)
-
-
-def _ellipse_vs_convex_pts(ex: float, ey: float, rx: float, ry: float, pts: list) -> Contact | None:
-    """Ellipse vs polygone convexe"""
-    n = len(pts)
-    min_ov = float("inf")
-    best_nx, best_ny = 0.0, 1.0
-
-    # Centroïde du polygone
-    pg_cx = sum(p[0] for p in pts) / n
-    pg_cy = sum(p[1] for p in pts) / n
-
-    def _test_axis(nx: float, ny: float) -> bool:
-        nonlocal min_ov, best_nx, best_ny
-        le = sqrt(nx * nx + ny * ny)
-        if le < 1e-10:
-            return True
-        nx /= le; ny /= le
-        h = sqrt(rx * rx * nx * nx + ry * ry * ny * ny)
-        ec = ex * nx + ey * ny
-        projs = [px * nx + py * ny for px, py in pts]
-        min_p, max_p = min(projs), max(projs)
-        ov = min(ec + h, max_p) - max(ec - h, min_p)
-        if ov <= 0:
-            return False
-        if ov < min_ov:
-            min_ov = ov
-            mid = (min_p + max_p) * 0.5
-            if abs(ec - mid) > 1e-6:
-                if ec > mid:
-                    best_nx, best_ny = nx, ny
-                else:
-                    best_nx, best_ny = -nx, -ny
-            else:
-                dx = ex - pg_cx; dy = ey - pg_cy
-                if dx * nx + dy * ny > 0:
-                    best_nx, best_ny = nx, ny
-                else:
-                    best_nx, best_ny = -nx, -ny
-        return True
-
-    # Axes des arêtes du polygone
-    for i in range(n):
-        x1, y1 = pts[i]
-        x2, y2 = pts[(i + 1) % n]
-        if not _test_axis(-(y2 - y1), x2 - x1):
-            return None
-
-    min_d2 = float("inf")
-    cpx, cpy = pts[0]
-    for i in range(n):
-        x1, y1 = pts[i]
-        x2, y2 = pts[(i + 1) % n]
-        px, py = _closest_pt_on_seg(x1, y1, x2 - x1, y2 - y1, ex, ey)
-        d2 = (px - ex) ** 2 + (py - ey) ** 2
-        if d2 < min_d2:
-            min_d2 = d2
-            cpx, cpy = px, py
-    if not _test_axis(cpx - ex, cpy - ey):
-        return None
-
-    return Contact(Vector(best_nx, best_ny), min_ov)
+# ======================================== WORLD CENTER ========================================
+def world_center(shape, tr) -> tuple[float, float]:
+    """Calcule le centre géométrique monde depuis transform et bounding_box"""
+    x_min, y_min, x_max, y_max = shape.bounding_box
+    anchor_x = x_min + tr.anchor.x * (x_max - x_min)
+    anchor_y = y_min + tr.anchor.y * (y_max - y_min)
+    return tr.x - anchor_x * tr.scale, tr.y - anchor_y * tr.scale
 
 # ======================================== HELPERS GÉOMÉTRIQUES ========================================
-def _rect_corners(x: float, y: float, w: float, h: float) -> list:
-    """Renvoie les 4 sommets d'un Rect en coordonnées monde"""
-    return [(x, y), (x + w, y), (x + w, y + h), (x, y + h)]
-
-
-def _seg_corners(x: float, y: float, seg: Segment) -> list:
-    """Renvoie les 4 sommets OBB d'un Segment en coordonnées monde"""
-    wx_a = x + seg.A.x
-    wy_a = y + seg.A.y
-    wx_b = x + seg.B.x
-    wy_b = y + seg.B.y
-    dx = wx_b - wx_a
-    dy = wy_b - wy_a
-    le = sqrt(dx * dx + dy * dy)
-    if le < 1e-10:
-        hw = seg.width * 0.5
-        return [
-            (wx_a - hw, wy_a - hw), (wx_a + hw, wy_a - hw),
-            (wx_a + hw, wy_a + hw), (wx_a - hw, wy_a + hw),
-        ]
-    ux, uy = dx / le, dy / le
-    nx, ny = -uy, ux
-    hw = seg.width * 0.5
-    return [
-        (wx_a + nx * hw, wy_a + ny * hw),
-        (wx_b + nx * hw, wy_b + ny * hw),
-        (wx_b - nx * hw, wy_b - ny * hw),
-        (wx_a - nx * hw, wy_a - ny * hw),
-    ]
-
-
-def _closest_pt_on_seg(
-    sx: float, sy: float, sdx: float, sdy: float,
-    px: float, py: float,
-) -> tuple[float, float]:
+def closest_pt_on_seg(sx, sy, sdx, sdy, px, py) -> tuple[float, float]:
     """Point le plus proche de (px,py) sur le segment (sx,sy)→(sx+sdx,sy+sdy)"""
     len_sq = sdx * sdx + sdy * sdy
     if len_sq < 1e-10:
@@ -235,12 +74,8 @@ def _closest_pt_on_seg(
     t = max(0.0, min(1.0, ((px - sx) * sdx + (py - sy) * sdy) / len_sq))
     return sx + t * sdx, sy + t * sdy
 
-
-def _closest_pt_seg_to_seg(
-    ax: float, ay: float, adx: float, ady: float,
-    bx: float, by: float, bdx: float, bdy: float,
-) -> tuple[float, float]:
-    """Algorithme Ericson"""
+def closest_pt_seg_to_seg(ax, ay, adx, ady, bx, by, bdx, bdy) -> tuple[float, float]:
+    """Point le plus proche sur le segment A du segment B"""
     a_len_sq = adx * adx + ady * ady
     b_len_sq = bdx * bdx + bdy * bdy
     rx, ry = ax - bx, ay - by
@@ -251,36 +86,24 @@ def _closest_pt_seg_to_seg(
         return ax, ay
     if a_len_sq < 1e-10:
         s = max(0.0, min(1.0, e / b_len_sq))
-    else:
-        c = rx * adx + ry * ady
-        if b_len_sq < 1e-10:
-            s = 0.0
-            t = max(0.0, min(1.0, -c / a_len_sq))
-            return ax + t * adx, ay + t * ady
-        else:
-            denom = a_len_sq * b_len_sq - f * f
-            t = max(0.0, min(1.0, (f * e - c * b_len_sq) / denom)) if abs(denom) > 1e-10 else 0.0
-            s = max(0.0, min(1.0, (f * t + e) / b_len_sq))
-            t = max(0.0, min(1.0, (f * s - c) / a_len_sq))
-            return ax + t * adx, ay + t * ady
+        return bx + s * bdx, by + s * bdy
+    c = rx * adx + ry * ady
+    if b_len_sq < 1e-10:
+        t = max(0.0, min(1.0, -c / a_len_sq))
+        return ax + t * adx, ay + t * ady
+    denom = a_len_sq * b_len_sq - f * f
+    t = max(0.0, min(1.0, (f * e - c * b_len_sq) / denom)) if abs(denom) > 1e-10 else 0.0
+    s = max(0.0, min(1.0, (f * t + e) / b_len_sq))
+    t = max(0.0, min(1.0, (f * s - c) / a_len_sq))
+    return ax + t * adx, ay + t * ady
 
-    return bx + s * bdx, by + s * bdy
-
-
-def _closest_pt_on_ellipse(
-    cx: float, cy: float, rx: float, ry: float,
-    px: float, py: float,
-) -> tuple[float, float]:
-    """
-    Point le plus proche sur l'ellipse (cx,cy,rx,ry) du point (px,py).
-    Newton-Raphson — converge en ≤ 25 itérations.
-    """
+def closest_pt_on_ellipse(cx, cy, rx, ry, px, py) -> tuple[float, float]:
+    """Point le plus proche sur l'ellipse (cx,cy,rx,ry) du point (px,py)"""
     lx = px - cx
     ly = py - cy
     if abs(lx) < 1e-12 and abs(ly) < 1e-12:
         return cx + rx, cy
     t = atan2(ly * rx, lx * ry)
-
     for _ in range(25):
         ct, st = cos(t), sin(t)
         ex2 = rx * ct
@@ -294,13 +117,11 @@ def _closest_pt_on_ellipse(
         t -= delta
         if abs(delta) < 1e-9:
             break
-
     ct, st = cos(t), sin(t)
     return cx + rx * ct, cy + ry * st
 
-
-def _point_in_convex_poly(px: float, py: float, pts: list) -> bool:
-    """Vérifie si (px,py) est à l'intérieur d'un polygone convexe (agnostique au sens)"""
+def point_in_convex_poly(px: float, py: float, pts: list) -> bool:
+    """Vérifie si (px,py) est à l'intérieur d'un polygone convexe"""
     n = len(pts)
     sign = None
     for i in range(n):
@@ -315,54 +136,3 @@ def _point_in_convex_poly(px: float, py: float, pts: list) -> bool:
         elif sign != s:
             return False
     return sign is not None
-
-
-def _half_extents(shape) -> tuple[float, float]:
-    """Demi-dimensions AABB d'une shape"""
-    if isinstance(shape, Circle):
-        return shape.radius, shape.radius
-    if isinstance(shape, Rect):
-        return shape.width * 0.5, shape.height * 0.5
-    if isinstance(shape, Capsule):
-        return shape.radius, (shape.spine + shape.radius * 2) * 0.5
-    if isinstance(shape, Ellipse):
-        return shape.rx, shape.ry
-    if isinstance(shape, Polygon):
-        xs = [p.x for p in shape.points]
-        ys = [p.y for p in shape.points]
-        return (max(xs) - min(xs)) * 0.5, (max(ys) - min(ys)) * 0.5
-    if isinstance(shape, Segment):
-        dx = abs(shape.B.x - shape.A.x)
-        dy = abs(shape.B.y - shape.A.y)
-        return dx * 0.5 + shape.width * 0.5, dy * 0.5 + shape.width * 0.5
-    return 32.0, 32.0
-
-
-def _aabb_fallback(sa, ax: float, ay: float, sb, bx: float, by: float) -> Contact | None:
-    """Fallback AABB pour les paires sans narrowphase dédiée"""
-    def _bounds(shape, x, y):
-        if isinstance(shape, Ellipse):
-            return x - shape.rx, y - shape.ry, shape.rx * 2, shape.ry * 2
-        if isinstance(shape, Segment):
-            dx = abs(shape.B.x - shape.A.x)
-            dy = abs(shape.B.y - shape.A.y)
-            return x, y, dx + shape.width * 2, dy + shape.width * 2
-        if isinstance(shape, Capsule):
-            hw, hh = _half_extents(shape)
-            return x - hw, y - hh, hw * 2, hh * 2
-        return x, y, 1.0, 1.0
-
-    ax2, ay2, aw, ah = _bounds(sa, ax, ay)
-    bx2, by2, bw, bh = _bounds(sb, bx, by)
-
-    # Rect vs Rect inline
-    a_cx, a_cy = ax2 + aw * 0.5, ay2 + ah * 0.5
-    b_cx, b_cy = bx2 + bw * 0.5, by2 + bh * 0.5
-    dx, dy = a_cx - b_cx, a_cy - b_cy
-    ox = (aw + bw) * 0.5 - abs(dx)
-    oy = (ah + bh) * 0.5 - abs(dy)
-    if ox <= 0 or oy <= 0:
-        return None
-    if ox < oy:
-        return Contact(Vector(1.0 if dx > 0 else -1.0, 0.0), ox)
-    return Contact(Vector(0.0, 1.0 if dy > 0 else -1.0), oy)
