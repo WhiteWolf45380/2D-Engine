@@ -44,12 +44,3 @@ def rect_polygon(sa: Rect, ax, ay, sb: Polygon, bx, by) -> Contact | None:
         _rect_corners(ax, ay, sa.width, sa.height),
         [(bx + p.x, by + p.y) for p in sb.points],
     )
-
-# ======================================== Rect × Segment ========================================
-@register(Rect, Segment)
-def rect_segment(sa: Rect, ax, ay, sb: Segment, bx, by) -> Contact | None:
-    """Rect vs Segment — SAT complet sur les OBB des deux shapes"""
-    return _sat(
-        _rect_corners(ax, ay, sa.width, sa.height),
-        _seg_corners(bx, by, sb),
-    )

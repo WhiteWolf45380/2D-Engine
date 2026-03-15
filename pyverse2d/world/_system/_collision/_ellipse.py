@@ -150,27 +150,3 @@ def ellipse_polygon(sa: Ellipse, ax, ay, sb: Polygon, bx, by) -> Contact | None:
         ax, ay, sa.rx, sa.ry,
         [(bx + p.x, by + p.y) for p in sb.points],
     )
-
-
-# ======================================== Ellipse × Segment ========================================
-@register(Ellipse, Segment)
-def ellipse_segment(sa: Ellipse, ax, ay, sb: Segment, bx, by) -> Contact | None:
-    """Ellipse vs Segment"""
-    obb = _seg_corners(bx, by, sb)
-    c = _ellipse_vs_convex_pts(ax, ay, sa.rx, sa.ry, obb)
-    if c is not None:
-        return c
-
-    # Fallback ligne centrale si l'OBB plat a raté
-    seg_ax = bx + sb.A.x
-    seg_ay = by + sb.A.y
-    seg_bx = bx + sb.B.x
-    seg_by = by + sb.B.y
-    cpx, cpy = _closest_pt_on_seg(seg_ax, seg_ay, seg_bx - seg_ax, seg_by - seg_ay, ax, ay)
-    lx, ly = (cpx - ax) / sa.rx, (cpy - ay) / sa.ry
-    if lx * lx + ly * ly >= 1.0:
-        return None
-    qx, qy = _closest_pt_on_ellipse(ax, ay, sa.rx, sa.ry, cpx, cpy)
-    ddx, ddy = qx - cpx, qy - cpy
-    dist = sqrt(ddx * ddx + ddy * ddy) or 1e-8
-    return Contact(Vector(ddx / dist, ddy / dist), dist)

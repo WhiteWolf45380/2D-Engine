@@ -78,23 +78,3 @@ def circle_ellipse(sa: Circle, cx, cy, sb: Ellipse, ex, ey) -> Contact | None:
     if dist >= sa.radius:
         return None
     return Contact(Vector(dx / dist, dy / dist), sa.radius - dist)
-
-
-# ======================================== Circle × Segment ========================================
-@register(Circle, Segment)
-def circle_segment(sa: Circle, cx, cy, sb: Segment, sx, sy) -> Contact | None:
-    """Cerlce vs Segment"""
-    ax2 = sx + sb.A.x
-    ay2 = sy + sb.A.y
-    bx2 = sx + sb.B.x
-    by2 = sy + sb.B.y
-    dx, dy = bx2 - ax2, by2 - ay2
-    cpx, cpy = _closest_pt_on_seg(ax2, ay2, dx, dy, cx, cy)
-    half_w = sb.width * 0.5
-    total_r = sa.radius + half_w
-    ddx, ddy = cx - cpx, cy - cpy
-    dist_sq = ddx * ddx + ddy * ddy
-    if dist_sq >= total_r * total_r:
-        return None
-    dist = sqrt(dist_sq) or 1e-8
-    return Contact(Vector(ddx / dist, ddy / dist), total_r - dist)

@@ -2,10 +2,9 @@
 from __future__ import annotations
 
 from ..._flag import UpdatePhase
-from ...abc import System, Shape
-from ...shape import Capsule, Circle, Rect, Ellipse, Segment, Polygon
+from ...abc import System, Shape, VertexShape, PrimitiveShape, CompositeShape
+from ...shape import Capsule, Circle, Ellipse
 from ...asset import Text, Font, Color
-
 from .._world import World, Entity
 from .._component import Transform, SpriteRenderer, ShapeRenderer, TextRenderer
 
@@ -16,6 +15,7 @@ import pyglet.text
 import pyglet.image
 import pyglet.gl
 from pyglet.graphics import Batch, Group
+
 from typing import TYPE_CHECKING
 import math
 
@@ -27,21 +27,24 @@ _ORDER_SHAPE = 0
 _ORDER_SPRITE = 1
 _ORDER_LABEL = 2
 
+_CIRCLE_BORDER_SEGMENTS = 64
+_ELLIPSE_BORDER_SEGMENTS = 64
+_CAPSULE_BORDER_SEGMENTS = 32
+
 # ======================================== SYSTEM ========================================
 class RenderSystem(System):
-    """Système gérant le rendu des entités avec cache"""
+    """Système gérant le rendu des entités"""
     phase = UpdatePhase.LATE
     exclusive = True
 
     def __init__(self):
-        self._sprites: dict[str, pyglet.sprite.Sprite] = {}
-        self._shapes: dict[str, _ShapeObject] = {}
-        self._labels: dict[str, pyglet.text.Label] = {}
-        self._image_cache: dict[str, pyglet.image.AbstractImage] = {}
+        self._sprites = {}
+        self._shapes = {}
+        self._labels = {}
+        self._image_cache = {}
 
     # ======================================== UPDATE ========================================
-    def update(self, world: World, dt: float):
-        ...
+    def update(self, world: World, dt: float): ...
 
     # ======================================== DRAW ========================================
     def draw(self, world: World, pipeline: Pipeline):
@@ -53,8 +56,8 @@ class RenderSystem(System):
             pipeline(Pipeline): pipeline active
         """
         active_sprites = set()
-        active_shapes  = set()
-        active_labels  = set()
+        active_shapes = set()
+        active_labels = set()
 
         for entity in world.query(Transform):
             eid = entity.id
@@ -111,7 +114,7 @@ class RenderSystem(System):
         sprite.y = tr.y + sr.offset[1] * tr.scale
         sprite.rotation = tr.rotation
         sprite.scale = tr.scale * sr.image.scale
-        sprite.color = sr.tint
+        sprite.color = sr.tint.rgba8
         sprite.opacity = int(sr.opacity * 255)
 
         if sprite.image.anchor_x != tr.anchor.x * raw.width or sprite.image.anchor_y != tr.anchor.y * raw.height:
@@ -124,7 +127,7 @@ class RenderSystem(System):
 
     # ======================================== SYNC SHAPE ========================================
     def _sync_shape(self, entity: Entity, tr: Transform, pipeline: Pipeline):
-        """Crée ou met à jour la Shape pyglet de l'entité"""
+        """Crée ou met à jour le renderer de shape de l'entité"""
         sr: ShapeRenderer = entity.get(ShapeRenderer)
         eid = entity.id
 
@@ -133,24 +136,17 @@ class RenderSystem(System):
                 self._shapes[eid].visible = False
             return
 
-        scale = tr.scale
-        bx, by, bw, bh = sr.shape.bounding_box()
-        local_x = (-bx - tr.anchor.x * bw + sr.offset[0]) * scale
-        local_y = (-by - tr.anchor.y * bh + sr.offset[1]) * scale
-        x = tr.x + local_x
-        y = tr.y + local_y
+        cx, cy = _world_center(sr.shape, tr, sr.offset)
 
         if eid not in self._shapes:
             group = pipeline.get_group(sr.z * 3 + _ORDER_SHAPE)
-            obj = _ShapeObject(sr.shape, x, y, scale, tr.rotation, sr, pipeline.batch, group)
-            self._shapes[eid] = obj
+            self._shapes[eid] = _ShapeRenderer(sr.shape, cx, cy, tr.scale, tr.rotation, sr, pipeline.batch, group)
 
-        obj = self._shapes[eid]
-        obj.update(x, y, scale, tr.rotation, sr)
+        self._shapes[eid].update(cx, cy, tr.scale, tr.rotation, sr)
 
-    # ======================================== SYNC LABEL ========================================
-    def _sync_text(self, entity: Entity, tr: Transform, pipeline: Pipeline) -> None:
-        """Crée ou met à jour le Label pyglet de l'entité."""
+    # ======================================== SYNC TEXT ========================================
+    def _sync_text(self, entity: Entity, tr: Transform, pipeline: Pipeline):
+        """Crée ou met à jour le Label pyglet de l'entité"""
         tc: TextRenderer = entity.get(TextRenderer)
         eid = entity.id
 
@@ -162,31 +158,29 @@ class RenderSystem(System):
         t: Text = tc.text
         f: Font = t.font
 
-        # Création du label
         if eid not in self._labels:
             group = pipeline.get_group(tc.z * 3 + _ORDER_LABEL)
             self._labels[eid] = pyglet.text.Label(
                 t.text,
-                font_name=f.name,
-                font_size=int(f.size * tr.scale),
-                rotation=tr.rotation,
-                weight=tc.weight,
-                italic=tc.italic,
-                color=_final_color(tc),
-                multiline=tc.multiline or tc.width is not None,
-                align=tc.align,
-                width=tc.width,
-                anchor_x="left",
-                anchor_y="bottom",
-                batch=pipeline.batch,
-                group=group,
+                font_name = f.name,
+                font_size = int(f.size * tr.scale),
+                rotation = tr.rotation,
+                weight = tc.weight,
+                italic = tc.italic,
+                color = tc.color.rgba8,
+                multiline = tc.multiline or tc.width is not None,
+                align = tc.align,
+                width = tc.width,
+                anchor_x = "left",
+                anchor_y = "bottom",
+                batch = pipeline.batch,
+                group = group,
             )
             label = self._labels[eid]
-            label.x = tr.x - (tr.anchor[0] * label.content_width  + tc.offset[0]) * tr.scale
+            label.x = tr.x - (tr.anchor[0] * label.content_width + tc.offset[0]) * tr.scale
             label.y = tr.y - (tr.anchor[1] * label.content_height + tc.offset[1]) * tr.scale
             return
 
-        # Mise à jour
         label = self._labels[eid]
         label.visible = True
         label.text = t.text
@@ -197,7 +191,7 @@ class RenderSystem(System):
         label.font_name = f.name
         label.weight = tc.weight
         label.italic = tc.italic
-        label.color = _final_color(tc)
+        label.color = tc.color.rgba8
         label.width = tc.width
         label.multiline = tc.multiline or tc.width is not None
         label.align = tc.align
@@ -215,300 +209,366 @@ class RenderSystem(System):
             print(f"[RenderSystem] Cannot load image: {path}")
             return None
 
-
-# ======================================== SHAPE OBJECT ========================================
-class _ShapeObject:
+# ======================================== SHAPE RENDERER ========================================
+class _ShapeRenderer:
     """Wrapper unifié pour le rendu d'une shape géométrique"""
-    def __init__(self, shape: Shape, x: float, y: float, scale: float, rotation: float, sr: ShapeRenderer, batch: pyglet.graphics.Batch, group: pyglet.graphics.Group):
+
+    def __init__(self, shape: Shape, cx: float, cy: float, scale: float, rotation: float, sr: ShapeRenderer, batch: Batch, group: Group):
         self._shape = shape
         self._fill = None
         self._border = None
         self._batch = batch
         self._group = group
-        self._poly_scale = None
-        self._build(x, y, scale, rotation, sr)
+        self._build(cx, cy, scale, rotation, sr)
 
-    def _build(self, x: float, y: float, scale: float, rotation: float, sr: ShapeRenderer):
-        """Instancie fill et/ou border selon la config du ShapeRenderer"""
-        shape = self._shape
-
-        # Remplissage
+    def _build(self, cx: float, cy: float, scale: float, rotation: float, sr: ShapeRenderer):
+        """Instancie fill et border selon la config du ShapeRenderer"""
         if sr.filling:
-            color = sr.filling_color.rgba8
-            s = scale
-            if isinstance(shape, Capsule):
-                self._fill = _CapsuleShape(x, y, shape.radius * s, shape.spine * s, color=color, batch=self._batch, group=self._group)
-            elif isinstance(shape, Circle):
-                self._fill = pyglet.shapes.Circle(x, y, shape.radius * s, color=color, batch=self._batch, group=self._group)
-                self._fill.rotation = rotation
-            elif isinstance(shape, Rect):
-                self._fill = pyglet.shapes.Rectangle(x, y, shape.width * s, shape.height * s, color=color, batch=self._batch, group=self._group)
-                self._fill.rotation = rotation
-            elif isinstance(shape, Ellipse):
-                self._fill = pyglet.shapes.Ellipse(x, y, shape.rx * s, shape.ry * s, color=color, batch=self._batch, group=self._group)
-                self._fill.rotation = rotation
-            elif isinstance(shape, Segment):
-                ax, ay = x + shape.A.x * s, y + shape.A.y * s
-                bx, by = x + shape.B.x * s, y + shape.B.y * s
-                cx, cy = (ax + bx) / 2, (ay + by) / 2
-                ax, ay = _rotate(ax, ay, cx, cy, rotation)
-                bx, by = _rotate(bx, by, cx, cy, rotation)
-                self._fill = pyglet.shapes.Line(ax, ay, bx, by, thickness=shape.width * s, color=color, batch=self._batch, group=self._group)
-            elif isinstance(shape, Polygon):
-                pts = [_rotate(x + p.x * s, y + p.y * s, x, y, rotation) for p in shape.points]
-                self._fill = pyglet.shapes.Polygon(*pts, color=color, batch=self._batch, group=self._group)
-                self._poly_scale = s
+            self._fill = _build_fill(self._shape, cx, cy, scale, rotation, sr.filling_color, sr.opacity, self._batch, self._group)
 
-        # Bordure
         if sr.border_width > 0:
-            self._border = _BorderObject(shape, x, y, scale, rotation, sr.border_color.rgba8, sr.border_width, self._batch, self._group)
+            self._border = _BorderRenderer(self._shape, cx, cy, scale, rotation, sr.border_color, sr.border_width, sr.opacity, self._batch, self._group)
 
-    def update(self, x: float, y: float, scale: float, rotation: float, sr: ShapeRenderer):
+    def update(self, cx: float, cy: float, scale: float, rotation: float, sr: ShapeRenderer):
         """Met à jour position, scale, couleurs et visibilité"""
-        shape = self._shape
-        opacity = int(round(255 * sr.opacity))
-
-        # Remplissage
         if sr.filling and self._fill is None:
-            self._build(x, y, scale, rotation, sr)
-            return
-        if not sr.filling and self._fill is not None:
+            self._fill = _build_fill(self._shape, cx, cy, scale, rotation, sr.filling_color, sr.opacity, self._batch, self._group)
+        elif not sr.filling and self._fill is not None:
             self._fill.delete()
             self._fill = None
 
         if self._fill is not None:
             self._fill.visible = True
-            self._fill.opacity = opacity
-            self._fill.color = sr.filling_color.rgba8
-            if isinstance(shape, Polygon):
-                if self._poly_scale != scale:
-                    self._fill.delete()
-                    pts = [_rotate(x + p.x * scale, y + p.y * scale, x, y, rotation) for p in shape.points]
-                    self._fill = pyglet.shapes.Polygon(*pts, color=sr.filling_color.rgb8, batch=self._batch, group=self._group)
-                    self._fill.opacity = opacity
-                    self._poly_scale = scale
-                else:
-                    ox = self._fill.x - x
-                    oy = self._fill.y - y
-                    if ox != 0.0 or oy != 0.0:
-                        self._fill.delete()
-                        pts = [_rotate(x + p.x * scale, y + p.y * scale, x, y, rotation) for p in shape.points]
-                        self._fill = pyglet.shapes.Polygon(*pts, color=sr.filling_color.rgb8, batch=self._batch, group=self._group)
-                        self._fill.opacity = opacity
-            else:
-                _apply_fill_position(self._fill, shape, x, y, scale, rotation)
+            _update_fill(self._fill, self._shape, cx, cy, scale, rotation, sr.filling_color, sr.opacity)
 
-        # Bordure
         if sr.border_width > 0 and self._border is None:
-            self._border = _BorderObject(shape, x, y, scale, rotation, sr.border_color.rgba8, sr.border_width, self._batch, self._group)
-        if sr.border_width == 0 and self._border is not None:
+            self._border = _BorderRenderer(self._shape, cx, cy, scale, rotation, sr.border_color, sr.border_width, sr.opacity, self._batch, self._group)
+        elif sr.border_width == 0 and self._border is not None:
             self._border.delete()
             self._border = None
 
         if self._border is not None:
-            self._border.update(shape, x, y, scale, rotation, sr.border_color.rgba8, sr.border_width, sr.opacity)
+            self._border.update(self._shape, cx, cy, scale, rotation, sr.border_color, sr.border_width, sr.opacity)
 
     @property
-    def visible(self):
+    def visible(self) -> bool:
+        """Renvoie la visibilité du renderer"""
         f = self._fill.visible if self._fill else True
         b = self._border.visible if self._border else True
         return f or b
 
     @visible.setter
-    def visible(self, v):
+    def visible(self, v: bool):
+        """Fixe la visibilité du renderer"""
         if self._fill:
             self._fill.visible = v
         if self._border:
             self._border.visible = v
 
     def delete(self):
+        """Supprime les ressources pyglet du renderer"""
         if self._fill:
             self._fill.delete()
         if self._border:
             self._border.delete()
 
+# ======================================== BORDER RENDERER ========================================
+class _BorderRenderer:
+    """Bordure d'une shape via GL_LINE_LOOP sur des vertices monde"""
 
-# ======================================== BORDER OBJECT ========================================
-class _BorderObject:
-    """Bordure d'une shape via GL_LINE_LOOP sur ses vertices()"""
-    def __init__(self, shape: Shape, x: float, y: float, scale: float, rotation: float, color: tuple[int, ...], width: int, batch: Batch, group: Group):
-        self._vlist: list = None
-        self._visible: bool = True
-        self._color: tuple[int, ...] = color
-        self._width: int = width
-        self._n: int = 0
-        self._batch: Batch = batch
-        self._group: Group = group
-        self._build(shape, x, y, scale, rotation, color, width)
+    def __init__(self, shape: Shape, cx: float, cy: float, scale: float, rotation: float, color: Color, width: int, opacity: float, batch: Batch, group: Group):
+        self._vlist = None
+        self._n = 0
+        self._visible = True
+        self._width = width
+        self._batch = batch
+        self._group = group
+        self._build(shape, cx, cy, scale, rotation, color, width, opacity)
 
-    def _build(self, shape: Shape, x: float, y: float, scale: float, rotation: float, color: tuple[int, ...], width: int):
-        pts = shape.vertices(scale)
+    def _build(self, shape: Shape, cx: float, cy: float, scale: float, rotation: float, color: Color, width: int, opacity: float):
+        """Construit la vertex list GL_LINE_LOOP"""
+        pts = _border_vertices(shape, cx, cy, scale, rotation)
         self._n = len(pts)
-        flat = []
-        for px, py in pts:
-            rx, ry = _rotate(x + px, y + py, x, y, rotation)
-            flat += [rx, ry]
-        self._vlist = self._batch.add(self._n, pyglet.gl.GL_LINE_LOOP, self._group, ('v2f', flat), ('c4B', color * self._n))
+        flat = [c for p in pts for c in p]
+        r, g, b, a = color.rgba8
+        a = int(opacity * 255)
         pyglet.gl.glLineWidth(width)
+        self._vlist = self._batch.add(
+            self._n, pyglet.gl.GL_LINE_LOOP, self._group,
+            ('v2f', flat),
+            ('c4B', (r, g, b, a) * self._n)
+        )
 
-    def update(self, shape: Shape, x: float, y: float, scale: float, rotation: float, color: tuple[int, ...], width: int, opacity: float):
+    def update(self, shape: Shape, cx: float, cy: float, scale: float, rotation: float, color: Color, width: int, opacity: float):
+        """Met à jour la bordure"""
         if self._vlist is None:
             return
-        self._color = color
-        pts = shape.vertices(scale)
-        flat = []
-        for px, py in pts:
-            rx, ry = _rotate(x + px, y + py, x, y, rotation)
-            flat += [rx, ry]
+        pts = _border_vertices(shape, cx, cy, scale, rotation)
+        flat = [c for p in pts for c in p]
         self._vlist.vertices[:] = flat
-        r, g, b, a = color
-        self._vlist.colors[:] = (r, g, b, int(a * opacity)) * self._n
+        r, g, b, a = color.rgba8
+        a = int(opacity * 255)
+        self._vlist.colors[:] = (r, g, b, a) * self._n
         if width != self._width:
             pyglet.gl.glLineWidth(width)
             self._width = width
 
     @property
-    def visible(self):
+    def visible(self) -> bool:
+        """Renvoie la visibilité de la bordure"""
         return self._visible
 
     @visible.setter
-    def visible(self, v):
+    def visible(self, v: bool):
+        """Fixe la visibilité de la bordure"""
         if self._vlist is None:
             return
         self._visible = v
-        if v:
-            self._vlist.colors[:] = self._color * self._n
-        else:
+        if not v:
             self._vlist.colors[:] = (0, 0, 0, 0) * self._n
 
     def delete(self):
+        """Supprime la vertex list"""
         if self._vlist is not None:
             self._vlist.delete()
             self._vlist = None
 
-# ======================================== INTERNALS ========================================
-def _apply_fill_position(obj: object, shape: Shape, x: float, y: float, scale: float, rotation: float = 0.0):
-    """Met à jour la position et les dimensions du fill pyglet"""
-    if isinstance(shape, Circle):
-        obj.x = x
-        obj.y = y
-        obj.radius = shape.radius * scale
-        obj.rotation = rotation
-
-    elif isinstance(shape, Rect):
-        obj.x = x
-        obj.y = y
-        obj.width = shape.width * scale
-        obj.height = shape.height * scale
-        obj.rotation = rotation
-
-    elif isinstance(shape, Ellipse):
-        obj.x = x
-        obj.y = y
-        obj.a = shape.rx * scale
-        obj.b = shape.ry * scale
-        obj.rotation = rotation
-
-    elif isinstance(shape, Capsule):
-        obj.x = x
-        obj.y = y
-        obj.set_scale(scale)
-
-    elif isinstance(shape, Segment):
-        s = scale
-        cx = x + (shape.A.x + shape.B.x) / 2 * s
-        cy = y + (shape.A.y + shape.B.y) / 2 * s
-        ax, ay = _rotate(x + shape.A.x * s, y + shape.A.y * s, cx, cy, rotation)
-        bx, by = _rotate(x + shape.B.x * s, y + shape.B.y * s, cx, cy, rotation)
-        obj.x  = ax
-        obj.y  = ay
-        obj.x2 = bx
-        obj.y2 = by
-        obj.thickness = shape.width * s
-
-def _final_color(renderer: TextRenderer) -> tuple[int, int, int, int]:
-    """Fusionne color et opacity en un seul RGBA8"""
-    r, g, b, a = renderer.color.rgba8
-    return (r, g, b, int(a * renderer.opacity))
-
-def _rotate(px: float, py: float, cx: float, cy: float, angle: float) -> tuple[float, float]:
-    """Fait tourner (px, py) autour de (cx, cy) d'un angle en degrés"""
-    rad = math.radians(angle)
-    cos_a, sin_a = math.cos(rad), math.sin(rad)
-    dx, dy = px - cx, py - cy
-    return cx + dx * cos_a - dy * sin_a, cy + dx * sin_a + dy * cos_a
-
-# ======================================== CAPSULE SHAPE ========================================
-class _CapsuleShape:
+# ======================================== CAPSULE RENDERER ========================================
+class _CapsuleRenderer:
     """
-    Capsule pyglet composite : rect central + deux demi-cercles
-    Origine = centre du demi-cercle bas = bas de la spine
-    """
-    def __init__(self, x: float, y: float, radius: float, spine: float, color: tuple[int, ...]=(255, 255, 255, 255), batch: Batch=None, group: Group=None):
-        self._base_radius: float = radius
-        self._base_spine: float = spine
-        self._rect: pyglet.shapes.Rectangle = pyglet.shapes.Rectangle(x - radius, y, radius * 2, spine, color=color, batch=batch, group=group)
-        self._top: pyglet.shapes.Circle = pyglet.shapes.Circle(x, y + spine, radius, color=color, batch=batch, group=group)
-        self._bottom: pyglet.shapes.Circle = pyglet.shapes.Circle(x, y, radius, color=color, batch=batch, group=group)
+    Capsule pyglet composite : deux cercles + un polygone central roté
 
-    def set_scale(self, scale: float):
-        r = self._base_radius * scale
-        s = self._base_spine * scale
-        cx = self._bottom.x
-        cy = self._bottom.y
-        self._bottom.radius = r
-        self._top.radius = r
-        self._rect.x = cx - r
-        self._rect.width = r * 2
-        self._rect.height = s
-        self._top.y = cy + s
+    Args:
+        cx(float): centre monde horizontal
+        cy(float): centre monde vertical
+        radius(float): rayon des demi-cercles
+        spine(float): longueur du segment central
+        rotation(float): angle en degrés
+        color(Color): couleur
+        opacity(float): opacité [0.0; 1.0]
+        batch(Batch): batch pyglet
+        group(Group): group pyglet
+    """
+
+    def __init__(self, cx: float, cy: float, radius: float, spine: float, rotation: float, color: Color, opacity: float, batch: Batch, group: Group):
+        self._batch = batch
+        self._group = group
+        ax, ay, bx, by = _capsule_centers(cx, cy, spine, rotation)
+        rect_pts = _capsule_rect_vertices(ax, ay, bx, by, radius)
+        rgba = color.rgba8
+        self._top = pyglet.shapes.Circle(ax, ay, radius, color=rgba, batch=batch, group=group)
+        self._bottom = pyglet.shapes.Circle(bx, by, radius, color=rgba, batch=batch, group=group)
+        self._rect = pyglet.shapes.Polygon(*rect_pts, color=rgba, batch=batch, group=group)
+        self._set_opacity(opacity)
+
+    def update(self, cx: float, cy: float, radius: float, spine: float, rotation: float, color: Color, opacity: float):
+        """Met à jour la position, taille, couleur et opacité"""
+        ax, ay, bx, by = _capsule_centers(cx, cy, spine, rotation)
+        rect_pts = _capsule_rect_vertices(ax, ay, bx, by, radius)
+        rgba = color.rgba8
+        self._top.x = ax
+        self._top.y = ay
+        self._top.radius = radius
+        self._top.color = rgba
+        self._bottom.x = bx
+        self._bottom.y = by
+        self._bottom.radius = radius
+        self._bottom.color = rgba
+        self._rect.delete()
+        self._rect = pyglet.shapes.Polygon(*rect_pts, color=rgba, batch=self._batch, group=self._group)
+        self._set_opacity(opacity)
+
+    def _set_opacity(self, opacity: float):
+        """Fixe l'opacité sur les trois composants"""
+        v = int(opacity * 255)
+        self._top.opacity = v
+        self._bottom.opacity = v
+        self._rect.opacity = v
 
     @property
-    def visible(self):
-        return self._rect.visible
+    def visible(self) -> bool:
+        """Renvoie la visibilité du renderer capsule"""
+        return self._top.visible
 
     @visible.setter
-    def visible(self, v):
-        self._rect.visible = self._top.visible = self._bottom.visible = v
-
-    @property
-    def x(self):
-        return self._bottom.x
-
-    @x.setter
-    def x(self, v):
-        r = self._bottom.radius
-        self._bottom.x = v
-        self._top.x = v
-        self._rect.x = v - r
-
-    @property
-    def y(self):
-        return self._bottom.y
-
-    @y.setter
-    def y(self, v):
-        self._bottom.y = v
-        self._top.y = v + self._rect.height
-        self._rect.y = v
-
-    @property
-    def color(self):
-        return self._rect.color
-
-    @color.setter
-    def color(self, v):
-        self._rect.color = self._top.color = self._bottom.color = v
-
-    @property
-    def opacity(self):
-        return self._rect.opacity
-
-    @opacity.setter
-    def opacity(self, value: float):
-        self._rect.opacity = self._top.opacity = self._bottom.opacity = value
+    def visible(self, v: bool):
+        """Fixe la visibilité du renderer capsule"""
+        self._top.visible = v
+        self._bottom.visible = v
+        self._rect.visible = v
 
     def delete(self):
-        self._rect.delete()
+        """Supprime les ressources pyglet"""
         self._top.delete()
         self._bottom.delete()
+        self._rect.delete()
+
+# ======================================== FILL HELPERS ========================================
+def _build_fill(shape: Shape, cx: float, cy: float, scale: float, rotation: float, color: Color, opacity: float, batch: Batch, group: Group) -> object:
+    """Instancie le fill pyglet adapté au type de shape"""
+    rgba = color.rgba8
+
+    if isinstance(shape, VertexShape):
+        pts = [tuple(v) for v in shape.world_vertices(cx, cy, scale, rotation)]
+        fill = pyglet.shapes.Polygon(*pts, color=rgba, batch=batch, group=group)
+        fill.opacity = int(opacity * 255)
+        return fill
+
+    if isinstance(shape, Circle):
+        cx_, cy_, r_ = shape.world_transform(cx, cy, scale, rotation)
+        fill = pyglet.shapes.Circle(cx_, cy_, r_, color=rgba, batch=batch, group=group)
+        fill.opacity = int(opacity * 255)
+        return fill
+
+    if isinstance(shape, Ellipse):
+        cx_, cy_, rx, ry, angle = shape.world_transform(cx, cy, scale, rotation)
+        fill = pyglet.shapes.Ellipse(cx_, cy_, rx, ry, color=rgba, batch=batch, group=group)
+        fill.rotation = angle
+        fill.opacity = int(opacity * 255)
+        return fill
+
+    if isinstance(shape, Capsule):
+        ax, ay, bx, by, r_ = shape.world_transform(cx, cy, scale, rotation)
+        spine = math.dist((ax, ay), (bx, by))
+        return _CapsuleRenderer(cx, cy, r_, spine, rotation, color, opacity, batch, group)
+
+    return None
+
+def _update_fill(fill: object, shape: Shape, cx: float, cy: float, scale: float, rotation: float, color: Color, opacity: float):
+    """Met à jour le fill pyglet existant"""
+    rgba = color.rgba8
+    a = int(opacity * 255)
+
+    if isinstance(shape, VertexShape):
+        pts = [tuple(v) for v in shape.world_vertices(cx, cy, scale, rotation)]
+        fill.vertices = [c for p in pts for c in p]
+        fill.color = rgba
+        fill.opacity = a
+        return
+
+    if isinstance(shape, Circle):
+        cx_, cy_, r_ = shape.world_transform(cx, cy, scale, rotation)
+        fill.x = cx_
+        fill.y = cy_
+        fill.radius = r_
+        fill.color = rgba
+        fill.opacity = a
+        return
+
+    if isinstance(shape, Ellipse):
+        cx_, cy_, rx, ry, angle = shape.world_transform(cx, cy, scale, rotation)
+        fill.x = cx_
+        fill.y = cy_
+        fill.a = rx
+        fill.b = ry
+        fill.rotation = angle
+        fill.color = rgba
+        fill.opacity = a
+        return
+
+    if isinstance(shape, Capsule):
+        ax, ay, bx, by, r_ = shape.world_transform(cx, cy, scale, rotation)
+        spine = math.dist((ax, ay), (bx, by))
+        fill.update(cx, cy, r_, spine, rotation, color, opacity)
+
+# ======================================== BORDER HELPERS ========================================
+def _border_vertices(shape: Shape, cx: float, cy: float, scale: float, rotation: float) -> list[tuple[float, float]]:
+    """Génère les vertices monde pour le GL_LINE_LOOP de la bordure"""
+    if isinstance(shape, VertexShape):
+        return [tuple(v) for v in shape.world_vertices(cx, cy, scale, rotation)]
+
+    if isinstance(shape, Circle):
+        _, _, r = shape.world_transform(cx, cy, scale, rotation)
+        return _circle_vertices(cx, cy, r, _CIRCLE_BORDER_SEGMENTS)
+
+    if isinstance(shape, Ellipse):
+        _, _, rx, ry, angle = shape.world_transform(cx, cy, scale, rotation)
+        return _ellipse_vertices(cx, cy, rx, ry, angle, _ELLIPSE_BORDER_SEGMENTS)
+
+    if isinstance(shape, Capsule):
+        ax, ay, bx, by, r = shape.world_transform(cx, cy, scale, rotation)
+        return _capsule_border_vertices(ax, ay, bx, by, r, _CAPSULE_BORDER_SEGMENTS)
+    return []
+
+def _circle_vertices(cx: float, cy: float, r: float, n: int) -> list[tuple[float, float]]:
+    """Génère N vertices sur le périmètre d'un cercle"""
+    step = 360.0 / n
+    return [
+        (cx + r * math.cos(math.radians(i * step)),
+         cy + r * math.sin(math.radians(i * step)))
+        for i in range(n)
+    ]
+
+def _ellipse_vertices(cx: float, cy: float, rx: float, ry: float, angle: float, n: int) -> list[tuple[float, float]]:
+    """Génère N vertices sur le périmètre d'une ellipse rotée"""
+    rad = math.radians(angle)
+    cos_a = math.cos(rad)
+    sin_a = math.sin(rad)
+    step = 360.0 / n
+    pts = []
+    for i in range(n):
+        t = math.radians(i * step)
+        lx = rx * math.cos(t)
+        ly = ry * math.sin(t)
+        pts.append((
+            cx + lx * cos_a - ly * sin_a,
+            cy + lx * sin_a + ly * cos_a
+        ))
+    return pts
+
+def _capsule_border_vertices(ax: float, ay: float, bx: float, by: float, r: float, n: int) -> list[tuple[float, float]]:
+    """Génère les vertices du contour d'une capsule rotée"""
+    dx = bx - ax
+    dy = by - ay
+    angle = math.atan2(dy, dx)
+    perp = angle + math.pi * 0.5
+    pts = []
+    for i in range(n + 1):
+        t = perp + math.pi * i / n
+        pts.append((ax + r * math.cos(t), ay + r * math.sin(t)))
+    for i in range(n + 1):
+        t = perp + math.pi + math.pi * i / n
+        pts.append((bx + r * math.cos(t), by + r * math.sin(t)))
+    return pts
+
+# ======================================== CAPSULE INTERNALS ========================================
+def _capsule_centers(cx: float, cy: float, spine: float, rotation: float) -> tuple[float, float, float, float]:
+    """Calcule les deux centres des demi-cercles d'une capsule"""
+    rad = math.radians(rotation)
+    sin_r = math.sin(rad)
+    cos_r = math.cos(rad)
+    half = spine * 0.5
+    return cx - sin_r * half, cy + cos_r * half, cx + sin_r * half, cy - cos_r * half
+
+def _capsule_rect_vertices(ax: float, ay: float, bx: float, by: float, r: float) -> list[tuple[float, float]]:
+    """Calcule les 4 sommets du rectangle central d'une capsule"""
+    dx = bx - ax
+    dy = by - ay
+    length = math.sqrt(dx * dx + dy * dy)
+    if length == 0:
+        return [(ax - r, ay - r), (ax + r, ay - r), (ax + r, ay + r), (ax - r, ay + r)]
+    nx = -dy / length * r
+    ny = dx / length * r
+    return [
+        (ax + nx, ay + ny),
+        (ax - nx, ay - ny),
+        (bx - nx, by - ny),
+        (bx + nx, by + ny),
+    ]
+
+# ======================================== WORLD CENTER ========================================
+def _world_center(shape: Shape, tr: Transform, offset: tuple[float, float]) -> tuple[float, float]:
+    """
+    Calcule le centre géométrique monde en tenant compte de l'anchor
+
+    Args:
+        shape(Shape): shape locale
+        tr(Transform): transform de l'entité
+        offset(tuple[float, float]): offset du ShapeRenderer
+    """
+    x_min, y_min, x_max, y_max = shape.bounding_box
+    anchor_x = x_min + tr.anchor.x * (x_max - x_min)
+    anchor_y = y_min + tr.anchor.y * (y_max - y_min)
+    cx = tr.x - anchor_x * tr.scale + offset[0] * tr.scale
+    cy = tr.y - anchor_y * tr.scale + offset[1] * tr.scale
+    return cx, cy

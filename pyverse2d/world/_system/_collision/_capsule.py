@@ -88,10 +88,3 @@ def capsule_polygon(sa: Capsule, ax, ay, sb: Polygon, bx, by) -> Contact | None:
     """Capsule vs Polygone"""
     pts = [(bx + p.x, by + p.y) for p in sb.points]
     return _capsule_convex(ax, ay, sa.spine, sa.radius, pts)
-
-# ======================================== Capsule × Segment ========================================
-@register(Capsule, Segment)
-def capsule_segment(sa: Capsule, ax, ay, sb: Segment, bx, by) -> Contact | None:
-    """Capsule vs Segment"""
-    pts = _seg_corners(bx, by, sb)
-    return _capsule_convex(ax, ay, sa.spine, sa.radius, pts)
