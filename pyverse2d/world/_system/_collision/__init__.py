@@ -254,12 +254,18 @@ class CollisionSystem(System):
         cached.jn = max(0.0, old_jn + j_delta_n)
         j_delta_n = cached.jn - old_jn
 
-        friction = (rb_a.friction + rb_b.friction) * 0.5 if not static_a and not static_b else (rb_b.friction if static_a else rb_a.friction)
+        friction_dynamic = (rb_a.friction + rb_b.friction) * 0.5 if not static_a and not static_b else (rb_b.friction if static_a else rb_a.friction)
+        friction_static = friction_dynamic * 1.5
+
         vel_tan = rel_vx * tx + rel_vy * ty
-        j_delta_t = -vel_tan / inv_sum
+        j_delta_t_needed = -vel_tan / inv_sum
         old_jt = cached.jt
-        max_jt = friction * cached.jn
-        cached.jt = max(-max_jt, min(max_jt, old_jt + j_delta_t))
+
+        if abs(j_delta_t_needed) <= friction_static * cached.jn:
+            cached.jt = max(-friction_static * cached.jn, min(friction_static * cached.jn, old_jt + j_delta_t_needed))
+        else:
+            cached.jt = max(-friction_dynamic * cached.jn, min(friction_dynamic * cached.jn, old_jt + j_delta_t_needed))
+
         j_delta_t = cached.jt - old_jt
 
         ix = nx * j_delta_n + tx * j_delta_t
