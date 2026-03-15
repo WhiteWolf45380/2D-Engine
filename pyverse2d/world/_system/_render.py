@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from ..._flag import UpdatePhase
-from ...abc import System, Shape, VertexShape, PrimitiveShape, CompositeShape
+from ...abc import System, Shape, VertexShape
 from ...shape import Capsule, Circle, Ellipse
 from ...asset import Text, Font, Color
 from .._world import World, Entity
@@ -239,7 +239,7 @@ class _ShapeRenderer:
 
         if self._fill is not None:
             self._fill.visible = True
-            _update_fill(self._fill, self._shape, cx, cy, scale, rotation, sr.filling_color, sr.opacity)
+            self._fill = _update_fill(self._fill, self._shape, cx, cy, scale, rotation, sr.filling_color, sr.opacity, self._batch, self._group)
 
         if sr.border_width > 0 and self._border is None:
             self._border = _BorderRenderer(self._shape, cx, cy, scale, rotation, sr.border_color, sr.border_width, sr.opacity, self._batch, self._group)
@@ -434,17 +434,17 @@ def _build_fill(shape: Shape, cx: float, cy: float, scale: float, rotation: floa
 
     return None
 
-def _update_fill(fill: object, shape: Shape, cx: float, cy: float, scale: float, rotation: float, color: Color, opacity: float):
-    """Met à jour le fill pyglet existant"""
+def _update_fill(fill: object, shape: Shape, cx: float, cy: float, scale: float, rotation: float, color: Color, opacity: float, batch: Batch, group: Group) -> object:
+    """Met à jour le fill pyglet existant — retourne le fill (potentiellement recréé)"""
     rgba = color.rgba8
     a = int(opacity * 255)
 
     if isinstance(shape, VertexShape):
         pts = [tuple(v) for v in shape.world_vertices(cx, cy, scale, rotation)]
-        fill.vertices = [c for p in pts for c in p]
-        fill.color = rgba
+        fill.delete()
+        fill = pyglet.shapes.Polygon(*pts, color=rgba, batch=batch, group=group)
         fill.opacity = a
-        return
+        return fill
 
     if isinstance(shape, Circle):
         cx_, cy_, r_ = shape.world_transform(cx, cy, scale, rotation)
@@ -453,7 +453,7 @@ def _update_fill(fill: object, shape: Shape, cx: float, cy: float, scale: float,
         fill.radius = r_
         fill.color = rgba
         fill.opacity = a
-        return
+        return fill
 
     if isinstance(shape, Ellipse):
         cx_, cy_, rx, ry, angle = shape.world_transform(cx, cy, scale, rotation)
@@ -464,12 +464,15 @@ def _update_fill(fill: object, shape: Shape, cx: float, cy: float, scale: float,
         fill.rotation = angle
         fill.color = rgba
         fill.opacity = a
-        return
+        return fill
 
     if isinstance(shape, Capsule):
         ax, ay, bx, by, r_ = shape.world_transform(cx, cy, scale, rotation)
         spine = math.dist((ax, ay), (bx, by))
         fill.update(cx, cy, r_, spine, rotation, color, opacity)
+        return fill
+
+    return fill
 
 # ======================================== BORDER HELPERS ========================================
 def _border_vertices(shape: Shape, cx: float, cy: float, scale: float, rotation: float) -> list[tuple[float, float]]:
