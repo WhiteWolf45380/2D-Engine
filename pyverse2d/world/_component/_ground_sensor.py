@@ -49,7 +49,7 @@ class GroundSensor(Component):
     
     # ======================================== GETTERS ========================================
     @property
-    def theshold(self) -> float:
+    def threshold(self) -> float:
         """Renvoie le seuil de support"""
         return self._threshold
     
@@ -64,8 +64,8 @@ class GroundSensor(Component):
         return self._ground_damping
 
     # ======================================== SETTERS ========================================
-    @theshold.setter
-    def treshold(self, value: Real):
+    @threshold.setter
+    def threshold(self, value: Real):
         """Fixe le seuil de support"""
         self._threshold = float(clamped(expect(value, Real)))
 
