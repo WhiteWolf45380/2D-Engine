@@ -8,7 +8,7 @@ from ...._internal import Pipeline
 from ....math import Vector
 from ..._component import Transform, RigidBody, GroundSensor
 from ._constants import (
-    _SLOP, _BAUMGARTE, _MAX_CORRECTION, _MAX_MASS_RATIO,
+    _SLOP, _BAUMGARTE, _MAX_CORRECTION,
     _RESTITUTION_THRESHOLD, _RESTITUTION_MAX_VEL,
 )
 
@@ -144,8 +144,9 @@ def _baumgarte(ctx: ResolveContext):
         ctx.tr_a.x += ctx.nx * correction
         ctx.tr_a.y += ctx.ny * correction
     else:
-        ra = min(ctx.inv_a / ctx.inv_sum, _MAX_MASS_RATIO)
-        rb = min(ctx.inv_b / ctx.inv_sum, _MAX_MASS_RATIO)
+        # ra + rb == 1.0 naturellement, pas besoin de cap
+        ra = ctx.inv_a / ctx.inv_sum
+        rb = ctx.inv_b / ctx.inv_sum
         ctx.tr_a.x += ctx.nx * correction * ra
         ctx.tr_a.y += ctx.ny * correction * ra
         ctx.tr_b.x -= ctx.nx * correction * rb
@@ -165,11 +166,14 @@ def _normal_impulse(ctx: ResolveContext):
         t = min((-ctx.vel_along - _RESTITUTION_THRESHOLD) / (_RESTITUTION_MAX_VEL - _RESTITUTION_THRESHOLD), 1.0)
         j_delta_n = -(1.0 + restitution * t) * ctx.vel_along / ctx.inv_sum
     elif ctx.vel_along < 0:
-        # Approche lente : correction de penetration sans restitution
+        # Approche lente : correction de pénétration sans restitution
         bias = _BAUMGARTE * max(ctx.depth - _SLOP, 0.0)
         j_delta_n = -(ctx.vel_along + bias) / ctx.inv_sum
     else:
-        # Objet qui s'eloigne : pas d'impulsion
+        # Objet qui s'éloigne : pas d'impulsion
+        j_delta_n = 0.0
+    # Restitution négligeable : tronque la suite géométrique pour éviter le jitter
+    if abs(j_delta_n) < 1e-3:
         j_delta_n = 0.0
     # Clamping : pas de traction
     old_jn = ctx.cached.jn
@@ -178,34 +182,35 @@ def _normal_impulse(ctx: ResolveContext):
 
 @resolve_pipeline.step
 def _friction(ctx: ResolveContext):
-    """Calcul de la friction tangentielle avec gestion surfaces verticales et stability_angle"""
+    """Calcul de la friction tangentielle"""
+    # Surface quasi-verticale : pas de friction tangentielle
     if abs(ctx.ny) < 0.3:
-        # Surface verticale : pas de friction tangentielle
         ctx.cached.jt = 0.0
         ctx.j_delta_t = 0.0
         return
+
+    # Friction effective = combinaison des deux matériaux
     if not ctx.static_a and not ctx.static_b:
         friction_dynamic = (ctx.rb_a.friction + ctx.rb_b.friction) * 0.5
     elif ctx.static_a:
         friction_dynamic = ctx.rb_b.friction
     else:
         friction_dynamic = ctx.rb_a.friction
-    # Friction statique selon stability_angle
-    surface_angle = _degrees(_acos(min(abs(ctx.ny), 1.0)))
-    stability_angle = 75.0
-    for entity in (ctx.a, ctx.b):
-        if entity.has(GroundSensor):
-            stability_angle = entity.get(GroundSensor).stability_angle
-            break
-    friction_static = 0.0 if surface_angle > stability_angle else friction_dynamic * 1.5
+
+    # Ratio standard (Box2D) : static légèrement supérieur au dynamique
+    friction_static = friction_dynamic * 1.5
+
     vel_tan = ctx.rel_vx * ctx.tx + ctx.rel_vy * ctx.ty
     j_delta_t_needed = -vel_tan / ctx.inv_sum
     old_jt = ctx.cached.jt
-    # Choix friction statique ou dynamique selon le cone de Coulomb
-    if abs(j_delta_t_needed) <= friction_static * ctx.cached.jn:
-        ctx.cached.jt = max(-friction_static * ctx.cached.jn, min(friction_static * ctx.cached.jn, old_jt + j_delta_t_needed))
+
+    # Cône de Coulomb : statique si dans le cône, dynamique sinon
+    limit_s = friction_static  * ctx.cached.jn
+    limit_d = friction_dynamic * ctx.cached.jn
+    if abs(old_jt + j_delta_t_needed) <= limit_s:
+        ctx.cached.jt = max(-limit_s, min(limit_s, old_jt + j_delta_t_needed))
     else:
-        ctx.cached.jt = max(-friction_dynamic * ctx.cached.jn, min(friction_dynamic * ctx.cached.jn, old_jt + j_delta_t_needed))
+        ctx.cached.jt = max(-limit_d, min(limit_d, old_jt + j_delta_t_needed))
     ctx.j_delta_t = ctx.cached.jt - old_jt
 
 @resolve_pipeline.step
