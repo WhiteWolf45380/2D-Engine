@@ -135,13 +135,13 @@ class CollisionSystem(System):
                     gs = a.get(GroundSensor)
                     if ny >= gs._threshold:
                         gs._grounded = True
-                        gs._ground_normal = (nx, ny)
+                        gs._ground_normal = Vector(nx, ny)
             if ny < 0:
                 if b.has(GroundSensor):
                     gs = b.get(GroundSensor)
                     if -ny >= gs._threshold:
                         gs._grounded = True
-                        gs._ground_normal = (-nx, -ny)
+                        gs._ground_normal = Vector(-nx, -ny)
 
             if contact.depth > max_depth:
                 max_depth = contact.depth
