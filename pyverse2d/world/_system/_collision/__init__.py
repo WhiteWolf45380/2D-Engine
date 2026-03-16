@@ -66,7 +66,9 @@ class CollisionSystem(System):
         # Reset du GroundSensor avant détection
         for entity in entities:
             if entity.has(GroundSensor):
-                entity.get(GroundSensor).grounded = False
+                gs = entity.get(GroundSensor)
+                gs._grounded = False
+                gs._ground_normal = None
 
         # Broadphase : génération des paires candidates
         if self._hash is not None:
@@ -131,13 +133,15 @@ class CollisionSystem(System):
             if ny > 0:
                 if a.has(GroundSensor):
                     gs = a.get(GroundSensor)
-                    if ny >= gs.threshold:
-                        gs.grounded = True
+                    if ny >= gs._threshold:
+                        gs._grounded = True
+                        gs._ground_normal = (nx, ny)
             if ny < 0:
                 if b.has(GroundSensor):
                     gs = b.get(GroundSensor)
-                    if -ny >= gs.threshold:
-                        gs.grounded = True
+                    if -ny >= gs._threshold:
+                        gs._grounded = True
+                        gs._ground_normal = (-nx, -ny)
 
             if contact.depth > max_depth:
                 max_depth = contact.depth

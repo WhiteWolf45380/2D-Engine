@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from ..._internal import expect, clamped
 from ...abc import Component
+from ...math import Vector
 
 from math import cos, radians
 from numbers import Real
@@ -18,7 +19,7 @@ class GroundSensor(Component):
         max_climb_angle(float): angle maximal en degrés que l'entité peut gravir (0 à 90)
         ground_damping(float): amortissement horizontal appliqué uniquement au sol
     """
-    __slots__ = ("_threshold", "_max_climb_angle", "_ground_damping", "_grounded", "_climb_ny_min")
+    __slots__ = ("_threshold", "_max_climb_angle", "_ground_damping", "_grounded", "_climb_ny_min", "_ground_normal")
     requires = ("Transform", "Collider")
 
     def __init__(self, threshold: Real = 0.65, max_climb_angle: Real = 90.0, ground_damping: Real = 0.0):
@@ -62,6 +63,11 @@ class GroundSensor(Component):
     def ground_damping(self) -> float:
         """Renvoie l'amortissement horizontal au sol"""
         return self._ground_damping
+    
+    @property
+    def ground_normal(self) -> Vector | None:
+        """Renvoie la normal de collision au sol"""
+        return self._ground_normal
 
     # ======================================== SETTERS ========================================
     @threshold.setter
@@ -88,3 +94,4 @@ class GroundSensor(Component):
     def _compute(self) -> None:
         """Précalcul"""
         self._climb_ny_min: float = cos(radians(self._max_climb_angle))
+        self._ground_normal: Vector | None = None
