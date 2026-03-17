@@ -141,7 +141,7 @@ class RenderSystem(System):
         sprite.visible = True
         sprite.x = tr.x + sr.offset[0] * tr.scale
         sprite.y = tr.y + sr.offset[1] * tr.scale
-        sprite.rotation = tr.rotation + sr.rotation
+        sprite.rotation = tr.rotation
         sprite.scale_x = tr.scale * scale_x * sr.image.scale_factor * flip_x
         sprite.scale_y = tr.scale * scale_y * sr.image.scale_factor * flip_y
         sprite.color = sr.tint.rgb8
