@@ -55,26 +55,32 @@ class RenderSystem(System):
             world(World): monde à rendre
             pipeline(Pipeline): pipeline active
         """
+        # Reset des buffers
         active_sprites = set()
         active_shapes = set()
         active_labels = set()
 
+        # Boucle sur les entités ayant un Transform
         for entity in world.query(Transform):
             eid = entity.id
             tr: Transform = entity.get(Transform)
-
+            
+            # Renderers de formes
             if entity.has(ShapeRenderer):
                 active_shapes.add(eid)
                 self._sync_shape(entity, tr, pipeline)
 
+            # Renderers de sprites
             if entity.has(SpriteRenderer):
                 active_sprites.add(eid)
                 self._sync_sprite(entity, tr, pipeline)
 
+            # Renderers de textes
             if entity.has(TextRenderer):
                 active_labels.add(eid)
                 self._sync_text(entity, tr, pipeline)
 
+        # Nettoyage des entités inactives
         for eid in list(self._sprites):
             if eid not in active_sprites:
                 self._sprites.pop(eid).delete()
@@ -93,15 +99,18 @@ class RenderSystem(System):
         sr: SpriteRenderer = entity.get(SpriteRenderer)
         eid = entity.id
 
+        # Sprite caché
         if not sr.is_visible():
             if eid in self._sprites:
                 self._sprites[eid].visible = False
             return
 
+        # Chargement de l'image du sprite
         raw = self._load_image(sr.image.path)
         if raw is None:
             return
 
+        # Ajout du sprite au cache s'il n'y était pas déjà
         if eid not in self._sprites:
             raw.anchor_x = int(tr.anchor.x * raw.width)
             raw.anchor_y = int(tr.anchor.y * raw.height)
@@ -124,20 +133,21 @@ class RenderSystem(System):
             scale_y = scale_x
 
         # Calcul de l'inversion
-        flip_x = -1 if sr.image.flip_x else 1
-        flip_y = -1 if sr.image.flip_y else 1
+        flip_x = -1 if sr.flip_x else 1
+        flip_y = -1 if sr.flip_y else 1
 
         # Mise à jour du sprite
         sprite: pyglet.sprite.Sprite = self._sprites[eid]
         sprite.visible = True
         sprite.x = tr.x + sr.offset[0] * tr.scale
         sprite.y = tr.y + sr.offset[1] * tr.scale
-        sprite.rotation = tr.rotation + sr.image.rotation
+        sprite.rotation = tr.rotation + sr.rotation
         sprite.scale_x = tr.scale * scale_x * sr.image.scale_factor * flip_x
         sprite.scale_y = tr.scale * scale_y * sr.image.scale_factor * flip_y
-        sprite.color = sr.tint.rgba8
+        sprite.color = sr.tint.rgb8
         sprite.opacity = int(sr.opacity * 255)
 
+        # Actualisation de l'ancre si nécessaire
         if sprite.image.anchor_x != tr.anchor.x * raw.width or sprite.image.anchor_y != tr.anchor.y * raw.height:
             sprite.image.anchor_x = int(tr.anchor.x * raw.width)
             sprite.image.anchor_y = int(tr.anchor.y * raw.height)
@@ -148,17 +158,21 @@ class RenderSystem(System):
         sr: ShapeRenderer = entity.get(ShapeRenderer)
         eid = entity.id
 
+        # Forme cachée
         if not sr.is_visible():
             if eid in self._shapes:
                 self._shapes[eid].visible = False
             return
 
+        # Calcul de l'ancre
         cx, cy = _world_center(sr.shape, tr, sr.offset)
 
+        # Enregistrement en cache s'il n'y était pas déjà
         if eid not in self._shapes:
             group = pipeline.get_group(sr.z * 3 + _ORDER_SHAPE)
             self._shapes[eid] = _ShapeRenderer(sr.shape, cx, cy, tr.scale, tr.rotation, sr, pipeline.batch, group)
 
+        # Actualisation du Renderer
         self._shapes[eid].update(cx, cy, tr.scale, tr.rotation, sr)
 
     # ======================================== SYNC TEXT ========================================
@@ -167,14 +181,17 @@ class RenderSystem(System):
         tc: TextRenderer = entity.get(TextRenderer)
         eid = entity.id
 
+        # Texte caché
         if not tc.is_visible():
             if eid in self._labels:
                 self._labels[eid].visible = False
             return
 
+        # Raccourcis
         t: Text = tc.text
         f: Font = t.font
 
+        # Ajoute au cache s'il n'y était pas déjà
         if eid not in self._labels:
             group = pipeline.get_group(tc.z * 3 + _ORDER_LABEL)
             self._labels[eid] = pyglet.text.Label(
@@ -198,7 +215,8 @@ class RenderSystem(System):
             label.y = tr.y - (tr.anchor[1] * label.content_height + tc.offset[1]) * tr.scale
             return
 
-        label = self._labels[eid]
+        # Mise à jour du label
+        label: pyglet.text.Label = self._labels[eid]
         label.visible = True
         label.text = t.text
         label.font_size = int(f.size * tr.scale)
@@ -209,6 +227,7 @@ class RenderSystem(System):
         label.weight = tc.weight
         label.italic = tc.italic
         label.color = tc.color.rgba8
+        label.opacity = int(tc.opacity * 255)
         label.width = tc.width
         label.multiline = tc.multiline or tc.width is not None
         label.align = tc.align

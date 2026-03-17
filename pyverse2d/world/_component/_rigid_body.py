@@ -15,11 +15,18 @@ _SLEEP_DELAY = 0.5          # secondes consécutives sous le seuil avant mise en
 
 # ======================================== COMPONENT ========================================
 class RigidBody(Component):
-    """Composant gérant un corps dynamique"""
-    __slots__ = (
-        "_mass", "_friction", "_restitution", "_gravity", "_gravity_scale", "_linear_damping", "_velocity", "_acceleration", "_prev_x", "_prev_y",
-        "_sleeping", "_sleep_timer",
-    )
+    """
+    Composant gérant un corps dynamique
+
+    Args:
+        mass(Real, optional): masse du corps en kg (0 ou inf pour un corps statique)
+        friction(Real, optional): résistance au glissement [0, 1]
+        restitution(Real, optional): facteur de rebond [0, 1]
+        gravity(bool, optional): soumission à la gravité
+        gravity_scale(Real, optional): facteur de gravité
+        linear_damping(Real, optional): résistance de l'air (0 = aucune)
+    """
+    __slots__ = ("_mass", "_friction", "_restitution", "_gravity", "_gravity_scale", "_linear_damping", "_velocity", "_acceleration", "_prev_x", "_prev_y", "_sleeping", "_sleep_timer")
     requires = ("Transform",)
 
     def __init__(
@@ -31,15 +38,6 @@ class RigidBody(Component):
             gravity_scale: Real = 1.0,
             linear_damping: Real = 0.0,
         ):
-        """
-        Args:
-            mass(Real, optional): masse du corps en kg (0 ou inf pour un corps statique)
-            friction(Real, optional): résistance au glissement [0, 1]
-            restitution(Real, optional): facteur de rebond [0, 1]
-            gravity(bool, optional): soumission à la gravité
-            gravity_scale(Real, optional): facteur de gravité
-            linear_damping(Real, optional): résistance de l'air (0 = aucune)
-        """
         self._mass = float(positive(expect(mass, Real)))
         self._friction = float(clamped(expect(friction, Real)))
         self._restitution = float(positive(expect(restitution, Real)))

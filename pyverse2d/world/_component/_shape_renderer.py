@@ -9,7 +9,20 @@ from numbers import Real
 
 # ======================================== COMPONENT ========================================
 class ShapeRenderer(Component):
-    """Composant gérant le rendu d'une forme"""
+    """
+    Composant gérant le rendu d'une forme
+
+    Args:
+        shape(Shape, optional): forme du rendu
+        offset(Vector, optional): décalage par rapport au Transform
+        filling(bool, optional): activation du remplissage
+        filling_color(Color, optional): couleur de remplissage
+        border_width(int, optinal): épaisseur de la bordure
+        border_color(Color, optional): couleur de la bordure
+        opacity(Real, optional): facteur d'opacité
+        z(int, optional): ordre de rendu
+        visible(bool, optional): visibilité
+    """
     __slots__ = ("_shape", "_offset", "_filling", "_filling_color", "_border_width", "_border_color", "_opacity", "_z", "_visible")
     requires = ("Transform",)
 
@@ -25,18 +38,6 @@ class ShapeRenderer(Component):
             z: int = 0,
             visible: bool = True,
         ):
-        """
-        Args:
-            shape(Shape, optional): forme du rendu
-            offset(Vector, optional): décalage par rapport au Transform
-            filling(bool, optional): activation du remplissage
-            filling_color(Color, optional): couleur de remplissage
-            border_width(int, optinal): épaisseur de la bordure
-            border_color(Color, optional): couleur de la bordure
-            opacity(Real, optional): facteur d'opacité
-            z(int, optional): ordre de rendu
-            visible(bool, optional): visibilité
-        """
         self._shape: Shape = expect(shape, Shape)
         self._offset: Vector =Vector(offset)
         self._filling: bool = expect(filling, bool)
@@ -50,7 +51,7 @@ class ShapeRenderer(Component):
     # ======================================== CONVERSIONS ========================================
     def __repr__(self) -> str:
         """Renvoie une représentation du composant"""
-        return f"ShapeRenderer(shape={self._shape}, opacity={self._opacity}, z={self._z}, visible={self._visible})"
+        return f"ShapeRenderer(shape={self._shape}, z={self._z}, visible={self._visible})"
     
     def __iter__(self) -> Iterator:
         """Renvoie le composant dans un itérateur"""
@@ -60,13 +61,13 @@ class ShapeRenderer(Component):
         """Renvoie l'entier hashé du composant"""
         return hash(self.to_tuple())
     
-    def to_tuple(self) -> tuple[Shape, Vector, bool, Color, int, Color, int, bool]:
+    def to_tuple(self) -> tuple[Shape, Vector, bool, Color, int, Color, float, int]:
         """Renvoie le composant sous forme de tuple"""
-        return (self._shape, self._offset, self._filling, self._filling_color, self._border_width, self._border_color, self._z)
+        return (self._shape, self._offset, self._filling, self._filling_color, self._border_width, self._border_color, self._opacity, self._z)
     
     def to_list(self) -> list:
         """Renvoie le composant sous forme de liste"""
-        return [self._shape, self._offset, self._filling, self._filling_color, self._border_width, self._border_color, self._z]
+        return [self._shape, self._offset, self._filling, self._filling_color, self._border_width, self._border_color, self._opacity, self._z]
     
     # ======================================== GETTERS ========================================
     @property
@@ -139,6 +140,11 @@ class ShapeRenderer(Component):
     def opacity(self, value: Real):
         """Fixe le facteur d'opacité"""
         self._opacity = float(clamped(expect(value, Real)))
+
+    @z.setter
+    def z(self, value: int):
+        """Fixe l'ordre de rendu"""
+        self._z = expect(value, int)
     
     # ======================================== PREDICATES ========================================
     def is_visible(self) -> bool:

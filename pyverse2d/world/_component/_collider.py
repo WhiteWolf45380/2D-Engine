@@ -9,7 +9,17 @@ from typing import Iterator
 
 # ======================================== COMPONENT ========================================
 class Collider(Component):
-    """Composant gérant la hitbox"""
+    """
+    Composant gérant la hitbox
+
+    Args:
+        shape(Shape): forme de la hitbox
+        offset(tuple[Real, Real], optional): décalage par rapport au Transform
+        category(int, optional): catégorie binaire de collision
+        mask(int, optional): masque binaire de collision
+        trigger(bool, optional): collision fantôme
+        active(bool, optional): collision active
+    """
     __slots__ = ("_shape", "_offset", "_category", "_mask", "_trigger", "_active")
     requires = ("Transform",)
 
@@ -22,15 +32,6 @@ class Collider(Component):
             trigger: bool = False,
             active: bool = True,
         ):
-        """
-        Args:
-            shape(Shape): forme de la hitbox
-            offset(tuple[Real, Real], optional): décalage par rapport au Transform
-            category(int, optional): catégorie binaire de collision
-            mask(int, optional): masque binaire de collision
-            trigger(bool, optional): collision fantôme
-            active(bool, optional): collision active
-        """
         self._shape = expect(shape, Shape)
         self._offset = expect(offset, tuple[Real, Real])
         self._category = expect(category, int)

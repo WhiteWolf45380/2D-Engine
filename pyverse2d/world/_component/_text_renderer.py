@@ -19,7 +19,7 @@ class TextRenderer(Component):
         offset(Vector, optional): décalage par rapport au Transform
         color(Color, optional): couleur RGBA
         opacity(Real, optional): opacité multiplicative [0.0 – 1.0]
-        bold(bool, optional): graisse
+        weight(bool, optional): épaisseur
         italic(bool, optional): italique
         multiline(bool, optional): active le retour à la ligne automatique
         align(str, optional): alignement du texte multiline ("left"|"center"|"right")
@@ -27,12 +27,7 @@ class TextRenderer(Component):
         z(int, optional): ordre de rendu
         visible(bool, optional): visibilité
     """
-    __slots__ = (
-        "_text", "_offset", "_color", "_opacity",
-        "_bold", "_italic",
-        "_multiline", "_align", "_width",
-        "_z", "_visible",
-    )
+    __slots__ = ("_text", "_offset", "_color", "_opacity", "_bold", "_italic", "_multiline", "_align", "_width", "_z", "_visible")
     requires = ("Transform",)
 
     def __init__(
@@ -41,7 +36,7 @@ class TextRenderer(Component):
         offset: Vector = (0.0, 0.0),
         color: Color = (255, 255, 255, 1.0),
         opacity: Real = 1.0,
-        wheight: str = "regular",
+        weight: str = "regular",
         italic: bool = False,
         multiline: bool = False,
         align: str = "left",
@@ -53,7 +48,7 @@ class TextRenderer(Component):
         self._offset: Vector = Vector(offset)
         self._color: Color = Color(color)
         self._opacity: float = float(clamped(expect(opacity, Real)))
-        self._weight: bool = expect(wheight, str)
+        self._weight: bool = expect(weight, str)
         self._italic: bool = expect(italic, bool)
         self._multiline: bool = expect(multiline, bool)
         self._align: str = expect(align, str)
@@ -64,7 +59,7 @@ class TextRenderer(Component):
     # ======================================== CONVERSIONS ========================================
     def __repr__(self) -> str:
         """Renvoie une représentation du composant"""
-        return (f"TextRenderer(text={self._text}, color={self._color}, opacity={self._opacity}, z={self._z}, visible={self._visible})")
+        return (f"TextRenderer(text={self._text}, z={self._z}, visible={self._visible})")
 
     def __iter__(self) -> Iterator:
         """Renvoie le composant dans un itérateur"""
@@ -74,13 +69,13 @@ class TextRenderer(Component):
         """Renvoie l'entier hashé du composant"""
         return hash(self.to_tuple())
 
-    def to_tuple(self) -> tuple:
+    def to_tuple(self) -> tuple[Text, Vector, Color, float, str, bool, bool, str, int, int]:
         """Renvoie le composant sous forme de tuple"""
-        return (self._text, self._offset, self._color, self._opacity, self._z)
+        return (self._text, self._offset, self._color, self._opacity, self._weight, self._italic, self._multiline, self._align, self._width, self._z)
 
     def to_list(self) -> list:
         """Renvoie le composant sous forme de liste"""
-        return [self._text, self._offset, self._color, self._opacity, self._z]
+        return [self._text, self._offset, self._color, self._opacity, self._weight, self._italic, self._multiline, self._align, self._width, self._z]
 
     # ======================================== GETTERS ========================================
     @property
@@ -155,8 +150,8 @@ class TextRenderer(Component):
         self._opacity = float(clamped(expect(value, Real)))
 
     @weight.setter
-    def weight(self, value: bool) -> None:
-        """Fixe la graisse du texte"""
+    def weight(self, value: str) -> None:
+        """Fixe l'épaisseur du texte"""
         self._weight = expect(value, str)
 
     @italic.setter
@@ -173,6 +168,11 @@ class TextRenderer(Component):
     def width(self, value: int | None) -> None:
         """Fixe la largeur maximale en pixels"""
         self._width = expect(value, int) if value is not None else None
+
+    @z.setter
+    def z(self, value: int):
+        """Fixe l'ordre de rendu"""
+        self._z = expect(value, int)
 
     # ======================================== PREDICATES ========================================
     def is_visible(self) -> bool:

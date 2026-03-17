@@ -9,8 +9,20 @@ from numbers import Real
 
 # ======================================== COMPONENT ========================================
 class SpriteRenderer(Component):
-    """Composant gérant le rendu d'une image"""
-    __slots__ = ("_image", "_offset", "_z", "_visible", "_opacity")
+    """
+    Composant gérant le rendu d'une image
+
+    Args:
+        image(Image): image de rendu
+        offset(Vector, optional): décalage par rapport au Transform
+        tint(Color, optional): couleur de teinte
+        opacity(float, optional): facteur d'opacité de l'image
+        flip_x(bool, optional): mirroir horizontal
+        flip_y(bool, optional): mirroir vertical
+        z(int, optional): ordre de rendu
+        visible(bool, optional): visibilité
+    """
+    __slots__ = ("_image", "_offset", "_tint", "_opacity", "_flip_x", "_flip_y", "_z", "_visible")
     requires = ("Transform",)
 
     def __init__(
@@ -19,29 +31,24 @@ class SpriteRenderer(Component):
             offset: Vector = (0.0, 0.0),
             tint: Color = (255, 255, 255),
             opacity: Real = 1.0,
+            flip_x: bool = False,
+            flip_y: bool = False,
             z: int = 0,
             visible: bool = True,
         ):
-        """
-        Args:
-            image(Image): image de rendu
-            offset(Vector, optional): décalage par rapport au Transform
-            tint(Color, optional): couleur de teinte
-            opacity(float, optional): facteur d'opacité de l'image
-            z(int, optional): ordre de rendu
-            visible(bool, optional): visibilité
-        """
         self._image: Image = expect(image, Image)
         self._offset: Vector = Vector(offset)
         self._tint: Color = Color(tint)
         self._opacity: float = clamped(expect(opacity, Real))
+        self._flip_x: bool = expect(flip_x, bool)
+        self._flip_y: bool = expect(flip_y, bool)
         self._z: int = expect(z, int)
         self._visible: bool = expect(visible, bool)
     
     # ======================================== CONVERSIONS ========================================
     def __repr__(self) -> str:
         """Renvoie une représentation du composant"""
-        return f"SpriteRenderer(image={self._image}, opacity={self._opacity}, z={self._z}, visible={self._visible})"
+        return f"SpriteRenderer(image={self._image}, z={self._z}, visible={self._visible})"
     
     def __iter__(self) -> Iterator:
         """Renvoie le composant dans un itérateur"""
@@ -51,13 +58,13 @@ class SpriteRenderer(Component):
         """Renvoie l'entier hashé du composant"""
         return hash(self.to_tuple())
     
-    def to_tuple(self) -> tuple[Image, Vector, float, int]:
+    def to_tuple(self) -> tuple[Image, Vector, Color, float, bool, bool, int]:
         """Renvoie le composant sous forme de tuple"""
-        return (self._image, self._offset, self._opacity, self._z)
+        return (self._image, self._offset, self._tint, self._opacity, self._flip_x, self._flip_y, self._z)
     
     def to_list(self) -> list:
         """Renvoie le composant sous forme de liste"""
-        return [self._image, self._offset, self._opacity, self._z]
+        return [self._image, self._offset, self._tint, self._opacity, self._flip_x, self._flip_y, self._z]
     
     # ======================================== GETTERS ========================================
     @property
@@ -81,6 +88,16 @@ class SpriteRenderer(Component):
         return self._opacity
     
     @property
+    def flip_x(self) -> bool:
+        """Vérifie le mirroir horizontal"""
+        return self._flip_x
+    
+    @property
+    def flip_y(self) -> bool:
+        """Vérifie le mirroir vertical"""
+        return self._flip_y
+    
+    @property
     def z(self) -> int:
         """Renvoie l'ordre de rendu"""
         return self._z
@@ -100,17 +117,43 @@ class SpriteRenderer(Component):
     def opacity(self, value: Real):
         """Fixe le facteur d'opacité"""
         self._opacity = float(clamped(expect(value, Real)))
+
+    @flip_x.setter
+    def flip_x(self, value: bool):
+        """Fixe le mirroir horizontal"""
+        self._flip_x = expect(value, bool)
+
+    @flip_y.setter
+    def flip_y(self, value: bool):
+        """Fixe le mirroir vertical"""
+        self._flip_y = expect(value, bool)
+
+    @z.setter
+    def z(self, value: int):
+        """Fixe l'ordre de rendu"""
+        self._z = expect(value, int)
     
     # ======================================== PREDICATES ========================================
     def is_visible(self) -> bool:
         """Vérifie la visibilité"""
         return self._visible
 
-    # ======================================== PUBLIC METHODS ========================================
-    def show(self):
+    # ======================================== PUBLIC METHODS ========================================    
+    def flip(self, horizontal: bool = False, vertical: bool = False) -> None:
+        """
+        Applique un effet mirroir
+
+        Args:
+            horizontal(bool, optional): mirroir horizontal
+            vertical(bool, optional): mirroir vertical
+        """
+        self._flip_x ^= horizontal
+        self._flip_y ^= vertical
+    
+    def show(self) -> None:
         """Montre le sprite"""
         self._visible = True
 
-    def hide(self):
+    def hide(self) -> None:
         """Cache le sprite"""
         self._visible = False
