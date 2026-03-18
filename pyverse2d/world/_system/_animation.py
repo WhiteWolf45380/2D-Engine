@@ -6,7 +6,7 @@ from ...asset import Animation
 from ...request import AnimationRequest
 
 from .._world import World
-from .._component import Animator
+from .._component import Animator, SpriteRenderer
 
 # ======================================== SYSTEM ========================================
 class AnimationSystem(System):
@@ -23,10 +23,12 @@ class AnimationSystem(System):
             dt(float): delta time
         """
         for entity in world.query(Animator):
-            self._update_animator(entity.get(Animator), dt)
+            animator: Animator = entity.get(Animator)
+            sr: SpriteRenderer = entity.get(SpriteRenderer)
+            self._update_animator(animator, sr, dt)
 
     # ======================================== INTERNAL ========================================
-    def _update_animator(self, animator: Animator, dt: float) -> None:
+    def _update_animator(self, animator: Animator, sr: SpriteRenderer, dt: float) -> None:
         """Mise à jour d'un composant animateur"""
         target = self._resolve(animator)
 
@@ -38,10 +40,12 @@ class AnimationSystem(System):
             animator._elapsed = 0.0
             if req and req.on_start:
                 req.on_start()
-            return
 
         if animator._current is None:
             return
+
+        # Pousse la frame courante dans le SpriteRenderer
+        sr.image = animator.current_frame
 
         # Avance la frame
         animator._elapsed += dt

@@ -22,7 +22,7 @@ class SpriteRenderer(Component):
         z(int, optional): ordre de rendu
         visible(bool, optional): visibilité
     """
-    __slots__ = ("_image", "_offset", "_tint", "_opacity", "_flip_x", "_flip_y", "_z", "_visible")
+    __slots__ = ("_default_image", "_image", "_offset", "_tint", "_opacity", "_flip_x", "_flip_y", "_z", "_visible")
     requires = ("Transform",)
 
     def __init__(
@@ -36,7 +36,8 @@ class SpriteRenderer(Component):
             z: int = 0,
             visible: bool = True,
         ):
-        self._image: Image = expect(image, Image)
+        self._default_image: Image = expect(image, Image)
+        self._image: Image = None
         self._offset: Vector = Vector(offset)
         self._tint: Color = Color(tint)
         self._opacity: float = clamped(expect(opacity, Real))
@@ -70,7 +71,7 @@ class SpriteRenderer(Component):
     @property
     def image(self) -> Image:
         """Renvoie l'image du sprite"""
-        return self._image
+        return self._image if self._image else self._default_image
     
     @property
     def offset(self) -> Vector:
@@ -103,6 +104,11 @@ class SpriteRenderer(Component):
         return self._z
     
     # ======================================== SETTERS ========================================
+    @image.setter
+    def image(self, image: Image):
+        """Fixe l'image du sprite"""
+        self._image = expect(image, Image)
+
     @offset.setter
     def offset(self, value: Vector):
         """Fixe le décalage par rapport au Transform"""
