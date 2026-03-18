@@ -9,6 +9,8 @@ from ._composite_shape import CompositeShape
 
 from ._asset import Asset
 
+from ._request import Request
+
 from ._component import Component
 from ._system import System
 
@@ -25,6 +27,8 @@ __all__ = [
     "CompositeShape",
 
     "Asset",
+
+    "Request",
 
     "Component",
     "System",

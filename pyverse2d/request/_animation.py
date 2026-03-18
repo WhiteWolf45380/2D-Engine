@@ -1,5 +1,5 @@
 # ======================================== IMPORTS ========================================
-from ..abc import Asset
+from ..abc import Request
 
 from .._assets import Animation
 
@@ -8,7 +8,7 @@ from typing import Callable
 
 # ======================================== ASSET ========================================
 @dataclass(frozen=True)
-class AnimationRequest(Asset):
+class AnimationRequest(Request):
     """
     Requête d'animation
 
