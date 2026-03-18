@@ -10,6 +10,7 @@ from ._component import (
     Collider,
     RigidBody,
     GroundSensor,
+    Animator,
 )
 
 from ._system import (
@@ -32,6 +33,7 @@ __all__ = [
     "Collider",
     "RigidBody",
     "GroundSensor",
+    "Animator",
 
     "PhysicsSystem",
     "GravitySystem",
