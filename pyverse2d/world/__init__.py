@@ -17,6 +17,7 @@ from ._system import (
     GravitySystem,
     CollisionSystem,
     RenderSystem,
+    AnimationSystem,
 )
 
 # ======================================== EXPORTS ========================================
@@ -36,4 +37,5 @@ __all__ = [
     "GravitySystem",
     "CollisionSystem",
     "RenderSystem",
+    "AnimationSystem",
 ]
