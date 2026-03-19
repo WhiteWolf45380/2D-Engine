@@ -75,10 +75,12 @@ class AnimationSystem(System):
         best: AnimationRequest | None = None
 
         for req in animator._requests:
-            if req.condition is None or req.condition():
-                if best is None or req.priority >= best.priority:
-                    best = req
-
+            if req.cutable and req is not best:
+                if req.loop:
+                    animator._frame = 0
+                    animator._elapsed = 0.0
+    
+        animator._requests = [req for req in animator._requests if not req.cutable or req.loop or req is best]
         return best.animation if best else animator._idle
 
     def _request_of(self, animator: Animator, animation: Animation) -> AnimationRequest | None:

@@ -15,6 +15,7 @@ class AnimationRequest(Request):
     Args:
         animation(Animation): animation à activer
         loop(bool, optional): répétition de l'animation
+        cutable(bool, optional): supprimer / reset si elle perd la main
         priority(int, optional): niveau de priorité de l'animation
         tag(str, optional): label de l'animation
         condition(callable, optional): condition d'activation de l'animation
@@ -23,6 +24,7 @@ class AnimationRequest(Request):
     """
     animation: Animation
     loop: bool = False
+    cutable: bool = True
     priority: int = 0
     tag: str | None = None
     condition: Callable[[], bool] | None = None
