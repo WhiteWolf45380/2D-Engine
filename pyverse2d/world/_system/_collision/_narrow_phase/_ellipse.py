@@ -21,7 +21,7 @@ def ellipse_ellipse(sa: Ellipse, ax, ay, scale_a, rot_a, sb: Ellipse, bx, by, sc
     cdy = ey_b - ey_a
 
     if cdx == 0.0 and cdy == 0.0:
-        return Contact(Vector(1.0, 0.0), rx_a + rx_b)
+        return Contact(Vector._make(1.0, 0.0), rx_a + rx_b)
 
     _STEP = _PI / 24
     best_ov = float("inf")
@@ -75,7 +75,7 @@ def ellipse_ellipse(sa: Ellipse, ax, ay, scale_a, rot_a, sb: Ellipse, bx, by, sc
         return None
 
     sign_c = 1.0 if c_proj >= 0.0 else -1.0
-    return Contact(Vector(-ct * sign_c, -st * sign_c), overlap)
+    return Contact(Vector._make(-ct * sign_c, -st * sign_c), overlap)
 
 # ======================================== Ellipse × Capsule ========================================
 @register(Ellipse, Capsule)
@@ -95,7 +95,7 @@ def ellipse_capsule(sa: Ellipse, ax, ay, scale_a, rot_a, sb: Capsule, bx, by, sc
     dist = sqrt(dx * dx + dy * dy) or 1e-8
     nx, ny = -dx / dist, -dy / dist
     if spine_inside:
-        return Contact(Vector(nx, ny), cap_r + dist)
+        return Contact(Vector._make(nx, ny), cap_r + dist)
     if dist >= cap_r:
         return None
-    return Contact(Vector(nx, ny), cap_r - dist)
+    return Contact(Vector._make(nx, ny), cap_r - dist)

@@ -12,7 +12,13 @@ from math import sqrt
 
 # ======================================== OBJECT ========================================
 class Point(MathObject):
-    """Objet mathématique 2D abstrait : Point"""
+    """
+    Objet mathématique 2D abstrait : Point
+
+    Args:
+        x(Real): coordonnée horizontale, ou Point/tuple à coercer
+        y(Real): coordonnée verticale (optionnel si x est un Point ou tuple)
+    """
     __slots__ = ("_x", "_y")
     PRECISION = 8
 
@@ -23,11 +29,6 @@ class Point(MathObject):
         return super().__new__(cls)
 
     def __init__(self, x, y=None):
-        """
-        Args:
-            x(Real): coordonnée horizontale, ou Point/tuple à coercer
-            y(Real): coordonnée verticale (optionnel si x est un Point ou tuple)
-        """
         if isinstance(x, Point) and y is None:
             return
         super().__init__()
@@ -35,6 +36,15 @@ class Point(MathObject):
             x, y = x[0], x[1]
         self._x: float = round(float(expect(x, Real)), self.PRECISION)
         self._y: float = round(float(expect(y, Real)), self.PRECISION)
+
+    # ======================================== FACTORY INTERNE ========================================
+    @classmethod
+    def _make(cls, x: float, y: float) -> Point:
+        """Création rapide sans validation (usage interne uniquement)"""
+        obj = object.__new__(cls)
+        obj._x = x
+        obj._y = y
+        return obj
 
     # ======================================== CONVERSIONS ========================================
     def __repr__(self) -> str:
@@ -60,7 +70,7 @@ class Point(MathObject):
 
     def to_vector(self) -> Vector:
         """Renvoie le vecteur origin -> self"""
-        return Vector(self._x, self._y)
+        return Vector._make(self._x, self._y)
 
     # ======================================== GETTERS ========================================
     def __getitem__(self, i: int) -> float:
@@ -99,37 +109,35 @@ class Point(MathObject):
     # ======================================== OPERATIONS ========================================
     def __add__(self, other: Vector | Point) -> Point:
         """Renvoie l'image du point par le vecteur donné"""
-        if isinstance(other, Vector):
-            return Point(self._x + other._x, self._y + other._y)
-        if isinstance(other, Point):
-            return Point(self._x + other._x, self._y + other._y)
+        if isinstance(other, (Vector, Point)):
+            return Point._make(self._x + other._x, self._y + other._y)
         return NotImplemented
 
     def __radd__(self, other: Vector) -> Point:
         """Renvoie l'image du point par le vecteur donné"""
         if isinstance(other, Vector):
-            return Point(self._x + other._x, self._y + other._y)
+            return Point._make(self._x + other._x, self._y + other._y)
         return NotImplemented
 
     def __sub__(self, other: Point | Vector) -> Point | Vector:
         """Renvoie l'image du point par l'opposé du vecteur ou le vecteur other -> self"""
         if isinstance(other, Point):
-            return Vector(self._x - other._x, self._y - other._y)
+            return Vector._make(self._x - other._x, self._y - other._y)
         if isinstance(other, Vector):
-            return Point(self._x - other._x, self._y - other._y)
+            return Point._make(self._x - other._x, self._y - other._y)
         return NotImplemented
 
     def __pos__(self) -> Point:
         """Renvoie une copie du point"""
-        return Point(self._x, self._y)
+        return Point._make(self._x, self._y)
 
     def __neg__(self) -> Point:
         """Renvoie l'opposé du point par rapport à l'origine"""
-        return Point(-self._x, -self._y)
+        return Point._make(-self._x, -self._y)
 
     def __abs__(self) -> Point:
         """Renvoie le point côté positif"""
-        return Point(abs(self._x), abs(self._y))
+        return Point._make(abs(self._x), abs(self._y))
 
     # ======================================== COMPARATORS ========================================
     def __eq__(self, other: Point) -> bool:
@@ -158,10 +166,10 @@ class Point(MathObject):
         """
         if len(points) < 1:
             return True
-        v0 = Vector(points[0]._x - self._x, points[0]._y - self._y)
+        v0 = Vector._make(points[0]._x - self._x, points[0]._y - self._y)
         if v0.is_null():
             return all(
-                Vector(p._x - points[0]._x, p._y - points[0]._y).is_null()
+                Vector._make(p._x - points[0]._x, p._y - points[0]._y).is_null()
                 for p in points[1:]
             )
         return all(
@@ -172,7 +180,7 @@ class Point(MathObject):
     # ======================================== PUBLIC METHODS ========================================
     def copy(self) -> Point:
         """Renvoie une copie du point"""
-        return Point(self._x, self._y)
+        return Point._make(self._x, self._y)
 
     def vector_to(self, point: Point) -> Vector:
         """
@@ -182,7 +190,7 @@ class Point(MathObject):
             point(Point): point cible
         """
         p = expect(point, Point)
-        return Vector(p._x - self._x, p._y - self._y)
+        return Vector._make(p._x - self._x, p._y - self._y)
 
     def distance_to(self, point: Point) -> float:
         """
@@ -204,7 +212,7 @@ class Point(MathObject):
             vector(Vector): vecteur de translation
         """
         v = Vector(vector)
-        return Point(self._x + v._x, self._y + v._y)
+        return Point._make(self._x + v._x, self._y + v._y)
 
     def midpoint(self, point: Point) -> Point:
         """
@@ -214,7 +222,7 @@ class Point(MathObject):
             point(Point): second point du segment
         """
         p = expect(point, Point)
-        return Point((self._x + p._x) * 0.5, (self._y + p._y) * 0.5)
+        return Point._make((self._x + p._x) * 0.5, (self._y + p._y) * 0.5)
 
     def barycenter(self, *points: Point) -> Point:
         """
@@ -226,12 +234,12 @@ class Point(MathObject):
         n = len(points) + 1
         x = (self._x + sum(p._x for p in points)) / n
         y = (self._y + sum(p._y for p in points)) / n
-        return Point(x, y)
+        return Point._make(x, y)
 
     # ======================================== INTERNAL METHODS ========================================
     def _vector_to(self, point: Point) -> Vector:
         """Vecteur à un autre point"""
-        return Vector(point._x - self._x, point._y - self._y)
+        return Vector._make(point._x - self._x, point._y - self._y)
 
     def _distance_to(self, point: Point) -> float:
         """Distance à un autre point"""
@@ -241,16 +249,16 @@ class Point(MathObject):
 
     def _translate(self, vector: Vector) -> Point:
         """Translation par un vecteur"""
-        return Point(self._x + vector._x, self._y + vector._y)
+        return Point._make(self._x + vector._x, self._y + vector._y)
 
     def _midpoint(self, point: Point) -> Point:
         """Point du milieu à un autre point"""
-        return Point((self._x + point._x) * 0.5, (self._y + point._y) * 0.5)
+        return Point._make((self._x + point._x) * 0.5, (self._y + point._y) * 0.5)
 
     def _barycenter(self, *points) -> Point:
         """Barycentre à plusieurs autres points"""
         n = len(points) + 1
-        return Point(
+        return Point._make(
             (self._x + sum(p._x for p in points)) / n,
             (self._y + sum(p._y for p in points)) / n,
         )

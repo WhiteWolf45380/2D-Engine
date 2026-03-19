@@ -220,9 +220,9 @@ def _apply(ctx: ResolveContext):
     ix = ctx.nx * ctx.j_delta_n + ctx.tx * ctx.j_delta_t
     iy = ctx.ny * ctx.j_delta_n + ctx.ty * ctx.j_delta_t
     if not ctx.static_a:
-        ctx.rb_a.velocity = Vector(ctx.rb_a.velocity.x + ix * ctx.inv_a, ctx.rb_a.velocity.y + iy * ctx.inv_a)
+        ctx.rb_a.velocity = Vector._make(ctx.rb_a.velocity.x + ix * ctx.inv_a, ctx.rb_a.velocity.y + iy * ctx.inv_a)
     if not ctx.static_b:
-        ctx.rb_b.velocity = Vector(ctx.rb_b.velocity.x - ix * ctx.inv_b, ctx.rb_b.velocity.y - iy * ctx.inv_b)
+        ctx.rb_b.velocity = Vector._make(ctx.rb_b.velocity.x - ix * ctx.inv_b, ctx.rb_b.velocity.y - iy * ctx.inv_b)
 
 # ======================================== FACADE ========================================
 def resolve(a, b, contact, cached: CachedContact, dt: float):

@@ -60,7 +60,7 @@ def sat(pts_a: NDArray[np.float32], pts_b: NDArray[np.float32]) -> Contact | Non
     if float((ca[0] - cb[0]) * best_nx + (ca[1] - cb[1]) * best_ny) < 0:
         best_nx, best_ny = -best_nx, -best_ny
 
-    return Contact(Vector(best_nx, best_ny), min_depth)
+    return Contact(Vector._make(best_nx, best_ny), min_depth)
 
 # ======================================== CIRCLE VS POLYGONE ========================================
 def circle_vs_pts(cx: float, cy: float, cr: float, pts: NDArray[np.float32]) -> Contact | None:
@@ -112,7 +112,7 @@ def circle_vs_pts(cx: float, cy: float, cr: float, pts: NDArray[np.float32]) -> 
         min_depth = ov
         best_nx, best_ny = nx, ny
 
-    return Contact(Vector(best_nx, best_ny), min_depth)
+    return Contact(Vector._make(best_nx, best_ny), min_depth)
 
 # ======================================== ELLIPSE VS POLYGONE ========================================
 def ellipse_vs_pts(ex: float, ey: float, rx: float, ry: float, pts: NDArray[np.float32]) -> Contact | None:
@@ -169,7 +169,7 @@ def ellipse_vs_pts(ex: float, ey: float, rx: float, ry: float, pts: NDArray[np.f
     if not _test_axis(cpx - ex, cpy - ey):
         return None
 
-    return Contact(Vector(best_nx, best_ny), min_ov)
+    return Contact(Vector._make(best_nx, best_ny), min_ov)
 
 # ======================================== CAPSULE VS POLYGONE ========================================
 def capsule_vs_pts(ax: float, ay: float, bx: float, by: float, r: float, pts: NDArray[np.float32]) -> Contact | None:
@@ -229,7 +229,7 @@ def capsule_vs_pts(ax: float, ay: float, bx: float, by: float, r: float, pts: ND
                     near_nx, near_ny = ddx / d, ddy / d
                 else:
                     near_nx, near_ny = -edy / le, edx / le
-        return Contact(Vector(near_nx, near_ny), r + near_dist)
+        return Contact(Vector._make(near_nx, near_ny), r + near_dist)
 
     if min_dist >= r:
         return None
@@ -240,4 +240,4 @@ def capsule_vs_pts(ax: float, ay: float, bx: float, by: float, r: float, pts: ND
     if best_nx * to_mid_x + best_ny * to_mid_y < 0:
         best_nx, best_ny = -best_nx, -best_ny
 
-    return Contact(Vector(best_nx, best_ny), r - min_dist)
+    return Contact(Vector._make(best_nx, best_ny), r - min_dist)

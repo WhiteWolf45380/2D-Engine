@@ -10,7 +10,13 @@ from math import acos, sqrt
 
 # ======================================== OBJET ========================================
 class Vector(MathObject):
-    """Objet mathématique 2D abstrait : Vecteur"""
+    """
+    Objet mathématique 2D abstrait : Vecteur
+
+    Args:
+        x(Real): composante x, ou Vector/tuple à coercer
+        y(Real): composante y (optionnel si x est un Vector ou tuple)
+    """
     __slots__ = ("_x", "_y")
     PRECISION = 9
 
@@ -21,11 +27,6 @@ class Vector(MathObject):
         return super().__new__(cls)
 
     def __init__(self, x, y=None):
-        """
-        Args:
-            x(Real): composante x, ou Vector/tuple à coercer
-            y(Real): composante y (optionnel si x est un Vector ou tuple)
-        """
         if isinstance(x, Vector) and y is None:
             return
         super().__init__()
@@ -33,6 +34,15 @@ class Vector(MathObject):
             x, y = x[0], x[1]
         self._x: float = round(float(expect(x, Real)), self.PRECISION)
         self._y: float = round(float(expect(y, Real)), self.PRECISION)
+
+    # ======================================== FACTORY INTERNE ========================================
+    @classmethod
+    def _make(cls, x: float, y: float) -> Vector:
+        """Création rapide sans validation (usage interne uniquement)"""
+        obj = object.__new__(cls)
+        obj._x = x
+        obj._y = y
+        return obj
 
     # ======================================== CONVERSIONS ========================================
     def __repr__(self) -> str:
@@ -91,7 +101,7 @@ class Vector(MathObject):
         if n == 0:
             raise ZeroDivisionError("Cannot normalize null vector")
         inv = 1.0 / n
-        return Vector(self._x * inv, self._y * inv)
+        return Vector._make(self._x * inv, self._y * inv)
 
     # ======================================== SETTERS ========================================
     def __setitem__(self, i: int, value: Real):
@@ -122,25 +132,25 @@ class Vector(MathObject):
     def __add__(self, other: Vector) -> Vector:
         """Somme de vecteurs"""
         if isinstance(other, Vector):
-            return Vector(self._x + other._x, self._y + other._y)
+            return Vector._make(self._x + other._x, self._y + other._y)
         return NotImplemented
 
     def __sub__(self, other: Vector) -> Vector:
         """Différence de vecteurs"""
         if isinstance(other, Vector):
-            return Vector(self._x - other._x, self._y - other._y)
+            return Vector._make(self._x - other._x, self._y - other._y)
         return NotImplemented
 
     def __mul__(self, other: Real) -> Vector:
         """Multiplication par un scalaire"""
         if isinstance(other, Real):
-            return Vector(self._x * float(other), self._y * float(other))
+            return Vector._make(self._x * float(other), self._y * float(other))
         return NotImplemented
 
     def __rmul__(self, other: Real) -> Vector:
         """Multiplication par un scalaire (inversée)"""
         if isinstance(other, Real):
-            return Vector(self._x * float(other), self._y * float(other))
+            return Vector._make(self._x * float(other), self._y * float(other))
         return NotImplemented
 
     def __truediv__(self, other: Real) -> Vector:
@@ -149,7 +159,7 @@ class Vector(MathObject):
             if other == 0:
                 raise ZeroDivisionError("Cannot divide by zero")
             inv = 1.0 / float(other)
-            return Vector(self._x * inv, self._y * inv)
+            return Vector._make(self._x * inv, self._y * inv)
         if isinstance(other, Vector):
             return other.__rtruediv__(self)
         return NotImplemented
@@ -180,11 +190,11 @@ class Vector(MathObject):
 
     def __pos__(self) -> Vector:
         """Renvoie une copie du vecteur"""
-        return Vector(self._x, self._y)
+        return Vector._make(self._x, self._y)
 
     def __neg__(self) -> Vector:
         """Renvoie le vecteur opposé"""
-        return Vector(-self._x, -self._y)
+        return Vector._make(-self._x, -self._y)
 
     # ======================================== COMPARATORS ========================================
     def __eq__(self, other: Vector) -> bool:
@@ -223,7 +233,7 @@ class Vector(MathObject):
     # ======================================== PUBLIC METHODS ========================================
     def copy(self) -> Vector:
         """Renvoie une copie"""
-        return Vector(self._x, self._y)
+        return Vector._make(self._x, self._y)
 
     def normalize(self):
         """Normalise le vecteur en place"""
@@ -280,7 +290,7 @@ class Vector(MathObject):
         if denom == 0:
             raise ValueError("Cannot project on null vector")
         t = (self._x * v._x + self._y * v._y) / denom
-        return Vector(v._x * t, v._y * t)
+        return Vector._make(v._x * t, v._y * t)
 
     def distance(self, vector: Vector) -> float:
         """
@@ -321,7 +331,7 @@ class Vector(MathObject):
         """Projeté vectoriel"""
         denom = vector._x * vector._x + vector._y * vector._y
         t = (self._x * vector._x + self._y * vector._y) / denom
-        return Vector(vector._x * t, vector._y * t)
+        return Vector._make(vector._x * t, vector._y * t)
 
     def _distance(self, vector: Vector) -> float:
         """Distance euclidienne"""

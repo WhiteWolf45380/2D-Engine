@@ -23,20 +23,20 @@ class GravitySystem(System):
     exclusive = False
     requires = ("PhysicsSystem",)
 
-    def __init__(self, gravity: Real = 9.8):
-        self._gravity: float = float(gravity)
+    def __init__(self, gravity: Vector = (0.0, -9.8)):
+        self._gravity: Vector = Vector(gravity)
 
     # ======================================== GETTERS ========================================
     @property
-    def gravity(self) -> float:
-        """Renvoie la force gravitationnelle en N/kg"""
+    def gravity(self) -> Vector:
+        """Renvoie le vecteur gravitationnel en N/kg"""
         return self._gravity
 
     # ======================================== SETTERS ========================================
     @gravity.setter
-    def gravity(self, value: Real):
-        """Fixe la force gravitationnelle en N/kg"""
-        self._gravity = float(value)
+    def gravity(self, value: Vector):
+        """Fixe le vecteur gravitationnel en N/kg"""
+        self._gravity = Vector(value)
 
     # ======================================== UPDATE ========================================
     def update(self, world: World, dt: float):
@@ -51,4 +51,4 @@ class GravitySystem(System):
             rb: RigidBody = entity.get(RigidBody)
             if rb.is_static() or not rb.is_gravitational():
                 continue
-            rb.apply_acceleration(Vector(0.0, -self._gravity * rb.gravity_scale))
+            rb.apply_acceleration(self._gravity * rb.gravity_scale)

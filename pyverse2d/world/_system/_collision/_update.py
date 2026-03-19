@@ -102,7 +102,7 @@ def _narrowphase(ctx: UpdateContext):
                 cached.jn = 0.0
                 cached.jt = 0.0
         cached.normal = (nx, ny)
-        contact = Contact(Vector(nx, ny), contact.depth)
+        contact = Contact(Vector._make(nx, ny), contact.depth)
         # Actualisation du GroundSensor selon la normale du contact
         _update_ground_sensor(a, b, nx, ny)
         if contact.depth > ctx.max_depth:
@@ -151,7 +151,7 @@ def _update_ground_sensor(a, b, nx: float, ny: float):
         if ny_norm >= gs._threshold:
             gs._grounded = True
             gs._coyote_elapsed = 0.0
-            gs._ground_normal = Vector(nx / n_len, ny_norm)
+            gs._ground_normal = Vector._make(nx / n_len, ny_norm)
     
     # Ne touche pas le sol
     if ny_norm < 0 and b.has(GroundSensor):
@@ -159,4 +159,4 @@ def _update_ground_sensor(a, b, nx: float, ny: float):
         if -ny_norm >= gs._threshold:
             gs._grounded = True
             gs._coyote_elapsed = 0.0
-            gs._ground_normal = Vector(-nx / n_len, -ny_norm)
+            gs._ground_normal = Vector._make(-nx / n_len, -ny_norm)

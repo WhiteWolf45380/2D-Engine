@@ -82,9 +82,9 @@ def _apply(ctx: WarmStartContext):
     ix = ctx.nx * ctx._jn + ctx.tx * ctx._jt
     iy = ctx.ny * ctx._jn + ctx.ty * ctx._jt
     if not ctx.static_a:
-        ctx.rb_a.velocity = Vector(ctx.rb_a.velocity.x + ix * ctx.inv_a, ctx.rb_a.velocity.y + iy * ctx.inv_a)
+        ctx.rb_a.velocity = Vector._make(ctx.rb_a.velocity.x + ix * ctx.inv_a, ctx.rb_a.velocity.y + iy * ctx.inv_a)
     if not ctx.static_b:
-        ctx.rb_b.velocity = Vector(ctx.rb_b.velocity.x - ix * ctx.inv_b, ctx.rb_b.velocity.y - iy * ctx.inv_b)
+        ctx.rb_b.velocity = Vector._make(ctx.rb_b.velocity.x - ix * ctx.inv_b, ctx.rb_b.velocity.y - iy * ctx.inv_b)
 
 # ======================================== FACADE ========================================
 def warm_start(a, b, contact, cached):

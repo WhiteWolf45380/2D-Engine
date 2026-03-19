@@ -24,7 +24,7 @@ def circle_circle(sa: Circle, ax, ay, scale_a, rot_a, sb: Circle, bx, by, scale_
     if dist_sq >= radii * radii:
         return None
     dist = sqrt(dist_sq) or 1e-8
-    return Contact(Vector(dx / dist, dy / dist), radii - dist)
+    return Contact(Vector._make(dx / dist, dy / dist), radii - dist)
 
 # ======================================== Circle × Ellipse ========================================
 @register(Circle, Ellipse)
@@ -40,10 +40,10 @@ def circle_ellipse(sa: Circle, ax, ay, scale_a, rot_a, sb: Ellipse, bx, by, scal
     dy = ay - qy
     dist = sqrt(dx * dx + dy * dy) or 1e-8
     if inside:
-        return Contact(Vector(dx / dist, dy / dist), r + dist)
+        return Contact(Vector._make(dx / dist, dy / dist), r + dist)
     if dist >= r:
         return None
-    return Contact(Vector(dx / dist, dy / dist), r - dist)
+    return Contact(Vector._make(dx / dist, dy / dist), r - dist)
 
 # ======================================== Circle × Capsule ========================================
 @register(Circle, Capsule)
@@ -61,4 +61,4 @@ def circle_capsule(sa: Circle, ax, ay, scale_a, rot_a, sb: Capsule, bx, by, scal
     if dist_sq >= radii * radii:
         return None
     dist = sqrt(dist_sq) or 1e-8
-    return Contact(Vector(dx / dist, dy / dist), radii - dist)
+    return Contact(Vector._make(dx / dist, dy / dist), radii - dist)

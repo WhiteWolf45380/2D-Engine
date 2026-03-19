@@ -28,4 +28,4 @@ def capsule_capsule(sa: Capsule, ax, ay, scale_a, rot_a, sb: Capsule, bx, by, sc
     if dist_sq >= radii * radii:
         return None
     dist = sqrt(dist_sq) or 1e-8
-    return Contact(Vector(dx / dist, dy / dist), radii - dist)
+    return Contact(Vector._make(dx / dist, dy / dist), radii - dist)
