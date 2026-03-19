@@ -49,7 +49,7 @@ def _reset_sensors(ctx: UpdateContext):
         if entity.has(GroundSensor):
             gs = entity.get(GroundSensor)
             gs._coyote_elapsed += ctx.dt
-            if gs._coyote_elapsed >= gs._ground_damping:
+            if gs._coyote_elapsed >= gs._coyote_time:
                 gs._grounded = False
                 gs._ground_normal = None
 
@@ -144,14 +144,16 @@ def _update_ground_sensor(a, b, nx: float, ny: float):
     """Actualisation du GroundSensor selon la normale du contact"""
     n_len = sqrt(nx * nx + ny * ny) or 1.0
     ny_norm = ny / n_len
-
+    
+    # Touche le sol
     if ny_norm > 0 and a.has(GroundSensor):
         gs = a.get(GroundSensor)
         if ny_norm >= gs._threshold:
             gs._grounded = True
             gs._coyote_elapsed = 0.0
             gs._ground_normal = Vector(nx / n_len, ny_norm)
-
+    
+    # Ne touche pas le sol
     if ny_norm < 0 and b.has(GroundSensor):
         gs = b.get(GroundSensor)
         if -ny_norm >= gs._threshold:

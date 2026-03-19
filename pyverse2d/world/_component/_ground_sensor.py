@@ -20,7 +20,7 @@ class GroundSensor(Component):
         ground_damping(float): amortissement horizontal appliqué uniquement au sol
         coyote_time(float): durée de grâce en secondes après perte du sol
     """
-    __slots__ = ("_threshold", "_stability_angle", "_ground_damping", "_coyote_time", "_grounded", "_coyote_elapsed", "_climb_ny_min", "_ground_normal")
+    __slots__ = ("_threshold", "_stability_angle", "_ground_damping", "_coyote_time", "_coyote_elapsed", "_climb_ny_min", "_ground_normal")
     requires = ("Transform", "Collider")
 
     def __init__(self, threshold: Real = 0.65, stability_angle: Real = 90.0, ground_damping: Real = 0.0, coyote_time: Real = 0.08):
@@ -28,8 +28,8 @@ class GroundSensor(Component):
         self._stability_angle: float = abs(float(expect(stability_angle, Real)))
         self._ground_damping: float = float(max(0.0, expect(ground_damping, Real)))
         self._coyote_time: float = float(max(0.0, expect(coyote_time, Real)))
-        self._grounded: bool = False
         self._coyote_elapsed: float = 0.0
+        self._grounded: bool = False
         self._compute()
 
     # ======================================== CONVERSIONS ========================================
