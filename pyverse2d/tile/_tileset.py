@@ -1,0 +1,1 @@
+# représente une spritesheet découpée en tuiles ; connaît la taille d'une tuile et les métadonnées associées à chaque ID (tags, forme de collision) ; utilisé par _tile_map_data et _tile_layer

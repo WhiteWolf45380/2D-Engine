@@ -1,0 +1,1 @@
+# conteneur qui regroupe plusieurs TileMapData nommées (ex. "bg", "collision", "fg") issues d'un même fichier ; c'est l'objet que l'utilisateur manipule après le chargement.

@@ -1,0 +1,1 @@
+# parcourt une TileMapData et injecte des shapes statiques dans le World pour les tuiles solides ; utilisé une seule fois au setup de la scène, comme WallsDefiner.

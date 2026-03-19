@@ -1,0 +1,1 @@
+#  une grille 2D d'IDs de tuiles, rien de plus ; sait convertir une position monde ↔ coordonnées grille ; utilisé par _tile_layer pour le rendu et _collision_mapper pour la physique.

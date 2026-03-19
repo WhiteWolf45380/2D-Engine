@@ -2,7 +2,7 @@
 from __future__ import annotations
 from ._version import __version__
 
-from . import abc, math, shape, asset, request, world, map, ui, scene
+from . import abc, math, shape, asset, request, world, tile, ui, scene
 
 from ._rendering import Screen, Window
 from ._rendering._pipeline import Pipeline
@@ -78,7 +78,7 @@ __all__ = [
     "asset",
     "request",
     "world",
-    "map",
+    "tile",
     "ui",
     "scene",
 

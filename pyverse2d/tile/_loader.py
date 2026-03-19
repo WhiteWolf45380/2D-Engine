@@ -1,0 +1,1 @@
+# lit un fichier externe (Tiled JSON pour l'instant) et produit un MapAsset ; c'est le seul endroit du codebase qui connaît le format des fichiers.
