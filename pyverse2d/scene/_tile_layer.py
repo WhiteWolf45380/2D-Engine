@@ -74,18 +74,17 @@ class TileLayer(Layer):
         ...
 
     def on_stop(self):
-        """Désactivation du layer — libère les ressources pyglet"""
+        """Désactivation du layer"""
         self._invalidate_cache()
 
     # ======================================== LOOP ========================================
     def update(self, dt: float):
-        """Actualisation du layer — les tuiles sont statiques, rien à faire ici"""
+        """Actualisation du layer"""
         ...
 
     def draw(self, pipeline: Pipeline):
         """
-        Affichage du layer — ne dessine que les tuiles visibles dans le viewport caméra
-
+        Affichage du layer
         Args:
             pipeline(Pipeline): pipeline active
         """
@@ -93,11 +92,14 @@ class TileLayer(Layer):
         if self._image is None:
             return
 
-        cam    = pipeline.camera
+        cam = pipeline.camera
         screen = pipeline.screen
-        px     = cam.final_x * self._parallax[0]
-        py     = cam.final_y * self._parallax[1]
 
+        # Position caméra avec parallax appliqué
+        px = cam.final_x * self._parallax[0]
+        py = cam.final_y * self._parallax[1]
+
+        # Région visible en coordonnées monde
         col_min, row_min, col_max, row_max = self._tile_map.tiles_in_region(
             px - screen.half_width,
             py - screen.half_height,
@@ -106,8 +108,6 @@ class TileLayer(Layer):
         )
 
         tm = self._tile_map
-        tw = tm.tile_width
-        th = tm.tile_height
 
         visible = set()
         for row in range(row_min, row_max):
@@ -119,11 +119,11 @@ class TileLayer(Layer):
                 key = (col, row)
                 visible.add(key)
 
-                # Création du sprite si absent du cache
                 if key not in self._sprites:
                     region = self._get_region(tile_id)
                     if region is None:
                         continue
+
                     wx, wy = tm.tile_to_world(col, row)
                     sprite = pyglet.sprite.Sprite(
                         region,
@@ -131,8 +131,8 @@ class TileLayer(Layer):
                         batch=self._batch,
                         group=self._group,
                     )
-                    sprite.scale_x = tw / region.width
-                    sprite.scale_y = th / region.height
+                    sprite.scale_x = tm.tile_width  / region.width
+                    sprite.scale_y = tm.tile_height / region.height
                     self._sprites[key] = sprite
 
         # Nettoyage des sprites hors champ
@@ -158,24 +158,23 @@ class TileLayer(Layer):
         if tile_id in self._regions:
             return self._regions[tile_id]
 
-        tile   = self._tile_map.tile
-        tw     = int(tile.tile_width)
-        th     = int(tile.tile_height)
+        tile = self._tile_map.tile
+        tw = int(tile.tile_width)
+        th = int(tile.tile_height)
         margin = int(tile.margin)
         spacing = int(tile.spacing)
-        stride  = tw + spacing
-        cols    = (self._image.width - margin) // stride
+        stride = tw + spacing
+        cols = (self._image.width - margin) // stride
 
         if cols <= 0:
             return None
 
         col = tile_id % cols
         row = tile_id // cols
-        x   = margin + col * stride
-        # pyglet : y=0 en bas, Tiled : y=0 en haut — on inverse la ligne
-        total_rows = (self._image.height - margin) // (th + spacing)
-        y_tiled    = margin + row * (th + spacing)
-        y_pyglet   = self._image.height - y_tiled - th
+        x = margin + col * stride
+
+        y_tiled = margin + row * (th + spacing)
+        y_pyglet = self._image.height - y_tiled - th
 
         region = self._image.get_region(x, y_pyglet, tw, th).get_texture()
         self._regions[tile_id] = region
