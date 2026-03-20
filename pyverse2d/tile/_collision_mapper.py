@@ -5,7 +5,7 @@ from ._tile_map import TileMap
 from ._tile import TileMeta
 
 from .._internal import expect, positive
-from ..world import World
+from ..world import World, Entity, Transform, Collider, RigidBody
 from ..shape import Rect
 
 from numbers import Real
@@ -49,16 +49,14 @@ class CollisionMapper:
         Args:
             world(World): monde cible
         """
-        from ..world._component import Transform, Collider, RigidBody
         for col, row, w, h, friction, restitution, category, mask in self._merged_rects():
             wx, wy = self._tile_map.tile_to_world(col, row)
-            entity = world.create_entity()
-            entity.add(Transform(pos=(wx + w / 2, wy + h / 2)))
-            entity.add(Collider(shape=Rect(w, h), category=category, mask=mask))
-            rb = RigidBody(static=True)
-            rb.friction = friction
-            rb.restitution = restitution
-            entity.add(rb)
+            entity = Entity(
+                Transform(pos=(wx + w / 2, wy + h / 2)),
+                Collider(shape=Rect(w, h), category=category, mask=mask),
+                RigidBody(static=True, friction=friction, restitution=restitution)
+            )
+            world.add_entity(entity)
 
     # ======================================== INTERNALS ========================================
     def _is_solid(self, col: int, row: int) -> bool:
