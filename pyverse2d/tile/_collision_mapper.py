@@ -5,7 +5,7 @@ from ._tile_map import TileMap
 from ._tile import TileMeta
 
 from .._internal import expect, positive
-from ..world import World, Entity, Transform, Collider, RigidBody
+from ..world import World
 from ..shape import Rect
 
 from numbers import Real
@@ -18,10 +18,12 @@ class CollisionMapper:
     Args:
         tile_map(TileMap): couche source
         solid_tag(str, optional): tag identifiant les tuiles solides
-        friction(Real, optional): friction par défaut pour toutes les tuiles
-        restitution(Real, optional): restitution par défaut pour toutes les tuiles
+        friction(Real, optional): friction par défaut
+        restitution(Real, optional): restitution par défaut
+        category(int, optional): catégorie binaire par défaut
+        mask(int, optional): masque binaire par défaut
     """
-    __slots__ = ("_tile_map", "_solid_tag", "_friction", "_restitution")
+    __slots__ = ("_tile_map", "_solid_tag", "_friction", "_restitution", "_category", "_mask")
 
     def __init__(
         self,
@@ -29,11 +31,15 @@ class CollisionMapper:
         solid_tag: str = "solid",
         friction: Real = 0.3,
         restitution: Real = 0.0,
+        category: int = 0b00000001,
+        mask: int = 0b11111111,
     ):
         self._tile_map: TileMap = expect(tile_map, TileMap)
         self._solid_tag: str = expect(solid_tag, str)
         self._friction: float = float(positive(expect(friction, Real)))
         self._restitution: float = float(positive(expect(restitution, Real)))
+        self._category: int = expect(category, int)
+        self._mask: int = expect(mask, int)
 
     # ======================================== PUBLIC METHODS ========================================
     def inject(self, world: World) -> None:
@@ -43,14 +49,16 @@ class CollisionMapper:
         Args:
             world(World): monde cible
         """
-        for col, row, w, h, friction, restitution in self._merged_rects():
-            x, y = self._tile_map.tile_to_world(col, row)
-            entity = Entity(
-                Transform(x=x + w / 2, y=y + h / 2),
-                Collider(shape=Rect(w, h)),
-                RigidBody(friction=friction, restitution=restitution)
-            )
-            world.add_entity(entity)
+        from ..world._component import Transform, Collider, RigidBody
+        for col, row, w, h, friction, restitution, category, mask in self._merged_rects():
+            wx, wy = self._tile_map.tile_to_world(col, row)
+            entity = world.create_entity()
+            entity.add(Transform(pos=(wx + w / 2, wy + h / 2)))
+            entity.add(Collider(shape=Rect(w, h), category=category, mask=mask))
+            rb = RigidBody(static=True)
+            rb.friction = friction
+            rb.restitution = restitution
+            entity.add(rb)
 
     # ======================================== INTERNALS ========================================
     def _is_solid(self, col: int, row: int) -> bool:
@@ -63,14 +71,16 @@ class CollisionMapper:
             return False
         return meta.has_tag(self._solid_tag)
 
-    def _resolve_props(self, tile_id: int) -> tuple[float, float]:
-        """Résout friction et restitution pour un tile_id"""
+    def _resolve_props(self, tile_id: int) -> tuple[float, float, int, int]:
+        """Résout friction, restitution, category, mask pour un tile_id — meta > global"""
         meta: TileMeta | None = self._tile_map.tile.get_meta(tile_id)
         friction = meta.friction if (meta and meta.friction is not None) else self._friction
         restitution = meta.restitution if (meta and meta.restitution is not None) else self._restitution
-        return friction, restitution
+        category = meta.category if (meta and meta.category is not None) else self._category
+        mask = meta.mask if (meta and meta.mask is not None) else self._mask
+        return friction, restitution, category, mask
 
-    def _merged_rects(self) -> list[tuple[int, int, float, float, float, float]]:
+    def _merged_rects(self) -> list[tuple[int, int, float, float, float, float, int, int]]:
         """Fusionne les tuiles solides en rectangles par sweep horizontal puis vertical"""
         tm = self._tile_map
         tw = tm.tile_width
@@ -78,13 +88,14 @@ class CollisionMapper:
         rects = []
 
         visited = [[False] * tm.cols for _ in range(tm.rows)]
+
         for row in range(tm.rows):
             for col in range(tm.cols):
                 if visited[row][col] or not self._is_solid(col, row):
                     continue
 
                 tile_id = tm.tile_at(col, row)
-                friction, restitution = self._resolve_props(tile_id)
+                props = self._resolve_props(tile_id)
 
                 # Extension horizontale
                 w = 1
@@ -92,7 +103,7 @@ class CollisionMapper:
                     col + w < tm.cols
                     and not visited[row][col + w]
                     and self._is_solid(col + w, row)
-                    and self._resolve_props(tm.tile_at(col + w, row)) == (friction, restitution)
+                    and self._resolve_props(tm.tile_at(col + w, row)) == props
                 ):
                     w += 1
 
@@ -102,7 +113,7 @@ class CollisionMapper:
                     can_extend = all(
                         not visited[row + h][col + c]
                         and self._is_solid(col + c, row + h)
-                        and self._resolve_props(tm.tile_at(col + c, row + h)) == (friction, restitution)
+                        and self._resolve_props(tm.tile_at(col + c, row + h)) == props
                         for c in range(w)
                     )
                     if not can_extend:
@@ -114,6 +125,7 @@ class CollisionMapper:
                     for dc in range(w):
                         visited[row + dr][col + dc] = True
 
-                rects.append((col, row, w * tw, h * th, friction, restitution))
+                friction, restitution, category, mask = props
+                rects.append((col, row, w * tw, h * th, friction, restitution, category, mask))
 
         return rects

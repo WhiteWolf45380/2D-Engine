@@ -129,7 +129,7 @@ def _tile_from_tsx(node: ET.Element, base_dir: Path) -> Tile:
     )
     # Propriétés custom par tuile (format TSX/XML)
     for tile_node in node.findall("tile"):
-        local_id   = int(tile_node.attrib["id"]) + 1
+        local_id = int(tile_node.attrib["id"]) + 1
         props_node = tile_node.find("properties")
         if props_node is None:
             continue
@@ -182,6 +182,7 @@ def _meta_from_props_dict(props: dict) -> TileMeta | None:
     if props.get("solid"): tags.append("solid")
     if props.get("ladder"): tags.append("ladder")
     if props.get("one_way"): tags.append("one_way")
+    if props.get("ladder"): tags.append("ladder")
 
     if not tags and friction is None and restitution is None:
         return None
@@ -197,7 +198,7 @@ def _tile_for(flat_ids: list[int], tiles: list[tuple[int, Tile]]) -> tuple[int, 
     non_empty = [gid for gid in flat_ids if gid != 0]
     if not non_empty:
         return tiles[0]
-    min_gid = min(non_empty)
+    min_gid= min(non_empty)
     candidate = tiles[0]
     for firstgid, tile in tiles:
         if firstgid <= min_gid:

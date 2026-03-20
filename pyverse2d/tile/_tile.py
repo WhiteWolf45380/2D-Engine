@@ -2,12 +2,12 @@
 from __future__ import annotations
 
 from .._internal import expect, positive
-from ..abc import Shape
+from ..abc import Asset, Shape
 
 from numbers import Real
 
 # ======================================== TILE ========================================
-class Tile:
+class Tile(Asset):
     """
     Spritesheet découpée en tuiles de taille uniforme
 
@@ -28,11 +28,11 @@ class Tile:
         margin: Real = 0,
         spacing: Real = 0,
     ):
-        self._image_path: str    = expect(image_path, str)
-        self._tile_width: float  = float(positive(expect(tile_width,  Real)))
+        self._image_path: str = expect(image_path, str)
+        self._tile_width: float = float(positive(expect(tile_width, Real)))
         self._tile_height: float = float(positive(expect(tile_height, Real)))
-        self._margin: float      = float(positive(expect(margin,  Real)))
-        self._spacing: float     = float(positive(expect(spacing, Real)))
+        self._margin: float = float(positive(expect(margin, Real)))
+        self._spacing: float = float(positive(expect(spacing, Real)))
         self._meta: dict[int, TileMeta] = {}
 
     # ======================================== CONVERSIONS ========================================
@@ -77,10 +77,10 @@ class Tile:
             tile_id(int): identifiant local de la tuile (0-indexé)
         """
         tile_id = expect(tile_id, int)
-        stride  = self._tile_width + self._spacing
-        cols    = self._columns_hint(stride)
-        col     = tile_id % cols
-        row     = tile_id // cols
+        stride = self._tile_width + self._spacing
+        cols = self._columns_hint(stride)
+        col = tile_id % cols
+        row = tile_id // cols
         x = self._margin + col * stride
         y = self._margin + row * stride
         return (x, y, self._tile_width, self._tile_height)
@@ -109,6 +109,7 @@ class Tile:
     def _columns_hint(self, stride: float) -> int:
         """Placeholder — le vrai calcul nécessite la largeur image, connue au runtime par le renderer"""
         return max(1, int(stride))
+    
 
 # ======================================== TILE META ========================================
 class TileMeta:
@@ -120,8 +121,10 @@ class TileMeta:
         collision_shape(Shape, optional): forme de collision custom ; None = bounding box
         friction(Real, optional): friction de la tuile ; None = valeur du CollisionMapper
         restitution(Real, optional): restitution de la tuile ; None = valeur du CollisionMapper
+        category(int, optional): catégorie binaire de collision ; None = valeur du CollisionMapper
+        mask(int, optional): masque binaire de collision ; None = valeur du CollisionMapper
     """
-    __slots__ = ("_tags", "_collision_shape", "_friction", "_restitution")
+    __slots__ = ("_tags", "_collision_shape", "_friction", "_restitution", "_category", "_mask")
 
     def __init__(
         self,
@@ -129,17 +132,22 @@ class TileMeta:
         collision_shape: Shape | None = None,
         friction: Real | None = None,
         restitution: Real | None = None,
+        category: int | None = None,
+        mask: int | None = None,
     ):
-        self._tags: frozenset[str]      = frozenset(expect(tags, tuple[str]))
+        self._tags: frozenset[str] = frozenset(expect(tags, tuple[str]))
         self._collision_shape: Shape | None = collision_shape
-        self._friction: float | None    = float(positive(expect(friction, Real)))    if friction    is not None else None
+        self._friction: float | None = float(positive(expect(friction, Real))) if friction is not None else None
         self._restitution: float | None = float(positive(expect(restitution, Real))) if restitution is not None else None
+        self._category: int | None = expect(category, int) if category is not None else None
+        self._mask: int | None = expect(mask, int) if mask is not None else None
 
     # ======================================== CONVERSIONS ========================================
     def __repr__(self) -> str:
         return (
             f"TileMeta(tags={self._tags}, "
             f"friction={self._friction}, restitution={self._restitution}, "
+            f"category={self._category}, mask={self._mask}, "
             f"collision_shape={self._collision_shape})"
         )
 
@@ -163,6 +171,16 @@ class TileMeta:
     def restitution(self) -> float | None:
         """Renvoie la restitution de la tuile, ou None si héritage du CollisionMapper"""
         return self._restitution
+
+    @property
+    def category(self) -> int | None:
+        """Renvoie la catégorie binaire, ou None si héritage du CollisionMapper"""
+        return self._category
+
+    @property
+    def mask(self) -> int | None:
+        """Renvoie le masque binaire, ou None si héritage du CollisionMapper"""
+        return self._mask
 
     # ======================================== PREDICATES ========================================
     def has_tag(self, tag: str) -> bool:
