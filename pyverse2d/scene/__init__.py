@@ -6,6 +6,7 @@ from .._rendering._pipeline import Pipeline
 from ._camera import Camera
 from ._viewport import Viewport
 from ._world_layer import WorldLayer
+from ._tile_layer import TileLayer
 from ._scene import Scene
 
 # ======================================== STATE ========================================
@@ -93,6 +94,7 @@ __all__ = [
     "Viewport",
 
     "WorldLayer",
+    "TileLayer",
     "Scene",
 
     "get_current",

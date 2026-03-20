@@ -8,6 +8,7 @@ from ._map_asset import MapAsset
 import json
 import numpy as np
 from pathlib import Path
+from xml.etree import ElementTree as ET
 
 # ======================================== LOADER ========================================
 class MapLoader:
@@ -25,78 +26,133 @@ class MapLoader:
         path = Path(path)
         raw  = json.loads(path.read_text(encoding="utf-8"))
 
-        tiles  = _load_tiles(raw["tilesets"], path.parent)
+        tiles  = _load_tiles_json(raw["tilesets"], path.parent)
         layers = {}
 
         for layer in raw.get("layers", []):
             if layer["type"] != "tilelayer":
                 continue
-
-            name      = layer["name"]
-            cols      = layer["width"]
-            rows      = layer["height"]
-            flat_ids  = layer["data"]          # IDs globaux Tiled (1-indexés, 0 = vide)
-            firstgid, tile = _tile_for(flat_ids, tiles)
-
-            # Conversion IDs globaux → IDs locaux (0-indexés), 0 reste vide
-            local_ids = [
-                (gid - firstgid) if gid != 0 else 0
-                for gid in flat_ids
-            ]
-            grid = np.array(local_ids, dtype=np.int32).reshape(rows, cols)
-
-            layers[name] = TileMap(
-                tile        = tile,
-                grid        = grid,
-                tile_width  = raw["tilewidth"],
-                tile_height = raw["tileheight"],
-            )
+            layers[layer["name"]] = _parse_layer_json(layer, raw, tiles)
 
         return MapAsset(layers)
 
+    # ======================================== TILED TMX ========================================
+    @staticmethod
+    def from_tiled_tmx(path: str | Path) -> MapAsset:
+        """
+        Charge un fichier Tiled au format natif XML (.tmx)
 
-# ======================================== INTERNALS ========================================
-def _load_tiles(raw_tilesets: list[dict], base_dir: Path) -> list[tuple[int, Tile]]:
-    """
-    Résout et charge tous les tilesets déclarés dans le fichier
+        Args:
+            path(str | Path): chemin du fichier
+        """
+        path = Path(path)
+        root = ET.parse(path).getroot()
 
-    Renvoie une liste de (firstgid, Tile) triée par firstgid croissant
-    """
+        map_tw = int(root.attrib["tilewidth"])
+        map_th = int(root.attrib["tileheight"])
+
+        tiles  = _load_tiles_tmx(root.findall("tileset"), path.parent)
+        layers = {}
+
+        for layer in root.findall("layer"):
+            layers[layer.attrib["name"]] = _parse_layer_tmx(layer, map_tw, map_th, tiles)
+
+        return MapAsset(layers)
+
+# ======================================== JSON INTERNALS ========================================
+def _load_tiles_json(raw_tilesets: list[dict], base_dir: Path) -> list[tuple[int, Tile]]:
+    """Résout et charge les tilesets depuis un fichier JSON"""
     result = []
     for entry in raw_tilesets:
         firstgid = entry["firstgid"]
-
-        # Tileset externe — fichier .tsj / .tsx référencé
         if "source" in entry:
-            source_path = base_dir / entry["source"]
-            data = json.loads(source_path.read_text(encoding="utf-8"))
+            data = json.loads((base_dir / entry["source"]).read_text(encoding="utf-8"))
         else:
             data = entry
-
-        tile = Tile(
-            image_path  = str(base_dir / data["image"]),
-            tile_width  = data["tilewidth"],
-            tile_height = data["tileheight"],
-            margin      = data.get("margin",  0),
-            spacing     = data.get("spacing", 0),
-        )
-        result.append((firstgid, tile))
-
+        result.append((firstgid, _tile_from_dict(data, base_dir)))
     result.sort(key=lambda t: t[0])
     return result
 
 
-def _tile_for(flat_ids: list[int], tiles: list[tuple[int, Tile]]) -> tuple[int, Tile]:
-    """
-    Renvoie le (firstgid, Tile) correspondant aux IDs de la couche
+def _parse_layer_json(layer: dict, raw: dict, tiles: list[tuple[int, Tile]]) -> TileMap:
+    """Construit un TileMap depuis une couche JSON"""
+    cols     = layer["width"]
+    rows     = layer["height"]
+    flat_ids = layer["data"]
+    firstgid, tile = _tile_for(flat_ids, tiles)
+    local_ids = [(gid - firstgid) if gid != 0 else 0 for gid in flat_ids]
+    grid = np.array(local_ids, dtype=np.int32).reshape(rows, cols)
+    return TileMap(tile=tile, grid=grid, tile_width=raw["tilewidth"], tile_height=raw["tileheight"])
 
-    Stratégie : on prend le tileset dont le firstgid est le plus grand
-    tout en restant <= au premier ID non-vide de la couche
-    """
+
+# ======================================== TMX INTERNALS ========================================
+def _load_tiles_tmx(tileset_nodes: list[ET.Element], base_dir: Path) -> list[tuple[int, Tile]]:
+    """Résout et charge les tilesets depuis un fichier TMX"""
+    result = []
+    for node in tileset_nodes:
+        firstgid = int(node.attrib["firstgid"])
+        if "source" in node.attrib:
+            # Tileset externe .tsx
+            tsx_path = base_dir / node.attrib["source"]
+            tsx_root = ET.parse(tsx_path).getroot()
+            tile = _tile_from_tsx(tsx_root, tsx_path.parent)
+        else:
+            # Tileset embarqué
+            tile = _tile_from_tsx(node, base_dir)
+        result.append((firstgid, tile))
+    result.sort(key=lambda t: t[0])
+    return result
+
+
+def _tile_from_tsx(node: ET.Element, base_dir: Path) -> Tile:
+    """Construit un Tile depuis un nœud XML tileset ou .tsx"""
+    image_node = node.find("image")
+    return Tile(
+        image_path  = str(base_dir / image_node.attrib["source"]),
+        tile_width  = int(node.attrib["tilewidth"]),
+        tile_height = int(node.attrib["tileheight"]),
+        margin      = int(node.attrib.get("margin",  0)),
+        spacing     = int(node.attrib.get("spacing", 0)),
+    )
+
+
+def _parse_layer_tmx(layer: ET.Element, map_tw: int, map_th: int, tiles: list[tuple[int, Tile]]) -> TileMap:
+    """Construit un TileMap depuis une couche TMX"""
+    cols = int(layer.attrib["width"])
+    rows = int(layer.attrib["height"])
+    data_node = layer.find("data")
+    encoding  = data_node.attrib.get("encoding", "xml")
+
+    if encoding == "csv":
+        flat_ids = [int(v) for v in data_node.text.strip().split(",")]
+    elif encoding == "xml":
+        flat_ids = [int(tile.attrib["gid"]) for tile in data_node.findall("tile")]
+    else:
+        raise NotImplementedError(f"Encodage TMX non supporté : '{encoding}' (utilisez CSV ou XML dans Tiled)")
+
+    firstgid, tile = _tile_for(flat_ids, tiles)
+    local_ids = [(gid - firstgid) if gid != 0 else 0 for gid in flat_ids]
+    grid = np.array(local_ids, dtype=np.int32).reshape(rows, cols)
+    return TileMap(tile=tile, grid=grid, tile_width=map_tw, tile_height=map_th)
+
+
+# ======================================== SHARED INTERNALS ========================================
+def _tile_from_dict(data: dict, base_dir: Path) -> Tile:
+    """Construit un Tile depuis un dict JSON tileset"""
+    return Tile(
+        image_path  = str(base_dir / data["image"]),
+        tile_width  = data["tilewidth"],
+        tile_height = data["tileheight"],
+        margin      = data.get("margin",  0),
+        spacing     = data.get("spacing", 0),
+    )
+
+
+def _tile_for(flat_ids: list[int], tiles: list[tuple[int, Tile]]) -> tuple[int, Tile]:
+    """Renvoie le (firstgid, Tile) correspondant aux IDs de la couche"""
     non_empty = [gid for gid in flat_ids if gid != 0]
     if not non_empty:
         return tiles[0]
-
     min_gid   = min(non_empty)
     candidate = tiles[0]
     for firstgid, tile in tiles:

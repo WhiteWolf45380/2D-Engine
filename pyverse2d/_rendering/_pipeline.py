@@ -8,8 +8,9 @@ from pyglet.math import Mat4
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ..scene import Scene
+    from ..scene import Scene, Viewport, Camera
     from ._window import Window
+    from ._screen import Screen
 
 # ======================================== RENDERER ========================================
 class Pipeline:
@@ -17,12 +18,13 @@ class Pipeline:
     Pipeline de rendu exploitant OpenGL
 
     Args:
-        virtual_width (int): largeur de l'espace virtuel
-        virtual_height (int): hauteur de l'espace virtuel
+        window(Window): fenêtre associée
     """
+    __slots__ = ("_window", "_scene", "_batch", "_groups")
 
     def __init__(self, window: Window):
         self._window: Window = window
+        self._scene: Scene | None = None
         self._batch: Batch = Batch()
         self._groups: dict[int, Group] = {}
 
@@ -31,6 +33,26 @@ class Pipeline:
     def window(self) -> Window:
         """Renvoie la fenêtre OS assignée"""
         return self._window
+    
+    @property
+    def screen(self) -> Screen:
+        """Renvoie l'espace logique de référence"""
+        return self._window.screen
+    
+    @property
+    def scene(self) -> Scene:
+        """Renvoie la scene en cours de rendu"""
+        return self._scene
+    
+    @property
+    def viewport(self) -> Viewport:
+        """Renvoie le viewport de la scene en cours de rendu"""
+        return self._scene.viewport
+    
+    @property
+    def camera(self) -> Camera:
+        """Renvoie la caméra de la scene en cours de rendu"""
+        return self._scene.camera
 
     @property
     def batch(self) -> Batch:
@@ -66,6 +88,7 @@ class Pipeline:
         Args:
             scene(Scene): scène active à rendre
         """
+        self._scene = scene
         screen = self._window.screen
 
         # NDC
@@ -86,3 +109,4 @@ class Pipeline:
     def flush(self):
         """Envoie tout le batch au GPU"""
         self._batch.draw()
+        self._scene = None
