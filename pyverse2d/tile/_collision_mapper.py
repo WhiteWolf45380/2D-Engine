@@ -54,7 +54,7 @@ class CollisionMapper:
             entity = Entity(
                 Transform(pos=(wx + w / 2, wy + h / 2)),
                 Collider(shape=Rect(w, h), category=category, mask=mask),
-                RigidBody(static=True, friction=friction, restitution=restitution)
+                RigidBody(friction=friction, restitution=restitution)
             )
             world.add_entity(entity)
 
