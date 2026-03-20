@@ -1,7 +1,7 @@
 # ======================================== IMPORTS ========================================
 from __future__ import annotations
 
-from ._tile import Tile
+from ._tile import Tile, TileMeta
 from ._tile_map import TileMap
 from ._map_asset import MapAsset
 
@@ -84,6 +84,24 @@ def _parse_layer_json(layer: dict, raw: dict, tiles: list[tuple[int, Tile]]) -> 
     return TileMap(tile=tile, grid=grid, tile_width=raw["tilewidth"], tile_height=raw["tileheight"])
 
 
+def _tile_from_dict(data: dict, base_dir: Path) -> Tile:
+    tile = Tile(
+        image_path = str(base_dir / data["image"]),
+        tile_width = data["tilewidth"],
+        tile_height = data["tileheight"],
+        margin = data.get("margin", 0),
+        spacing = data.get("spacing", 0),
+    )
+    # Propriétés custom par tuile (format JSON)
+    for tile_data in data.get("tiles", []):
+        local_id = tile_data["id"] + 1
+        props = {p["name"]: p["value"] for p in tile_data.get("properties", [])}
+        meta = _meta_from_props_dict(props)
+        if meta is not None:
+            tile.set_meta(local_id, meta)
+    return tile
+
+
 # ======================================== TMX INTERNALS ========================================
 def _load_tiles_tmx(tileset_nodes: list[ET.Element], base_dir: Path) -> list[tuple[int, Tile]]:
     result = []
@@ -102,13 +120,27 @@ def _load_tiles_tmx(tileset_nodes: list[ET.Element], base_dir: Path) -> list[tup
 
 def _tile_from_tsx(node: ET.Element, base_dir: Path) -> Tile:
     image_node = node.find("image")
-    return Tile(
+    tile = Tile(
         image_path = str(base_dir / image_node.attrib["source"]),
         tile_width = int(node.attrib["tilewidth"]),
         tile_height = int(node.attrib["tileheight"]),
-        margin = int(node.attrib.get("margin",  0)),
+        margin = int(node.attrib.get("margin", 0)),
         spacing = int(node.attrib.get("spacing", 0)),
     )
+    # Propriétés custom par tuile (format TSX/XML)
+    for tile_node in node.findall("tile"):
+        local_id   = int(tile_node.attrib["id"]) + 1
+        props_node = tile_node.find("properties")
+        if props_node is None:
+            continue
+        props = {
+            p.attrib["name"]: _cast_xml_prop(p)
+            for p in props_node.findall("property")
+        }
+        meta = _meta_from_props_dict(props)
+        if meta is not None:
+            tile.set_meta(local_id, meta)
+    return tile
 
 
 def _parse_layer_tmx(layer: ET.Element, map_tw: int, map_th: int, tiles: list[tuple[int, Tile]]) -> TileMap:
@@ -118,7 +150,7 @@ def _parse_layer_tmx(layer: ET.Element, map_tw: int, map_th: int, tiles: list[tu
     encoding = data_node.attrib.get("encoding", "xml")
 
     if encoding == "csv":
-        flat_ids = [int(v) for v in data_node.text.strip().split(",")]
+        flat_ids = [int(v) for v in data_node.text.strip().split(",") if v.strip()]
     elif encoding == "xml":
         flat_ids = [int(tile.attrib["gid"]) for tile in data_node.findall("tile")]
     else:
@@ -131,13 +163,33 @@ def _parse_layer_tmx(layer: ET.Element, map_tw: int, map_th: int, tiles: list[tu
 
 
 # ======================================== SHARED INTERNALS ========================================
-def _tile_from_dict(data: dict, base_dir: Path) -> Tile:
-    return Tile(
-        image_path = str(base_dir / data["image"]),
-        tile_width = data["tilewidth"],
-        tile_height = data["tileheight"],
-        margin = data.get("margin", 0),
-        spacing = data.get("spacing", 0),
+def _cast_xml_prop(prop: ET.Element):
+    """Convertit une propriété XML Tiled vers le bon type Python"""
+    ptype = prop.attrib.get("type", "string")
+    value = prop.attrib.get("value", "")
+    if ptype == "bool": return value == "true"
+    if ptype == "float": return float(value)
+    if ptype == "int": return int(value)
+    return value
+
+
+def _meta_from_props_dict(props: dict) -> TileMeta | None:
+    """Construit un TileMeta depuis un dict de propriétés — None si aucune propriété connue"""
+    tags = []
+    friction = props.get("friction")
+    restitution = props.get("restitution")
+
+    if props.get("solid"): tags.append("solid")
+    if props.get("ladder"): tags.append("ladder")
+    if props.get("one_way"): tags.append("one_way")
+
+    if not tags and friction is None and restitution is None:
+        return None
+
+    return TileMeta(
+        *tags,
+        friction = friction,
+        restitution = restitution,
     )
 
 

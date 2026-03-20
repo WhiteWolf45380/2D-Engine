@@ -36,7 +36,7 @@ class TileMap:
     ):
         self._tile: Tile = expect(tile, Tile)
         self._grid: NDArray[np.int32] = np.asarray(grid, dtype=np.int32)
-        self._tile_width: float = float(positive(expect(tile_width, Real)))
+        self._tile_width: float = float(positive(expect(tile_width,  Real)))
         self._tile_height: float = float(positive(expect(tile_height, Real)))
         self._pos: Point = Point(pos)
         self._anchor: Point = Point(anchor)
@@ -158,7 +158,9 @@ class TileMap:
             y(float): coordonnée verticale monde
         """
         ox, oy = self.origin
-        return int((x - ox) // self._tile_width), int((y - oy) // self._tile_height)
+        col = int((x - ox) // self._tile_width)
+        row = self.rows - 1 - int((y - oy) // self._tile_height)
+        return col, row
 
     def tile_to_world(self, col: int, row: int) -> tuple[float, float]:
         """
@@ -169,7 +171,8 @@ class TileMap:
             row(int): ligne
         """
         ox, oy = self.origin
-        return ox + col * self._tile_width, oy + row * self._tile_height
+        flipped_row = self.rows - 1 - row
+        return ox + col * self._tile_width, oy + flipped_row * self._tile_height
 
     def tiles_in_region(self, x: float, y: float, width: float, height: float) -> tuple[int, int, int, int]:
         """
@@ -183,7 +186,8 @@ class TileMap:
         """
         ox, oy = self.origin
         col_min = max(0, int((x - ox) // self._tile_width))
-        row_min = max(0, int((y - oy) // self._tile_height))
-        col_max = min(self.cols, int((x + width  - ox) // self._tile_width)  + 1)
-        row_max = min(self.rows, int((y + height - oy) // self._tile_height) + 1)
+        col_max = min(self.cols, int((x + width - ox) // self._tile_width) + 1)
+        # Y inversé : les grandes y monde correspondent aux petites rows
+        row_min = max(0, self.rows - int((y + height - oy) // self._tile_height) - 1)
+        row_max = min(self.rows, self.rows - int((y - oy) // self._tile_height))
         return col_min, row_min, col_max, row_max
