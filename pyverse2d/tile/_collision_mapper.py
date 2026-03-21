@@ -5,7 +5,7 @@ from ._tile_map import TileMap
 from ._tile import TileMeta
 
 from .._internal import expect, positive
-from ..world import World, Entity, Transform, Collider, RigidBody, ShapeRenderer
+from ..world import World, Entity, Transform, Collider, RigidBody
 from ..shape import Rect
 
 from numbers import Real
@@ -15,6 +15,9 @@ class CollisionMapper:
     """
     Convertit les tuiles solides d'un TileMap en bodies statiques dans le World
 
+    Les propriétés physiques sont résolues dans l'ordre suivant :
+    TileMeta (par tuile) > valeurs du CollisionMapper (globales) > défauts
+
     Args:
         tile_map(TileMap): couche source
         solid_tag(str, optional): tag identifiant les tuiles solides
@@ -23,7 +26,7 @@ class CollisionMapper:
         category(int, optional): catégorie binaire par défaut
         mask(int, optional): masque binaire par défaut
     """
-    __slots__ = ("_tile_map", "_solid_tag", "_friction", "_restitution", "_category", "_mask")
+    __slots__ = ("_tile_map", "_solid_tag", "_friction", "_restitution", "_category", "_mask", "_entities")
 
     def __init__(
         self,
@@ -34,12 +37,13 @@ class CollisionMapper:
         category: int = 0b00000001,
         mask: int = 0b11111111,
     ):
-        self._tile_map: TileMap = expect(tile_map, TileMap)
-        self._solid_tag: str = expect(solid_tag, str)
-        self._friction: float = float(positive(expect(friction, Real)))
+        self._tile_map: TileMap  = expect(tile_map, TileMap)
+        self._solid_tag: str     = expect(solid_tag, str)
+        self._friction: float    = float(positive(expect(friction,    Real)))
         self._restitution: float = float(positive(expect(restitution, Real)))
-        self._category: int = expect(category, int)
-        self._mask: int = expect(mask, int)
+        self._category: int      = expect(category, int)
+        self._mask: int          = expect(mask, int)
+        self._entities: list     = []
 
     # ======================================== PUBLIC METHODS ========================================
     def inject(self, world: World) -> None:
@@ -57,6 +61,18 @@ class CollisionMapper:
                 RigidBody(friction=friction, restitution=restitution),
             )
             world.add_entity(entity)
+            self._entities.append(entity)
+
+    def remove(self, world: World) -> None:
+        """
+        Supprime toutes les entités précédemment injectées dans le World
+
+        Args:
+            world(World): monde cible
+        """
+        for entity in self._entities:
+            world.remove_entity(entity)
+        self._entities.clear()
 
     # ======================================== INTERNALS ========================================
     def _is_solid(self, col: int, row: int) -> bool:
@@ -72,17 +88,22 @@ class CollisionMapper:
     def _resolve_props(self, tile_id: int) -> tuple[float, float, int, int]:
         """Résout friction, restitution, category, mask pour un tile_id — meta > global"""
         meta: TileMeta | None = self._tile_map.tile.get_meta(tile_id)
-        friction = meta.friction if (meta and meta.friction is not None) else self._friction
+        friction    = meta.friction    if (meta and meta.friction    is not None) else self._friction
         restitution = meta.restitution if (meta and meta.restitution is not None) else self._restitution
-        category = meta.category if (meta and meta.category is not None) else self._category
-        mask = meta.mask if (meta and meta.mask is not None) else self._mask
+        category    = meta.category    if (meta and meta.category    is not None) else self._category
+        mask        = meta.mask        if (meta and meta.mask        is not None) else self._mask
         return friction, restitution, category, mask
 
     def _merged_rects(self) -> list[tuple[int, int, float, float, float, float, int, int]]:
-        """Fusionne les tuiles solides en rectangles par sweep horizontal puis vertical"""
-        tm = self._tile_map
-        tw = tm.tile_width
-        th = tm.tile_height
+        """
+        Fusionne les tuiles solides en rectangles par sweep horizontal puis vertical.
+        Renvoie une liste de (col, row, width, height, friction, restitution, category, mask).
+
+        Note : la fusion n'est appliquée que sur des tuiles ayant les mêmes propriétés physiques.
+        """
+        tm   = self._tile_map
+        tw   = tm.tile_width
+        th   = tm.tile_height
         rects = []
 
         visited = [[False] * tm.cols for _ in range(tm.rows)]
@@ -93,7 +114,7 @@ class CollisionMapper:
                     continue
 
                 tile_id = tm.tile_at(col, row)
-                props = self._resolve_props(tile_id)
+                props   = self._resolve_props(tile_id)
 
                 # Extension horizontale
                 w = 1
