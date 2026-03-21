@@ -42,19 +42,12 @@ class TileLayer(Layer):
         )
         self._z: int = z
         self._chunk_size: int = max(1, expect(chunk_size, int))
-
         self._batches: dict[tuple[int, int], Batch] = {}
         self._sprites: list[pyglet.sprite.Sprite] = []
         self._image: pyglet.image.AbstractImage | None = None
-        self._regions: dict[tuple[int, int], pyglet.image.TextureRegion] = {}
+        self._texture_grid: pyglet.image.TextureGrid | None = None
+        self._regions: dict[int, pyglet.image.TextureRegion] = {}
         self._built: bool = False
-
-        self._src_tw: int = 0
-        self._src_th: int = 0
-        self._margin: int = 0
-        self._spacing: int = 0
-        self._cols_ts: int = 0
-        self._total_rows: int = 0
 
     # ======================================== GETTERS ========================================
     @property
@@ -149,6 +142,13 @@ class TileLayer(Layer):
         cr_min = max(0, int((vy - oy) // chunk_h))
         cr_max = min(chunk_rows, int((vy + vh - oy) // chunk_h) + 1)
 
+        # Vue parallax — décale la caméra selon le facteur
+        from pyglet.math import Mat4, Vec3
+        offset_x = cam.final_x - px
+        offset_y = cam.final_y - py
+        if offset_x != 0.0 or offset_y != 0.0:
+            pipeline.set_view(Mat4.from_translation(Vec3(offset_x, offset_y, 0)) @ cam.view_matrix())
+
         for cr in range(cr_min, cr_max):
             for cc in range(cc_min, cc_max):
                 batch = self._batches.get((cc, cr))
@@ -167,10 +167,10 @@ class TileLayer(Layer):
             self._built = True
             return
 
-        tm   = self._tile_map
-        tile = tm.tile
-        tw   = tm.tile_width
-        th   = tm.tile_height
+        tm      = self._tile_map
+        tile    = tm.tile
+        tw      = tm.tile_width
+        th      = tm.tile_height
 
         img_w   = self._image.width
         img_h   = self._image.height
@@ -183,16 +183,14 @@ class TileLayer(Layer):
         if spacing > 0:
             cols_ts    = max(1, (img_w - margin - spacing) // stride + 1)
             total_rows = max(1, (img_h - margin - spacing) // (src_th + spacing) + 1)
+            total_cols = max(1, (img_w - margin - spacing) // (src_tw + spacing) + 1)
         else:
             cols_ts    = max(1, (img_w - margin) // src_tw)
             total_rows = max(1, (img_h - margin) // src_th)
+            total_cols = max(1, (img_w - margin) // src_tw)
 
-        self._src_tw     = src_tw
-        self._src_th     = src_th
-        self._margin     = margin
-        self._spacing    = spacing
-        self._cols_ts    = cols_ts
-        self._total_rows = total_rows
+        grid = pyglet.image.ImageGrid(self._image, total_rows, total_cols)
+        self._texture_grid = pyglet.image.TextureGrid(grid)
 
         chunk_cols = (tm.cols + self._chunk_size - 1) // self._chunk_size
         chunk_rows = (tm.rows + self._chunk_size - 1) // self._chunk_size
@@ -214,12 +212,12 @@ class TileLayer(Layer):
                         if tile_id == 0:
                             continue
 
-                        flip   = tm.flags_at(col, row)
-                        region = self._get_region(tile_id, flip)
+                        region = self._get_region(tile_id, cols_ts, total_rows)
                         if region is None:
                             continue
 
                         wx, wy = tm.tile_to_world(col, row)
+                        flip   = tm.flags_at(col, row)
                         sprite = pyglet.sprite.Sprite(region, x=wx, y=wy, batch=batch, group=group)
                         sx = tw / src_tw
                         sy = th / src_th
@@ -243,46 +241,26 @@ class TileLayer(Layer):
         self._built = True
 
     # ======================================== INTERNALS ========================================
-    def _get_region(self, tile_id: int, flip: int) -> pyglet.image.TextureRegion | None:
-        """Renvoie la région de texture pour un (tile_id, flip), avec mise en cache"""
-        key = (tile_id, flip)
-        if key in self._regions:
-            return self._regions[key]
+    def _get_region(self, tile_id: int, cols_ts: int, total_rows: int) -> pyglet.image.TextureRegion | None:
+        """Renvoie la région de texture pour un tile_id, avec mise en cache"""
+        if tile_id in self._regions:
+            return self._regions[tile_id]
 
         local_id    = tile_id - 1
-        ts_col      = local_id % self._cols_ts
-        ts_row      = local_id // self._cols_ts
-        flipped_row = self._total_rows - 1 - ts_row
+        ts_col      = local_id % cols_ts
+        ts_row      = local_id // cols_ts
+        flipped_row = total_rows - 1 - ts_row
 
-        if flipped_row < 0 or flipped_row >= self._total_rows:
+        if flipped_row < 0 or flipped_row >= total_rows:
             return None
 
-        x = self._margin + ts_col * (self._src_tw + self._spacing)
-        y = self._margin + flipped_row * (self._src_th + self._spacing)
+        region = self._texture_grid[flipped_row, ts_col]
 
-        if flip == 0:
-            region = self._image.get_region(x, y, self._src_tw, self._src_th).get_texture()
-        else:
-            import numpy as np
-            raw  = self._image.get_region(x, y, self._src_tw, self._src_th).get_image_data()
-            fmt  = raw.format
-            w, h = raw.width, raw.height
-            data = np.frombuffer(raw.get_data(fmt, w * len(fmt)), dtype=np.uint8).reshape(h, w, len(fmt)).copy()
-            if flip & FLIP_H:
-                data = data[:, ::-1, :]
-            if flip & FLIP_V:
-                data = data[::-1, :, :]
-            if flip & FLIP_D:
-                data = np.rot90(data, k=1)
-            img    = pyglet.image.ImageData(data.shape[1], data.shape[0], fmt, data.tobytes(), pitch=-data.shape[1] * len(fmt))
-            region = img.get_texture()
-
-        # GL_NEAREST sur chaque texture pour éviter le bleeding au scaling
         gl.glBindTexture(region.target, region.id)
         gl.glTexParameteri(region.target, gl.GL_TEXTURE_MIN_FILTER, gl.GL_NEAREST)
         gl.glTexParameteri(region.target, gl.GL_TEXTURE_MAG_FILTER, gl.GL_NEAREST)
 
-        self._regions[key] = region
+        self._regions[tile_id] = region
         return region
 
     def _invalidate(self) -> None:
@@ -292,5 +270,6 @@ class TileLayer(Layer):
         self._sprites.clear()
         self._batches.clear()
         self._regions.clear()
-        self._image = None
-        self._built = False
+        self._image        = None
+        self._texture_grid = None
+        self._built        = False

@@ -252,12 +252,12 @@ def _meta_from_props_dict(props: dict, collision_shape=None) -> TileMeta | None:
 def _extract_flags(raw_ids: list[int]) -> tuple[list[int], list[int]]:
     """Extrait les bits de flip Tiled et renvoie (flags, ids_masqués)"""
     from ._tile_map import FLIP_H, FLIP_V, FLIP_D
-    GID_FLIP_V = 0x80000000
-    GID_FLIP_H = 0x40000000
+    GID_FLIP_H = 0x80000000
+    GID_FLIP_V = 0x40000000
     GID_FLIP_D = 0x20000000
-    GID_MASK = 0x1FFFFFFF
+    GID_MASK   = 0x1FFFFFFF
     flags = []
-    ids = []
+    ids   = []
     for gid in raw_ids:
         f = 0
         if gid & GID_FLIP_H: f |= FLIP_H
@@ -266,6 +266,7 @@ def _extract_flags(raw_ids: list[int]) -> tuple[list[int], list[int]]:
         flags.append(f)
         ids.append(gid & GID_MASK)
     return flags, ids
+
 
 def _tile_for(flat_ids: list[int], tiles: list[tuple[int, Tile]]) -> tuple[int, Tile]:
     non_empty = [gid for gid in flat_ids if gid != 0]

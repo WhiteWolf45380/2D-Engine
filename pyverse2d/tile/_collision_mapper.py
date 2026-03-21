@@ -1,12 +1,13 @@
 # ======================================== IMPORTS ========================================
 from __future__ import annotations
 
-from ._tile_map import TileMap
+from ._tile_map import TileMap, FLIP_H, FLIP_V, FLIP_D
 from ._tile import TileMeta
 
 from .._internal import expect, positive
 from ..world import World, Entity, Transform, Collider, RigidBody
-from ..shape import Rect
+from ..shape import Rect, Polygon
+from ..abc import Shape
 
 from numbers import Real
 
@@ -64,7 +65,6 @@ class CollisionMapper:
             world.add_entity(entity)
             self._entities.append(entity)
 
-        # Tuiles solides standard, fusionnées en rects
         for col, row, w, h, friction, restitution, category, mask in self._merged_rects():
             wx, wy = self._tile_map.tile_to_world(col, row)
             entity = Entity(
@@ -110,24 +110,28 @@ class CollisionMapper:
     def _resolve_props(self, tile_id: int) -> tuple[float, float, int, int]:
         """Résout friction, restitution, category, mask pour un tile_id — meta > global"""
         meta: TileMeta | None = self._tile_map.tile.get_meta(tile_id)
-        friction = meta.friction if (meta and meta.friction is not None) else self._friction
+        friction    = meta.friction    if (meta and meta.friction    is not None) else self._friction
         restitution = meta.restitution if (meta and meta.restitution is not None) else self._restitution
-        category = meta.category if (meta and meta.category is not None) else self._category
-        mask = meta.mask if (meta and meta.mask is not None) else self._mask
+        category    = meta.category    if (meta and meta.category    is not None) else self._category
+        mask        = meta.mask        if (meta and meta.mask        is not None) else self._mask
         return friction, restitution, category, mask
 
     def _custom_shapes(self) -> list[tuple]:
         """Renvoie les tuiles avec collision_shape custom sous forme (col, row, shape, friction, restitution, category, mask)"""
         tm = self._tile_map
+        tw = tm.tile_width
+        th = tm.tile_height
         result = []
         for row in range(tm.rows):
             for col in range(tm.cols):
                 if not self._has_custom_shape(col, row):
                     continue
                 tile_id = tm.tile_at(col, row)
-                meta = tm.tile.get_meta(tile_id)
+                meta    = tm.tile.get_meta(tile_id)
                 friction, restitution, category, mask = self._resolve_props(tile_id)
-                result.append((col, row, meta.collision_shape, friction, restitution, category, mask))
+                flip  = tm.flags_at(col, row)
+                shape = _apply_flip(meta.collision_shape, flip, tw, th)
+                result.append((col, row, shape, friction, restitution, category, mask))
         return result
 
     def _merged_rects(self) -> list[tuple[int, int, float, float, float, float, int, int]]:
@@ -144,9 +148,8 @@ class CollisionMapper:
                     continue
 
                 tile_id = tm.tile_at(col, row)
-                props = self._resolve_props(tile_id)
+                props   = self._resolve_props(tile_id)
 
-                # Extension horizontale
                 w = 1
                 while (
                     col + w < tm.cols
@@ -156,7 +159,6 @@ class CollisionMapper:
                 ):
                     w += 1
 
-                # Extension verticale
                 h = 1
                 while row + h < tm.rows:
                     can_extend = all(
@@ -169,7 +171,6 @@ class CollisionMapper:
                         break
                     h += 1
 
-                # Marquage
                 for dr in range(h):
                     for dc in range(w):
                         visited[row + dr][col + dc] = True
@@ -178,3 +179,33 @@ class CollisionMapper:
                 rects.append((col, row, w * tw, h * th, friction, restitution, category, mask))
 
         return rects
+
+
+# ======================================== FLIP HELPER ========================================
+def _apply_flip(shape: Shape, flip: int, tw: float, th: float) -> Shape:
+    """
+    Applique les transformations de flip à une collision shape
+
+    Args:
+        shape(Shape): shape source
+        flip(int): flags FLIP_H, FLIP_V, FLIP_D
+        tw(float): largeur monde de la tuile
+        th(float): hauteur monde de la tuile
+    """
+    if flip == 0:
+        return shape
+
+    if isinstance(shape, Rect):
+        return shape
+
+    if isinstance(shape, Polygon):
+        verts = [(float(v[0]), float(v[1])) for v in shape.vertices]
+        if flip & FLIP_H:
+            verts = [(tw - x, y) for x, y in verts]
+        if flip & FLIP_V:
+            verts = [(x, th - y) for x, y in verts]
+        if flip & FLIP_D:
+            verts = [(y * (tw / th), x * (th / tw)) for x, y in verts]
+        return Polygon(*verts)
+
+    return shape
