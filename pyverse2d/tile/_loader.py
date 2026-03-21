@@ -16,12 +16,15 @@ class MapLoader:
 
     # ======================================== TILED JSON ========================================
     @staticmethod
-    def from_tiled_json(path: str | Path) -> MapAsset:
+    def from_tiled_json(path: str | Path, scale: float = 1.0, tile_width: float | None = None, tile_height: float | None = None) -> MapAsset:
         """
         Charge un fichier Tiled au format JSON (.json)
 
         Args:
             path(str | Path): chemin du fichier
+            scale(float, optional): facteur de redimensionnement des tuiles monde
+            tile_width(float, optional): largeur cible des tuiles monde ; prioritaire sur scale
+            tile_height(float, optional): hauteur cible des tuiles monde ; prioritaire sur scale
         """
         path = Path(path)
         raw  = json.loads(path.read_text(encoding="utf-8"))
@@ -32,18 +35,21 @@ class MapLoader:
         for layer in raw.get("layers", []):
             if layer["type"] != "tilelayer":
                 continue
-            layers[layer["name"]] = _parse_layer_json(layer, raw, tiles)
+            layers[layer["name"]] = _parse_layer_json(layer, raw, tiles, scale, tile_width, tile_height)
 
         return MapAsset(layers)
 
     # ======================================== TILED TMX ========================================
     @staticmethod
-    def from_tiled_tmx(path: str | Path) -> MapAsset:
+    def from_tiled_tmx(path: str | Path, scale: float = 1.0, tile_width: float | None = None, tile_height: float | None = None) -> MapAsset:
         """
         Charge un fichier Tiled au format natif XML (.tmx)
 
         Args:
             path(str | Path): chemin du fichier
+            scale(float, optional): facteur de redimensionnement des tuiles monde
+            tile_width(float, optional): largeur cible des tuiles monde ; prioritaire sur scale
+            tile_height(float, optional): hauteur cible des tuiles monde ; prioritaire sur scale
         """
         path = Path(path)
         root = ET.parse(path).getroot()
@@ -55,7 +61,7 @@ class MapLoader:
         layers = {}
 
         for layer in root.findall("layer"):
-            layers[layer.attrib["name"]] = _parse_layer_tmx(layer, map_tw, map_th, tiles)
+            layers[layer.attrib["name"]] = _parse_layer_tmx(layer, map_tw, map_th, tiles, scale, tile_width, tile_height)
 
         return MapAsset(layers)
 
@@ -74,7 +80,7 @@ def _load_tiles_json(raw_tilesets: list[dict], base_dir: Path) -> list[tuple[int
     return result
 
 
-def _parse_layer_json(layer: dict, raw: dict, tiles: list[tuple[int, Tile]]) -> TileMap:
+def _parse_layer_json(layer: dict, raw: dict, tiles: list[tuple[int, Tile]], scale: float = 1.0, tile_width: float | None = None, tile_height: float | None = None) -> TileMap:
     cols = layer["width"]
     rows = layer["height"]
     flags_flat, flat_ids = _extract_flags(layer["data"])
@@ -84,7 +90,9 @@ def _parse_layer_json(layer: dict, raw: dict, tiles: list[tuple[int, Tile]]) -> 
     flags = np.array(flags_flat, dtype=np.uint8).reshape(rows, cols)
     grid = np.flipud(grid)
     flags = np.flipud(flags)
-    return TileMap(tile=tile, grid=grid, flags=flags, tile_width=raw["tilewidth"], tile_height=raw["tileheight"])
+    tw = tile_width  if tile_width  is not None else raw["tilewidth"]  * scale
+    th = tile_height if tile_height is not None else raw["tileheight"] * scale
+    return TileMap(tile=tile, grid=grid, flags=flags, tile_width=tw, tile_height=th)
 
 
 def _tile_from_dict(data: dict, base_dir: Path) -> Tile:
@@ -149,7 +157,7 @@ def _tile_from_tsx(node: ET.Element, base_dir: Path) -> Tile:
     return tile
 
 
-def _parse_layer_tmx(layer: ET.Element, map_tw: int, map_th: int, tiles: list[tuple[int, Tile]]) -> TileMap:
+def _parse_layer_tmx(layer: ET.Element, map_tw: int, map_th: int, tiles: list[tuple[int, Tile]], scale: float = 1.0, tile_width: float | None = None, tile_height: float | None = None) -> TileMap:
     cols      = int(layer.attrib["width"])
     rows      = int(layer.attrib["height"])
     data_node = layer.find("data")
@@ -169,7 +177,9 @@ def _parse_layer_tmx(layer: ET.Element, map_tw: int, map_th: int, tiles: list[tu
     flags = np.array(flags_flat, dtype=np.uint8).reshape(rows, cols)
     grid = np.flipud(grid)
     flags = np.flipud(flags)
-    return TileMap(tile=tile, grid=grid, flags=flags, tile_width=map_tw, tile_height=map_th)
+    tw = tile_width  if tile_width  is not None else map_tw * scale
+    th = tile_height if tile_height is not None else map_th * scale
+    return TileMap(tile=tile, grid=grid, flags=flags, tile_width=tw, tile_height=th)
 
 
 # ======================================== SHARED INTERNALS ========================================
@@ -242,8 +252,8 @@ def _meta_from_props_dict(props: dict, collision_shape=None) -> TileMeta | None:
 def _extract_flags(raw_ids: list[int]) -> tuple[list[int], list[int]]:
     """Extrait les bits de flip Tiled et renvoie (flags, ids_masqués)"""
     from ._tile_map import FLIP_H, FLIP_V, FLIP_D
-    GID_FLIP_H = 0x80000000
-    GID_FLIP_V = 0x40000000
+    GID_FLIP_V = 0x80000000
+    GID_FLIP_H = 0x40000000
     GID_FLIP_D = 0x20000000
     GID_MASK = 0x1FFFFFFF
     flags = []
@@ -256,62 +266,6 @@ def _extract_flags(raw_ids: list[int]) -> tuple[list[int], list[int]]:
         flags.append(f)
         ids.append(gid & GID_MASK)
     return flags, ids
-
-
-def _tile_for(flat_ids: list[int], tiles: list[tuple[int, Tile]]) -> tuple[int, Tile]:
-    non_empty = [gid for gid in flat_ids if gid != 0]
-    if not non_empty:
-        return tiles[0]
-    min_gid   = min(non_empty)
-    candidate = tiles[0]
-    for firstgid, tile in tiles:
-        if firstgid <= min_gid:
-            candidate = (firstgid, tile)
-    return candidate
-
-def _meta_from_props_dict(props: dict, collision_shape=None) -> TileMeta | None:
-    """Construit un TileMeta depuis un dict de propriétés — None si aucune propriété connue"""
-    tags        = []
-    friction    = props.get("friction")
-    restitution = props.get("restitution")
-    category    = props.get("category")
-    mask        = props.get("mask")
-
-    if props.get("solid"):    tags.append("solid")
-    if props.get("ladder"):   tags.append("ladder")
-    if props.get("one_way"):  tags.append("one_way")
-
-    if not tags and friction is None and restitution is None and category is None and mask is None and collision_shape is None:
-        return None
-
-    return TileMeta(
-        *tags,
-        friction        = friction,
-        restitution     = restitution,
-        category        = int(category) if category is not None else None,
-        mask            = int(mask)     if mask     is not None else None,
-        collision_shape = collision_shape,
-    )
-
-
-def _extract_flags(raw_ids: list[int]) -> tuple[list[int], list[int]]:
-    """Extrait les bits de flip Tiled et renvoie (flags, ids_masqués)"""
-    from ._tile_map import FLIP_H, FLIP_V, FLIP_D
-    GID_FLIP_H = 0x80000000
-    GID_FLIP_V = 0x40000000
-    GID_FLIP_D = 0x20000000
-    GID_MASK = 0x1FFFFFFF
-    flags = []
-    ids = []
-    for gid in raw_ids:
-        f = 0
-        if gid & GID_FLIP_H: f |= FLIP_H
-        if gid & GID_FLIP_V: f |= FLIP_V
-        if gid & GID_FLIP_D: f |= FLIP_D
-        flags.append(f)
-        ids.append(gid & GID_MASK)
-    return flags, ids
-
 
 def _tile_for(flat_ids: list[int], tiles: list[tuple[int, Tile]]) -> tuple[int, Tile]:
     non_empty = [gid for gid in flat_ids if gid != 0]

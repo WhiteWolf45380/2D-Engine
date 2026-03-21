@@ -5,13 +5,13 @@ from .._internal import expect, positive
 from .._flag import CameraMode
 from .._rendering._pipeline import Pipeline
 from ..abc import Layer
-from ..tile._tile_map import TileMap
+from ..tile._tile_map import TileMap, FLIP_H, FLIP_V, FLIP_D
 
 import pyglet
 import pyglet.image
 import pyglet.sprite
+import pyglet.gl as gl
 from pyglet.graphics import Batch, Group
-from ..tile._tile_map import FLIP_H, FLIP_V, FLIP_D
 
 from numbers import Real
 
@@ -42,12 +42,19 @@ class TileLayer(Layer):
         )
         self._z: int = z
         self._chunk_size: int = max(1, expect(chunk_size, int))
+
         self._batches: dict[tuple[int, int], Batch] = {}
         self._sprites: list[pyglet.sprite.Sprite] = []
         self._image: pyglet.image.AbstractImage | None = None
-        self._texture_grid: pyglet.image.TextureGrid | None = None
-        self._regions: dict[int, pyglet.image.TextureRegion] = {}
+        self._regions: dict[tuple[int, int], pyglet.image.TextureRegion] = {}
         self._built: bool = False
+
+        self._src_tw: int = 0
+        self._src_th: int = 0
+        self._margin: int = 0
+        self._spacing: int = 0
+        self._cols_ts: int = 0
+        self._total_rows: int = 0
 
     # ======================================== GETTERS ========================================
     @property
@@ -117,20 +124,20 @@ class TileLayer(Layer):
         if not self._batches:
             return
 
-        cam = pipeline.camera
+        cam    = pipeline.camera
         screen = pipeline.screen
-        px = cam.final_x * self._parallax[0]
-        py = cam.final_y * self._parallax[1]
+        px     = cam.final_x * self._parallax[0]
+        py     = cam.final_y * self._parallax[1]
 
         vx = px - screen.half_width
         vy = py - screen.half_height
         vw = screen.width
         vh = screen.height
 
-        tm = self._tile_map
-        tw = tm.tile_width
-        th = tm.tile_height
-        ox, oy = tm.origin
+        tm      = self._tile_map
+        tw      = tm.tile_width
+        th      = tm.tile_height
+        ox, oy  = tm.origin
         chunk_w = self._chunk_size * tw
         chunk_h = self._chunk_size * th
 
@@ -160,25 +167,32 @@ class TileLayer(Layer):
             self._built = True
             return
 
-        tm = self._tile_map
+        tm   = self._tile_map
         tile = tm.tile
-        tw = tm.tile_width
-        th = tm.tile_height
+        tw   = tm.tile_width
+        th   = tm.tile_height
 
-        img_w = self._image.width
-        img_h = self._image.height
-        src_tw = int(tile.tile_width)
-        src_th = int(tile.tile_height)
-        margin = int(tile.margin)
+        img_w   = self._image.width
+        img_h   = self._image.height
+        src_tw  = int(tile.tile_width)
+        src_th  = int(tile.tile_height)
+        margin  = int(tile.margin)
         spacing = int(tile.spacing)
-        stride = src_tw + spacing
-        cols_ts = max(1, (img_w - margin) // stride)
+        stride  = src_tw + spacing
 
-        # Construction du TextureGrid une seule fois
-        total_rows = max(1, (img_h - margin) // src_th)
-        total_cols = max(1, (img_w - margin) // src_tw)
-        grid = pyglet.image.ImageGrid(self._image, total_rows, total_cols)
-        self._texture_grid = pyglet.image.TextureGrid(grid)
+        if spacing > 0:
+            cols_ts    = max(1, (img_w - margin - spacing) // stride + 1)
+            total_rows = max(1, (img_h - margin - spacing) // (src_th + spacing) + 1)
+        else:
+            cols_ts    = max(1, (img_w - margin) // src_tw)
+            total_rows = max(1, (img_h - margin) // src_th)
+
+        self._src_tw     = src_tw
+        self._src_th     = src_th
+        self._margin     = margin
+        self._spacing    = spacing
+        self._cols_ts    = cols_ts
+        self._total_rows = total_rows
 
         chunk_cols = (tm.cols + self._chunk_size - 1) // self._chunk_size
         chunk_rows = (tm.rows + self._chunk_size - 1) // self._chunk_size
@@ -191,8 +205,8 @@ class TileLayer(Layer):
 
                 row_start = cr * self._chunk_size
                 col_start = cc * self._chunk_size
-                row_end = min(row_start + self._chunk_size, tm.rows)
-                col_end = min(col_start + self._chunk_size, tm.cols)
+                row_end   = min(row_start + self._chunk_size, tm.rows)
+                col_end   = min(col_start + self._chunk_size, tm.cols)
 
                 for row in range(row_start, row_end):
                     for col in range(col_start, col_end):
@@ -200,12 +214,12 @@ class TileLayer(Layer):
                         if tile_id == 0:
                             continue
 
-                        region = self._get_region(tile_id, cols_ts, total_rows)
+                        flip   = tm.flags_at(col, row)
+                        region = self._get_region(tile_id, flip)
                         if region is None:
                             continue
 
                         wx, wy = tm.tile_to_world(col, row)
-                        flip = tm.flags_at(col, row)
                         sprite = pyglet.sprite.Sprite(region, x=wx, y=wy, batch=batch, group=group)
                         sx = tw / src_tw
                         sy = th / src_th
@@ -229,23 +243,46 @@ class TileLayer(Layer):
         self._built = True
 
     # ======================================== INTERNALS ========================================
-    def _get_region(self, tile_id: int, cols_ts: int, total_rows: int) -> pyglet.image.TextureRegion | None:
-        """Renvoie la région de texture pour un tile_id, avec mise en cache"""
-        if tile_id in self._regions:
-            return self._regions[tile_id]
+    def _get_region(self, tile_id: int, flip: int) -> pyglet.image.TextureRegion | None:
+        """Renvoie la région de texture pour un (tile_id, flip), avec mise en cache"""
+        key = (tile_id, flip)
+        if key in self._regions:
+            return self._regions[key]
 
-        local_id = tile_id - 1
-        ts_col = local_id % cols_ts
-        ts_row = local_id // cols_ts
+        local_id    = tile_id - 1
+        ts_col      = local_id % self._cols_ts
+        ts_row      = local_id // self._cols_ts
+        flipped_row = self._total_rows - 1 - ts_row
 
-        # ImageGrid numérote de bas en haut — on inverse pour correspondre à Tiled (haut en bas)
-        flipped_row = total_rows - 1 - ts_row
-
-        if flipped_row < 0 or flipped_row >= total_rows:
+        if flipped_row < 0 or flipped_row >= self._total_rows:
             return None
 
-        region = self._texture_grid[flipped_row, ts_col]
-        self._regions[tile_id] = region
+        x = self._margin + ts_col * (self._src_tw + self._spacing)
+        y = self._margin + flipped_row * (self._src_th + self._spacing)
+
+        if flip == 0:
+            region = self._image.get_region(x, y, self._src_tw, self._src_th).get_texture()
+        else:
+            import numpy as np
+            raw  = self._image.get_region(x, y, self._src_tw, self._src_th).get_image_data()
+            fmt  = raw.format
+            w, h = raw.width, raw.height
+            data = np.frombuffer(raw.get_data(fmt, w * len(fmt)), dtype=np.uint8).reshape(h, w, len(fmt)).copy()
+            if flip & FLIP_H:
+                data = data[:, ::-1, :]
+            if flip & FLIP_V:
+                data = data[::-1, :, :]
+            if flip & FLIP_D:
+                data = np.rot90(data, k=1)
+            img    = pyglet.image.ImageData(data.shape[1], data.shape[0], fmt, data.tobytes(), pitch=-data.shape[1] * len(fmt))
+            region = img.get_texture()
+
+        # GL_NEAREST sur chaque texture pour éviter le bleeding au scaling
+        gl.glBindTexture(region.target, region.id)
+        gl.glTexParameteri(region.target, gl.GL_TEXTURE_MIN_FILTER, gl.GL_NEAREST)
+        gl.glTexParameteri(region.target, gl.GL_TEXTURE_MAG_FILTER, gl.GL_NEAREST)
+
+        self._regions[key] = region
         return region
 
     def _invalidate(self) -> None:
@@ -256,5 +293,4 @@ class TileLayer(Layer):
         self._batches.clear()
         self._regions.clear()
         self._image = None
-        self._texture_grid = None
         self._built = False
