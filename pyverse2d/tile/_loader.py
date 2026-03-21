@@ -149,6 +149,9 @@ def _parse_layer_tmx(layer: ET.Element, map_tw: int, map_th: int, tiles: list[tu
         flat_ids = [int(tile.attrib["gid"]) for tile in data_node.findall("tile")]
     else:
         raise NotImplementedError(f"Encodage TMX non supporté : '{encoding}' (utilisez CSV ou XML dans Tiled)")
+    
+    GID_MASK = 0x1FFFFFFF
+    flat_ids = [(gid & GID_MASK) for gid in flat_ids]
 
     firstgid, tile = _tile_for(flat_ids, tiles)
     local_ids = [(gid - firstgid + 1) if gid != 0 else 0 for gid in flat_ids]
@@ -188,7 +191,6 @@ def _meta_from_props_dict(props: dict) -> TileMeta | None:
         category=category,
         mask=mask
     )
-
 
 def _tile_for(flat_ids: list[int], tiles: list[tuple[int, Tile]]) -> tuple[int, Tile]:
     non_empty = [gid for gid in flat_ids if gid != 0]
