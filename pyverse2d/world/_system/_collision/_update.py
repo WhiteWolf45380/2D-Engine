@@ -114,7 +114,9 @@ def _narrowphase(ctx: UpdateContext):
 
         # Step climbing
         if _try_step(a, b, nx, ny, contact.depth):
+            print("no")
             continue
+        print("yes")
 
         # Application du warm start
         warm_start(a, b, contact, cached)
@@ -170,23 +172,33 @@ def _update_ground_sensor(a, b, nx: float, ny: float):
 
 def _try_step(a, b, nx: float, ny: float, depth: float) -> bool:
     """Tente de franchir un step horizontal"""
-    # Collision horizontale uniquement
     if abs(ny) > abs(nx):
         return False
 
-    # Cherche l'entité mobile avec GroundSensor
-    for mover, other in ((a, b), (b, a)):
+    for mover, obstacle in ((a, b), (b, a)):
         if not mover.has(GroundSensor):
             continue
         gs = mover.get(GroundSensor)
-        if gs.max_step_height <= 0:
+        if gs.max_step_height <= 0 or not gs.is_grounded():
             continue
-        if not gs.is_grounded():
+
+        col_m = mover.get(Collider)
+        col_o = obstacle.get(Collider)
+        tr_m  = mover.get(Transform)
+        tr_o  = obstacle.get(Transform)
+
+        cx_m, cy_m = world_center(col_m.shape, tr_m, col_m.offset)
+        cx_o, cy_o = world_center(col_o.shape, tr_o, col_o.offset)
+
+        _, my_min, _, _ = col_m.shape.world_bounding_box(cx_m, cy_m, tr_m.scale, tr_m.rotation)
+        _, _, _, oy_max = col_o.shape.world_bounding_box(cx_o, cy_o, tr_o.scale, tr_o.rotation)
+
+        # Hauteur à monter
+        step_h = oy_max - my_min
+        if step_h <= 0 or step_h > gs.max_step_height:
             continue
-        if depth > gs.max_step_height:
-            continue
-        
-        # Step absorbable : on monte l'entité
-        mover.get(Transform).y += depth
+
+        tr_m.y += step_h
         return True
+
     return False
