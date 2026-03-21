@@ -235,8 +235,10 @@ def capsule_vs_pts(ax: float, ay: float, bx: float, by: float, r: float, pts: ND
         return None
 
     # Orientation de la normale
-    to_mid_x = mid_x - best_sx
-    to_mid_y = mid_y - best_sy
+    poly_cx = float(pts.mean(axis=0)[0])
+    poly_cy = float(pts.mean(axis=0)[1])
+    to_mid_x = mid_x - poly_cx
+    to_mid_y = mid_y - poly_cy
     if best_nx * to_mid_x + best_ny * to_mid_y < 0:
         best_nx, best_ny = -best_nx, -best_ny
 
