@@ -59,6 +59,7 @@ class MapLoader:
 
         return MapAsset(layers)
 
+
 # ======================================== JSON INTERNALS ========================================
 def _load_tiles_json(raw_tilesets: list[dict], base_dir: Path) -> list[tuple[int, Tile]]:
     result = []
@@ -72,6 +73,7 @@ def _load_tiles_json(raw_tilesets: list[dict], base_dir: Path) -> list[tuple[int
     result.sort(key=lambda t: t[0])
     return result
 
+
 def _parse_layer_json(layer: dict, raw: dict, tiles: list[tuple[int, Tile]]) -> TileMap:
     cols = layer["width"]
     rows = layer["height"]
@@ -80,6 +82,7 @@ def _parse_layer_json(layer: dict, raw: dict, tiles: list[tuple[int, Tile]]) -> 
     local_ids = [(gid - firstgid + 1) if gid != 0 else 0 for gid in flat_ids]
     grid = np.array(local_ids, dtype=np.int32).reshape(rows, cols)
     return TileMap(tile=tile, grid=grid, tile_width=raw["tilewidth"], tile_height=raw["tileheight"])
+
 
 def _tile_from_dict(data: dict, base_dir: Path) -> Tile:
     tile = Tile(
@@ -98,6 +101,7 @@ def _tile_from_dict(data: dict, base_dir: Path) -> Tile:
             tile.set_meta(local_id, meta)
     return tile
 
+
 # ======================================== TMX INTERNALS ========================================
 def _load_tiles_tmx(tileset_nodes: list[ET.Element], base_dir: Path) -> list[tuple[int, Tile]]:
     result = []
@@ -113,29 +117,34 @@ def _load_tiles_tmx(tileset_nodes: list[ET.Element], base_dir: Path) -> list[tup
     result.sort(key=lambda t: t[0])
     return result
 
+
 def _tile_from_tsx(node: ET.Element, base_dir: Path) -> Tile:
     image_node = node.find("image")
+    src_tw = int(node.attrib["tilewidth"])
+    src_th = int(node.attrib["tileheight"])
     tile = Tile(
         image_path = str(base_dir / image_node.attrib["source"]),
-        tile_width = int(node.attrib["tilewidth"]),
-        tile_height = int(node.attrib["tileheight"]),
+        tile_width = src_tw,
+        tile_height = src_th,
         margin = int(node.attrib.get("margin", 0)),
         spacing = int(node.attrib.get("spacing", 0)),
     )
-    # Propriétés custom par tuile (format TSX/XML)
+    # Propriétés custom et collision shapes par tuile (format TSX/XML)
     for tile_node in node.findall("tile"):
         local_id = int(tile_node.attrib["id"]) + 1
         props_node = tile_node.find("properties")
-        if props_node is None:
-            continue
-        props = {
-            p.attrib["name"]: _cast_xml_prop(p)
-            for p in props_node.findall("property")
-        }
-        meta = _meta_from_props_dict(props)
+        props = {}
+        if props_node is not None:
+            props = {
+                p.attrib["name"]: _cast_xml_prop(p)
+                for p in props_node.findall("property")
+            }
+        shape = _parse_collision_shape(tile_node, src_tw, src_th)
+        meta = _meta_from_props_dict(props, shape)
         if meta is not None:
             tile.set_meta(local_id, meta)
     return tile
+
 
 def _parse_layer_tmx(layer: ET.Element, map_tw: int, map_th: int, tiles: list[tuple[int, Tile]]) -> TileMap:
     cols = int(layer.attrib["width"])
@@ -151,12 +160,13 @@ def _parse_layer_tmx(layer: ET.Element, map_tw: int, map_th: int, tiles: list[tu
         raise NotImplementedError(f"Encodage TMX non supporté : '{encoding}' (utilisez CSV ou XML dans Tiled)")
     
     GID_MASK = 0x1FFFFFFF
-    flat_ids = [(gid & GID_MASK) for gid in flat_ids]
+    flat_ids = [gid & GID_MASK for gid in flat_ids]
 
     firstgid, tile = _tile_for(flat_ids, tiles)
     local_ids = [(gid - firstgid + 1) if gid != 0 else 0 for gid in flat_ids]
     grid = np.array(local_ids, dtype=np.int32).reshape(rows, cols)
     return TileMap(tile=tile, grid=grid, tile_width=map_tw, tile_height=map_th)
+
 
 # ======================================== SHARED INTERNALS ========================================
 def _cast_xml_prop(prop: ET.Element):
@@ -168,8 +178,37 @@ def _cast_xml_prop(prop: ET.Element):
     if ptype == "int": return int(value)
     return value
 
-def _meta_from_props_dict(props: dict) -> TileMeta | None:
-    """Construit un TileMeta depuis un dict de propriétés — None si aucune propriété connue"""
+
+def _parse_collision_shape(tile_node, src_tw: int, src_th: int):
+    """Parse le <objectgroup> d'une tuile et renvoie la Shape correspondante"""
+    from ..shape import Rect, Polygon
+    import numpy as np
+
+    og = tile_node.find("objectgroup")
+    if og is None:
+        return None
+    obj = og.find("object")
+    if obj is None:
+        return None
+
+    ox = float(obj.attrib.get("x", 0))
+    oy = float(obj.attrib.get("y", 0))
+
+    poly = obj.find("polygon")
+    if poly is not None:
+        pts = []
+        for pair in poly.attrib["points"].split():
+            px, py = pair.split(",")
+            pts.append((ox + float(px), src_th - (oy + float(py))))
+        return Polygon(*pts)
+
+    w = float(obj.attrib.get("width", src_tw))
+    h = float(obj.attrib.get("height", src_th))
+    return Rect(w, h)
+
+
+def _meta_from_props_dict(props: dict, collision_shape=None) -> TileMeta | None:
+    """Construit un TileMeta depuis un dict de propriétés"""
     tags = []
     friction = props.get("friction")
     restitution = props.get("restitution")
@@ -179,24 +218,25 @@ def _meta_from_props_dict(props: dict) -> TileMeta | None:
     if props.get("solid"): tags.append("solid")
     if props.get("ladder"): tags.append("ladder")
     if props.get("one_way"): tags.append("one_way")
-    if props.get("ladder"): tags.append("ladder")
 
-    if not tags and friction is None and restitution is None:
+    if not tags and friction is None and restitution is None and category is None and mask is None and collision_shape is None:
         return None
 
     return TileMeta(
         *tags,
         friction = friction,
         restitution = restitution,
-        category=category,
-        mask=mask
+        category = int(category) if category is not None else None,
+        mask = int(mask) if mask is not None else None,
+        collision_shape = collision_shape,
     )
+
 
 def _tile_for(flat_ids: list[int], tiles: list[tuple[int, Tile]]) -> tuple[int, Tile]:
     non_empty = [gid for gid in flat_ids if gid != 0]
     if not non_empty:
         return tiles[0]
-    min_gid= min(non_empty)
+    min_gid = min(non_empty)
     candidate = tiles[0]
     for firstgid, tile in tiles:
         if firstgid <= min_gid:

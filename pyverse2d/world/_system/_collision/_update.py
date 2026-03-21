@@ -174,6 +174,8 @@ def _try_step(a, b, nx: float, ny: float, depth: float) -> bool:
     """Tente de franchir un step horizontal"""
     if abs(ny) > abs(nx):
         return False
+    if abs(ny) > 0.1:
+        return False
 
     for mover, obstacle in ((a, b), (b, a)):
         if not mover.has(GroundSensor):

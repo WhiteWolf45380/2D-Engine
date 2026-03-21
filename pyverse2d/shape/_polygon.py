@@ -24,9 +24,7 @@ class Polygon(VertexShape):
             raise ValueError("Polygon must have at least 3 points")
         if len(set(points)) != len(points):
             raise ValueError("Polygon must not have duplicate points")
-        self._source_vertices: NDArray[np.float32] = np.array(
-            [(p.x, p.y) for p in points], dtype=np.float32
-        )
+        self._source_vertices: NDArray[np.float32] = np.array([(p[0], p[1]) for p in points], dtype=np.float32)
         super().__init__()
 
     # ======================================== CONVERSIONS ========================================
