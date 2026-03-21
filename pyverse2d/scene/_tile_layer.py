@@ -10,24 +10,27 @@ from ..tile._tile_map import TileMap
 import pyglet
 import pyglet.image
 import pyglet.sprite
+from pyglet.graphics import Batch, Group
 
 from numbers import Real
 
 # ======================================== LAYER ========================================
 class TileLayer(Layer):
     """
-    Layer affichant un TileMap
+    Layer affichant un TileMap via des chunks de sprites pré-construits
 
     Args:
         tile_map(TileMap): couche de tuiles à afficher
-        parallax(tuple[float, float], optional): facteur de parallax (x, y) ; (1, 1) = suit la caméra normalement
+        parallax(tuple[float, float], optional): facteur de parallax (x, y)
         z(int, optional): z_order dans le batch pipeline
+        chunk_size(int, optional): nombre de tuiles par côté d'un chunk
     """
     def __init__(
         self,
         tile_map: TileMap,
         parallax: tuple[Real, Real] = (1.0, 1.0),
         z: int = 0,
+        chunk_size: int = 16,
         camera_mode: CameraMode = CameraMode.WORLD,
     ):
         super().__init__(camera_mode)
@@ -36,14 +39,15 @@ class TileLayer(Layer):
             float(positive(expect(parallax[0], Real))),
             float(positive(expect(parallax[1], Real))),
         )
-        self._z: int = z
-
-        # Cache image et régions — persistent entre frames
+        self._z: int          = z
+        self._chunk_size: int = max(1, expect(chunk_size, int))
+    
+        self._batches: dict[tuple[int, int], Batch] = {}
+        self._sprites: list[pyglet.sprite.Sprite] = []
         self._image: pyglet.image.AbstractImage | None = None
+        self._texture_grid: pyglet.image.TextureGrid | None = None
         self._regions: dict[int, pyglet.image.TextureRegion] = {}
-
-        # Sprites dans pipeline.batch — recréés chaque frame si nécessaire
-        self._sprites: dict[tuple[int, int], pyglet.sprite.Sprite] = {}
+        self._built: bool = False
 
     # ======================================== GETTERS ========================================
     @property
@@ -56,10 +60,15 @@ class TileLayer(Layer):
         """Renvoie le facteur de parallax"""
         return self._parallax
 
+    @property
+    def chunk_size(self) -> int:
+        """Renvoie la taille des chunks en tuiles"""
+        return self._chunk_size
+
     # ======================================== SETTERS ========================================
     @tile_map.setter
     def tile_map(self, value: TileMap) -> None:
-        """Fixe le TileMap assigné — réinitialise le cache"""
+        """Fixe le TileMap assigné — reconstruit les chunks"""
         self._tile_map = expect(value, TileMap)
         self._invalidate()
 
@@ -71,112 +80,167 @@ class TileLayer(Layer):
             float(positive(expect(value[1], Real))),
         )
 
+    @chunk_size.setter
+    def chunk_size(self, value: int) -> None:
+        """Fixe la taille des chunks — reconstruit les chunks"""
+        self._chunk_size = max(1, expect(value, int))
+        self._invalidate()
+
     # ======================================== CYCLE DE VIE ========================================
+    def preload(self):
+        """Force le build immédiat des chunks — à appeler avant la boucle principale"""
+        if not self._built:
+            self._build()
+
     def on_start(self):
         """Activation du layer"""
         ...
 
     def on_stop(self):
-        """Désactivation du layer"""
+        """Désactivation du layer — libère les ressources"""
         self._invalidate()
 
     # ======================================== LOOP ========================================
     def update(self, dt: float):
-        """Actualisation du laye"""
+        """Actualisation du layer — tuiles statiques, rien à faire"""
         ...
 
     def draw(self, pipeline: Pipeline):
         """
-        Affichage du layer, ne dessine que les tuiles visibles dans le viewport caméra
+        Affichage du layer — ne dessine que les chunks visibles dans le viewport
 
         Args:
             pipeline(Pipeline): pipeline active
         """
-        self._ensure_image()
-        if self._image is None:
+        if not self._built:
+            self._build()
+        if not self._batches:
             return
 
         cam = pipeline.camera
         screen = pipeline.screen
-        group = pipeline.get_group(self._z)
-
         px = cam.final_x * self._parallax[0]
         py = cam.final_y * self._parallax[1]
 
-        col_min, row_min, col_max, row_max = 0, 0, self._tile_map.cols, self._tile_map.rows
+        vx = px - screen.half_width
+        vy = py - screen.half_height
+        vw = screen.width
+        vh = screen.height
 
         tm = self._tile_map
-        visible = set()
-        for row in range(row_min, row_max):
-            for col in range(col_min, col_max):
-                tile_id = tm.tile_at(col, row)
-                if tile_id == 0:
-                    continue
+        tw = tm.tile_width
+        th = tm.tile_height
+        ox, oy = tm.origin
+        chunk_w = self._chunk_size * tw
+        chunk_h = self._chunk_size * th
 
-                key = (col, row)
-                visible.add(key)
+        chunk_cols = (tm.cols + self._chunk_size - 1) // self._chunk_size
+        chunk_rows = (tm.rows + self._chunk_size - 1) // self._chunk_size
 
-                if key not in self._sprites:
-                    region = self._get_region(tile_id)
-                    if region is None:
-                        continue
-                    wx, wy = tm.tile_to_world(col, row)
-                    sprite = pyglet.sprite.Sprite(
-                        region,
-                        x=wx, y=wy,
-                        batch=pipeline.batch,
-                        group=group,
-                    )
-                    sprite.scale_x = tm.tile_width / region.width
-                    sprite.scale_y = tm.tile_height / region.height
-                    self._sprites[key] = sprite
+        cc_min = max(0, int((vx - ox) // chunk_w))
+        cc_max = min(chunk_cols, int((vx + vw - ox) // chunk_w) + 1)
+        cr_min = max(0, int((vy - oy) // chunk_h))
+        cr_max = min(chunk_rows, int((vy + vh - oy) // chunk_h) + 1)
 
-        # Suppression des sprites hors champ
-        for key in list(self._sprites):
-            if key not in visible:
-                self._sprites.pop(key).delete()
+        for cr in range(cr_min, cr_max):
+            for cc in range(cc_min, cc_max):
+                batch = self._batches.get((cc, cr))
+                if batch is not None:
+                    batch.draw()
 
-    # ======================================== INTERNALS ========================================
-    def _ensure_image(self) -> None:
-        """Charge l'image source si elle n'est pas encore en cache"""
-        if self._image is not None:
-            return
+    # ======================================== BUILD ========================================
+    def _build(self) -> None:
+        """Pré-construit tous les sprites dans leurs chunks respectifs"""
+        self._invalidate()
+
         try:
             self._image = pyglet.image.load(self._tile_map.tile.image_path)
         except FileNotFoundError:
             print(f"[TileLayer] Image introuvable : {self._tile_map.tile.image_path}")
+            self._built = True
+            return
 
-    def _get_region(self, tile_id: int) -> pyglet.image.TextureRegion | None:
+        tm = self._tile_map
+        tile = tm.tile
+        tw = tm.tile_width
+        th = tm.tile_height
+
+        img_w = self._image.width
+        img_h = self._image.height
+        src_tw = int(tile.tile_width)
+        src_th = int(tile.tile_height)
+        margin = int(tile.margin)
+        spacing = int(tile.spacing)
+        stride = src_tw + spacing
+        cols_ts = max(1, (img_w - margin) // stride)
+
+        # Construction du TextureGrid
+        total_rows = max(1, (img_h - margin) // src_th)
+        total_cols = max(1, (img_w - margin) // src_tw)
+        grid = pyglet.image.ImageGrid(self._image, total_rows, total_cols)
+        self._texture_grid = pyglet.image.TextureGrid(grid)
+
+        chunk_cols = (tm.cols + self._chunk_size - 1) // self._chunk_size
+        chunk_rows = (tm.rows + self._chunk_size - 1) // self._chunk_size
+
+        for cr in range(chunk_rows):
+            for cc in range(chunk_cols):
+                batch = Batch()
+                group = Group(order=self._z)
+                has_sprite = False
+
+                row_start = cr * self._chunk_size
+                col_start = cc * self._chunk_size
+                row_end = min(row_start + self._chunk_size, tm.rows)
+                col_end = min(col_start + self._chunk_size, tm.cols)
+
+                for row in range(row_start, row_end):
+                    for col in range(col_start, col_end):
+                        tile_id = tm.tile_at(col, row)
+                        if tile_id == 0:
+                            continue
+
+                        region = self._get_region(tile_id, cols_ts, total_rows)
+                        if region is None:
+                            continue
+
+                        wx, wy = tm.tile_to_world(col, row)
+                        sprite = pyglet.sprite.Sprite(region, x=wx, y=wy, batch=batch, group=group)
+                        sprite.scale_x = tw / src_tw
+                        sprite.scale_y = th / src_th
+                        self._sprites.append(sprite)
+                        has_sprite = True
+
+                if has_sprite:
+                    self._batches[(cc, cr)] = batch
+
+        self._built = True
+
+    # ======================================== INTERNALS ========================================
+    def _get_region(self, tile_id: int, cols_ts: int, total_rows: int) -> pyglet.image.TextureRegion | None:
         """Renvoie la région de texture pour un tile_id, avec mise en cache"""
         if tile_id in self._regions:
             return self._regions[tile_id]
 
-        tile = self._tile_map.tile
-        tw = int(tile.tile_width)
-        th = int(tile.tile_height)
-        margin = int(tile.margin)
-        spacing = int(tile.spacing)
-        stride = tw + spacing
-        cols = (self._image.width - margin) // stride
+        local_id = tile_id - 1
+        ts_col = local_id % cols_ts
+        ts_row = local_id // cols_ts
 
-        if cols <= 0:
+        flipped_row = total_rows - 1 - ts_row
+        if flipped_row < 0 or flipped_row >= total_rows:
             return None
 
-        col = (tile_id - 1) % cols
-        row = (tile_id - 1) // cols
-        x = margin + col * stride
-
-        y_tiled = margin + row * (th + spacing)
-        y_pyglet = self._image.height - y_tiled - th
-
-        region = self._image.get_region(x, y_pyglet, tw, th).get_texture()
+        region = self._texture_grid[flipped_row, ts_col]
         self._regions[tile_id] = region
         return region
 
     def _invalidate(self) -> None:
-        """Libère tous les sprites et régions en cache"""
-        for sprite in self._sprites.values():
+        """Libère tous les sprites et batches"""
+        for sprite in self._sprites:
             sprite.delete()
         self._sprites.clear()
+        self._batches.clear()
         self._regions.clear()
         self._image = None
+        self._texture_grid = None
+        self._built = False

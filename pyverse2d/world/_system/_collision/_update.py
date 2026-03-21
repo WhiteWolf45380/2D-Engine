@@ -114,9 +114,7 @@ def _narrowphase(ctx: UpdateContext):
 
         # Step climbing
         if _try_step(a, b, nx, ny, contact.depth):
-            print("no")
             continue
-        print("yes")
 
         # Application du warm start
         warm_start(a, b, contact, cached)

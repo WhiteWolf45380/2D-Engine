@@ -81,6 +81,7 @@ def _parse_layer_json(layer: dict, raw: dict, tiles: list[tuple[int, Tile]]) -> 
     firstgid, tile = _tile_for(flat_ids, tiles)
     local_ids = [(gid - firstgid + 1) if gid != 0 else 0 for gid in flat_ids]
     grid = np.array(local_ids, dtype=np.int32).reshape(rows, cols)
+    grid = np.flipud(grid)
     return TileMap(tile=tile, grid=grid, tile_width=raw["tilewidth"], tile_height=raw["tileheight"])
 
 
@@ -165,6 +166,7 @@ def _parse_layer_tmx(layer: ET.Element, map_tw: int, map_th: int, tiles: list[tu
     firstgid, tile = _tile_for(flat_ids, tiles)
     local_ids = [(gid - firstgid + 1) if gid != 0 else 0 for gid in flat_ids]
     grid = np.array(local_ids, dtype=np.int32).reshape(rows, cols)
+    grid = np.flipud(grid)
     return TileMap(tile=tile, grid=grid, tile_width=map_tw, tile_height=map_th)
 
 
