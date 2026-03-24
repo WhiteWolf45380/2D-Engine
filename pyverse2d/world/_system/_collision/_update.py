@@ -66,6 +66,12 @@ def _broadphase(ctx: UpdateContext):
         ctx.pairs = [(ctx.entities[i], ctx.entities[j]) for i in range(n) for j in range(i + 1, n)]
 
 @update_pipeline.step
+def _reset_colliders(ctx: UpdateContext):
+    """Reset des listes de contacts des colliders"""
+    for entity in ctx.entities:
+        entity.get(Collider)._colliding.clear()
+
+@update_pipeline.step
 def _narrowphase(ctx: UpdateContext):
     """Narrowphase : détection, lissage des normales, warm start"""
     for a, b in ctx.pairs:
@@ -78,6 +84,10 @@ def _narrowphase(ctx: UpdateContext):
         contact = _detect(col_a, a.get(Transform), col_b, b.get(Transform))
         if contact is None:
             continue
+        
+        # Ajout du contact
+        col_a._colliding.append(b)
+        col_b._colliding.append(a)
         if col_a.is_trigger() or col_b.is_trigger():
             continue
 

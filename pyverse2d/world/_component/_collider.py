@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from ..._internal import expect
 from ...abc import Component, Shape
+from ...math import Point
 
 from numbers import Real
 from typing import Iterator
@@ -14,30 +15,31 @@ class Collider(Component):
 
     Args:
         shape(Shape): forme de la hitbox
-        offset(tuple[Real, Real], optional): décalage par rapport au Transform
+        offset(Point, optional): décalage par rapport au Transform
         category(int, optional): catégorie binaire de collision
         mask(int, optional): masque binaire de collision
         trigger(bool, optional): collision fantôme
         active(bool, optional): collision active
     """
-    __slots__ = ("_shape", "_offset", "_category", "_mask", "_trigger", "_active")
+    __slots__ = ("_shape", "_offset", "_category", "_mask", "_trigger", "_active", "_colliding")
     requires = ("Transform",)
 
     def __init__(
             self,
             shape: Shape,
-            offset: tuple[Real, Real] = (0.0, 0.0),
+            offset: Point = (0.0, 0.0),
             category: int = 0b00000001,
             mask: int = 0b11111111,
             trigger: bool = False,
             active: bool = True,
         ):
-        self._shape = expect(shape, Shape)
-        self._offset = expect(offset, tuple[Real, Real])
-        self._category = expect(category, int)
-        self._mask = expect(mask, int)
-        self._trigger = expect(trigger, bool)
-        self._active = expect(active, bool)
+        self._shape: Shape = expect(shape, Shape)
+        self._offset: Point = expect(offset, Point)
+        self._category: int = expect(category, int)
+        self._mask: int = expect(mask, int)
+        self._trigger: bool = expect(trigger, bool)
+        self._active: bool = expect(active, bool)
+        self._colliding: list[Collider] = []
     
     # ======================================== CONVERSIONS ========================================
     def __repr__(self) -> str:
@@ -52,7 +54,7 @@ class Collider(Component):
         """Renvoie l'entier hashé du composant"""
         return hash(self.to_tuple())
     
-    def to_tuple(self) -> tuple[Shape, tuple[Real, Real], int, int, bool]:
+    def to_tuple(self) -> tuple[Shape, Point, int, int, bool]:
         """Renvoie le composant sous forme de tuple"""
         return (self._shape, self._offset, self._category, self._mask, self._trigger)
     
@@ -67,7 +69,7 @@ class Collider(Component):
         return self._shape
     
     @property
-    def offset(self) -> tuple[Real, Real]:
+    def offset(self) -> Point:
         """Renvoie le décalage par rapport au Transform"""
         return self._offset
     
@@ -93,6 +95,10 @@ class Collider(Component):
     def collides_with(self, other: Collider) -> bool:
         """Vérification la possibilité de collision avec un autre collider"""
         return bool(self._mask & other._category)
+    
+    def collides(self, other: Collider) -> bool:
+        """Vérifie la collision avec un autre collider"""
+        return other in self._colliding
 
     # ======================================== PUBLIC METHODS ========================================
     def activate(self):
