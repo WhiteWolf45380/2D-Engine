@@ -9,7 +9,7 @@ from ..abc import Layer
 # ======================================== LAYER ========================================
 class UILayer(Layer):
     """
-    Layer contenant un World
+    Layer contenant des composants UI
 
     Args:
         widgets(Widget, optional): composants ui
