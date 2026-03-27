@@ -4,7 +4,7 @@ from __future__ import annotations
 from ..._internal import expect
 from ..._rendering import Pipeline, RenderContext
 from ...asset import Color
-from ...abc import Widget, Shape
+from ...abc import Widget, Shape, CompositeShape
 from ...math import Point
 
 from numbers import Real
@@ -23,22 +23,22 @@ class Surface(Widget):
         opacité(Real, optional): opacité [0; 1]
         parent(Widget, optional): Composant UI parent
     """
-    __slots__ = ()
+    __slots__ = ("_shape", "_color")
 
     def __init__(
             self,
             shape: Shape,
             pos: Point = (0.0, 0.0),
             anchor: Point = (0.5, 0.5),
-            filling: bool = True,
             color: Color = (125, 125, 125),
             opacity: Real = 1.0,
             parent: Widget = None,
         ):
         super().__init__(parent, pos, anchor, opacity)
         self._shape: Shape = expect(shape, Shape)
-        self._filling: bool = expect(filling, bool)
         self._color: Color = Color(color)
+        if isinstance(self._shape, CompositeShape):
+            raise ValueError("Surface does not support CompositeShape")
 
     # ======================================== GETTERS ========================================
     @property
