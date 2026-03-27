@@ -184,15 +184,21 @@ class Scene:
         pipeline.begin(self)
         camera_view = self.camera.view_matrix()
         camera_zoom = self.camera.zoom_matrix()
+        
         for layer in self._layers:
+            pipeline.layer(layer)
+
             if layer.camera_mode is CameraMode.WORLD:
                 pipeline.set_view(camera_view)
             elif layer.camera_mode is CameraMode.ZOOM:
                 pipeline.set_view(camera_zoom)
             else:
                 pipeline.set_view(None)
+
             layer.draw(pipeline)
             pipeline.flush()
+
         for fn in self._draw_callbacks:
             fn(pipeline)
+
         pipeline.end()

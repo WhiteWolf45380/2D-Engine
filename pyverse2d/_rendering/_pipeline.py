@@ -8,7 +8,7 @@ from pyglet.math import Mat4
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ..scene import Scene, Viewport, Camera
+    from ..scene import Scene, Layer, Viewport, Camera
     from ._window import Window
     from ._screen import Screen
 
@@ -20,12 +20,13 @@ class Pipeline:
     Args:
         window(Window): fenêtre associée
     """
-    __slots__ = ("_window", "_scene", "_batch", "_groups")
+    __slots__ = ("_window", "_scene", "_all_batches", "_batch", "_groups")
 
     def __init__(self, window: Window):
         self._window: Window = window
         self._scene: Scene | None = None
-        self._batch: Batch = Batch()
+        self._all_batches: dict[Scene, dict[Layer, Batch]] = {}
+        self._batch: Batch = None
         self._groups: dict[int, Group] = {}
 
     # ======================================== GETTERS ========================================
@@ -53,6 +54,13 @@ class Pipeline:
     def camera(self) -> Camera:
         """Renvoie la caméra de la scene en cours de rendu"""
         return self._scene.camera
+    
+    @property
+    def scene_batches(self) -> dict[str, Batch]:
+        """Renvoie les batches de la scene courante"""
+        if not self._scene:
+            return {}
+        return self._all_batches.get(self._scene)
 
     @property
     def batch(self) -> Batch:
@@ -88,8 +96,12 @@ class Pipeline:
         Args:
             scene(Scene): scène active à rendre
         """
-        self._scene = scene
         screen = self._window.screen
+
+        # Etablissement de la connexion à la scene
+        self._scene = scene
+        if scene not in self._all_batches:
+            self._all_batches[scene] = {}
 
         # NDC
         lx, ly, lw, lh = scene.viewport.resolve(screen.width, screen.height)
@@ -105,6 +117,12 @@ class Pipeline:
         ph = int(lh * sy)
 
         gl.glViewport(px, py, pw, ph)
+
+    def layer(self, current: Layer) -> None:
+        """Fixe la layer courant"""
+        if current not in self.scene_batches:
+            self.scene_batches[current] = Batch()
+        self._batch = self.scene_batches[current]
 
     def flush(self) -> None:
         """Envoie tout le batch au GPU"""
