@@ -289,7 +289,6 @@ class _FillRenderer:
             self._gl_shape = _CapsuleRenderer(cx, cy, r_, spine, rotation=rotation, color=rgba, batch=pipeline.batch, group=pipeline.get_group(z=z))
 
         self._gl_shape.opacity = a
-        self._gl_shape.z = z
     
     # ======================================== GETTERS ========================================
     @property
@@ -348,7 +347,7 @@ class _FillRenderer:
     
     def handle_z(self, psr: PygletShapeRenderer) -> None:
         """Actualisation du z-order"""
-        self._gl_shape.z = psr.z
+        self._gl_shape.group = psr.pipeline.get_group(z=psr.z)
     
     def handle_pipeline(self, psr: PygletShapeRenderer) -> None:
         """Actualisation de la pipeline de rendu"""
@@ -381,12 +380,11 @@ class _BorderRenderer:
         self._group: Group = None
         self._visible: bool = True
         self._local_contour: np.ndarray = _local_contour(shape)
-        self._build(shape, cx, cy, scale, rotation, width, color, opacity, z, pipeline)
+        self._build(cx, cy, scale, rotation, width, color, opacity, z, pipeline)
 
     # ======================================== BUILD ========================================
     def _build(
         self,
-        shape: Shape,
         cx: float,
         cy: float,
         scale: float,
@@ -412,11 +410,7 @@ class _BorderRenderer:
         r, g, b, _ = color.rgba8
         a = int(opacity * 255)
 
-        self._vlist = self._batch.add(
-            self._n, pyglet.gl.GL_TRIANGLE_STRIP, self._group,
-            ('v2f', flat),
-            ('c4B', (r, g, b, a) * self._n),
-        )
+        self._vlist = self._batch.add(self._n, pyglet.gl.GL_TRIANGLE_STRIP, self._group, ('v2f', flat),('c4B', (r, g, b, a) * self._n))
 
     def _world_strip(self, cx: float, cy: float, scale: float, rotation: float, width: float) -> np.ndarray:
         """Contour monde + strip"""
@@ -484,12 +478,10 @@ class _BorderRenderer:
         self._vlist.colors[:] = (r, g, b, a) * self._n
 
     def handle_z(self, psr: PygletShapeRenderer) -> None:
-        self._build(psr.shape, psr.cx, psr.cy, psr.scale, psr.rotation,
-                    psr.border_width, psr.border_color, psr.opacity, psr.z, psr.pipeline)
+        self._build(psr.shape, psr.cx, psr.cy, psr.scale, psr.rotation, psr.border_width, psr.border_color, psr.opacity, psr.z, psr.pipeline)
 
     def handle_pipeline(self, psr: PygletShapeRenderer) -> None:
-        self._build(psr.shape, psr.cx, psr.cy, psr.scale, psr.rotation,
-                    psr.border_width, psr.border_color, psr.opacity, psr.z, psr.pipeline)
+        self._build(psr.shape, psr.cx, psr.cy, psr.scale, psr.rotation, psr.border_width, psr.border_color, psr.opacity, psr.z, psr.pipeline)
 
 # ======================================== CAPSULE RENDERER ========================================
 class _CapsuleRenderer:
@@ -573,17 +565,6 @@ class _CapsuleRenderer:
         self._rect.opacity = value
  
     @property
-    def z(self) -> int:
-        return self._z
- 
-    @z.setter
-    def z(self, value: int) -> None:
-        self._z = value
-        self._top.z = value
-        self._bottom.z = value
-        self._rect.z = value
- 
-    @property
     def batch(self) -> Batch:
         return self._batch
  
@@ -634,9 +615,6 @@ class _CapsuleRenderer:
             self._top.opacity = self._opacity
             self._bottom.opacity = self._opacity
             self._rect.opacity = self._opacity
-            self._top.z = self._z
-            self._bottom.z = self._z
-            self._rect.z = self._z
         else:
             self._top.x = ax
             self._top.y = ay
@@ -647,7 +625,6 @@ class _CapsuleRenderer:
             self._rect.delete()
             self._rect = pyglet.shapes.Polygon(*rect_pts, color=self._color, batch=self._batch, group=self._group)
             self._rect.opacity = self._opacity
-            self._rect.z = self._z
  
 # ======================================== BORDER HELPERS ========================================
 def _local_contour(shape: Shape) -> np.ndarray:
