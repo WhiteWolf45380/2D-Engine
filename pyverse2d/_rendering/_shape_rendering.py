@@ -31,41 +31,41 @@ class PygletShapeRenderer:
         scale(float): échelle
         rotation(float): rotation en degrés
         color(Color): couleur de remplissage
-        opacity(float): opacité [0.0; 1.0]
-        pipeline(Pipeline): pipeline active
-        z(int): z-order
         border_color(Color, optional): couleur de la bordure
         border_width(int, optional): épaisseur de la bordure
+        opacity(float): opacité [0.0; 1.0]
+        z(int): z-order
     """
     __slots__ = ("_shape", "_fill", "_border", "_batch", "_group")
 
     def __init__(
         self,
         shape: Shape,
+        cx: float = 0.0,
+        cy: float = 0.0,
+        scale: float = 1.0,
+        rotation: float = 0.0,
+        color: Color = (255, 255, 255),
+        border_width: int = 0,
+        border_color: Color = (0, 0, 0),
+        opacity: float = 1.0,
+        z: int = 0,
+    ):
+        self._shape: Shape = shape
+        self._z: int = z
+        self._build(cx, cy, scale, rotation, color, border_width, border_color, opacity)
+
+    # ======================================== BUILD ========================================
+    def _build(
+        self,
         cx: float,
         cy: float,
         scale: float,
         rotation: float,
         color: Color,
         opacity: float,
-        pipeline: Pipeline,
-        z: int,
-        border_color: Color = None,
-        border_width: int = 0,
-    ):
-        self._shape = shape
-        self._batch = pipeline.batch
-        self._group = pipeline.get_group(z)
-        self._fill = None
-        self._border = None
-        self._build(cx, cy, scale, rotation, color, opacity, border_color, border_width)
-
-    # ======================================== BUILD ========================================
-    def _build(
-        self,
-        cx: float, cy: float, scale: float, rotation: float,
-        color: Color, opacity: float,
-        border_color: Color, border_width: int,
+        border_color: Color,
+        border_width: int,
     ):
         self._fill = _build_fill(self._shape, cx, cy, scale, rotation, color, opacity, self._batch, self._group)
 
