@@ -16,11 +16,11 @@ import math
 import numpy as np
 
 # ======================================== CONSTANTS ========================================
-_UNSET = object()
+_UNSET = object()   # élément non défini
 
-_CIRCLE_BORDER_SEGMENTS = 64
-_ELLIPSE_BORDER_SEGMENTS = 64
-_CAPSULE_BORDER_SEGMENTS = 32
+_CIRCLE_BORDER_SEGMENTS = 64    # précision des cercles
+_ELLIPSE_BORDER_SEGMENTS = 64   # précision des ellipses
+_CAPSULE_BORDER_SEGMENTS = 32   # précision des capsules
 
 # ======================================== PUBLIC ========================================
 class PygletShapeRenderer:
@@ -120,7 +120,7 @@ class PygletShapeRenderer:
         return self._rotation
 
     @property
-    def filling(self) -> float:
+    def filling(self) -> bool:
         """Vérifie le remplissage"""
         return self._filling
     
@@ -234,7 +234,20 @@ class PygletShapeRenderer:
 
 # ======================================== FILLING RENDERER ========================================
 class _FillRenderer:
-    """Remplissage d'une shape"""
+    """
+    Remplissage d'une shape
+
+    Args:
+        shape(Shape): forme
+        cx(float): position horizontale
+        cy(float): position verticale
+        scale(float): facteur de redimensionnement
+        rotation(float): angle de rotation en degrés
+        color(Color): couleur de remplissage
+        opacity(float): opacité
+        z(int): z-order
+        pipeline(Pipeline): pipeline de rendu
+    """
     __slots__ = ("_gl_shape")
 
     def __init__(
@@ -265,7 +278,20 @@ class _FillRenderer:
             z: int,
             pipeline: Pipeline,
         ) -> None:
-        """Construit le remplissage"""
+        """
+        Construit le remplissage
+
+        Args:
+            shape(Shape): forme
+            cx(float): position horizontale
+            cy(float): position verticale
+            scale(float): facteur de redimensionnement
+            rotation(float): facteur de redimensionnement
+            color(Color): couleur de remplissage
+            opacity(float): opacité
+            z(int): z-order
+            pipeline(Pipeline): pipeline de rendu
+        """
         rgba = color.rgba8
         a = int(opacity * 255)
 
@@ -375,7 +401,21 @@ class _FillRenderer:
 
 # ======================================== BORDER RENDERER ========================================
 class _BorderRenderer:
-    """Bordure d'une shape"""
+    """
+    Bordure d'une shape
+
+    Args:
+        shape(Shape): forme
+        cx(float): position horizontale
+        cy(float): position verticale
+        scale(float): facteur de redimensionnement
+        rotation(float): angle de rotation en degrés
+        width(int): épaisseur de la bordure
+        color(Color): couleur de la bordure
+        opacité(float): opacité
+        z(int): z-order
+        pipeline(Pipeline): pipeline de rendu
+    """
     __slots__ = ("_vlist", "_n", "_width", "_batch", "_group", "_local_contour", "_visible")
 
     def __init__(
@@ -413,25 +453,42 @@ class _BorderRenderer:
         z: int,
         pipeline: Pipeline,
     ) -> None:
-        """Construction de la bordure"""
+        """
+        Construction de la bordure
+
+        Args:
+            cx(float): position horizontale
+            cy(float): position verticale
+            scale(float): facteur de redimensionnement
+            rotation(float): angle de rotation en degrés
+            width(int): épaisseur de la bordure
+            color(Color): couleur de la bordure
+            opacity(float): opacité
+            z(int): z-order
+            pipeline(Pipeline): pipeline de rendu
+        """
         if self._vlist is not None:
             self._vlist.delete()
 
+        # Paramètres
         self._batch = pipeline.batch
         self._group = pipeline.get_group(z=z)
         self._width = width
 
+        # Meshes
         strip = self._world_strip(cx, cy, scale, rotation, width)
         self._n = len(strip)
         flat = strip.flatten().tolist()
 
-        r, g, b, _ = color.rgba8
-        a = int(opacity * 255)
+        # Couleur
+        r, g, b, a = color.rgba8
+        a = int(a * opacity)
 
+        # Arrêtes
         self._vlist = self._batch.add(self._n, pyglet.gl.GL_TRIANGLE_STRIP, self._group, ('v2f', flat),('c4B', (r, g, b, a) * self._n))
 
     def _world_strip(self, cx: float, cy: float, scale: float, rotation: float, width: float) -> np.ndarray:
-        """Contour monde + strip"""
+        """Génère le contour monde + strip"""
         world = _apply_transform(self._local_contour, cx, cy, scale, rotation)
         return _build_strip(world, width)
 
@@ -474,35 +531,44 @@ class _BorderRenderer:
 
     # ======================================== HANDLERS ========================================
     def handle_cx(self, psr: PygletShapeRenderer) -> None:
+        """Actualisation de la position horizontale"""
         self._refresh_vertices(psr)
 
     def handle_cy(self, psr: PygletShapeRenderer) -> None:
+        """Actualisation de la position verticale"""
         self._refresh_vertices(psr)
 
     def handle_scale(self, psr: PygletShapeRenderer) -> None:
+        """Actualisation du facteur de redimensionnement"""
         self._refresh_vertices(psr)
 
     def handle_rotation(self, psr: PygletShapeRenderer) -> None:
+        """Actualisation de l'angle de rotation"""
         self._refresh_vertices(psr)
 
     def handle_border_width(self, psr: PygletShapeRenderer) -> None:
+        """Actualisation de l'épaisseur de la bordure"""
         self._width = psr.border_width
         self._refresh_vertices(psr)
 
     def handle_border_color(self, psr: PygletShapeRenderer) -> None:
-        r, g, b, _ = psr.border_color.rgba8
-        a = int(psr.opacity * 255)
+        """Actualisation de la couleur"""
+        r, g, b, a = psr.border_color.rgba8
+        a = int(a * psr.opacity)
         self._vlist.colors[:] = (r, g, b, a) * self._n
 
     def handle_opacity(self, psr: PygletShapeRenderer) -> None:
-        r, g, b, _ = psr.border_color.rgba8
-        a = int(psr.opacity * 255)
+        """Actualisation de l'opacité"""
+        r, g, b, a = psr.border_color.rgba8
+        a = int(a * psr.opacity)
         self._vlist.colors[:] = (r, g, b, a) * self._n
 
     def handle_z(self, psr: PygletShapeRenderer) -> None:
+        """Actualisation du z-order"""
         return True
 
     def handle_pipeline(self, psr: PygletShapeRenderer) -> None:
+        """Actualisation de la pipeline de rendu"""
         return True
 
     # ======================================== HELPERS ========================================
@@ -513,7 +579,18 @@ class _BorderRenderer:
 
 # ======================================== CAPSULE RENDERER ========================================
 class _CapsuleRenderer:
-    """Capsule pyglet composite : deux cercles + rectangle central"""
+    """
+    Capsule pyglet composite : deux cercles + rectangle central
+
+    Args:
+        x(float): position horizontale
+        y(float): position verticale
+        radius(float): rayon de la capsule
+        spine(float): hauteur du rect central
+        color(tuple[int, ...], optional): couleur
+        batch(Batch, optional): batch pyglet
+        group(Group, optional): groupe pyglet
+    """
     __slots__ = ("_x", "_y", "_radius", "_spine", "_rotation", "_color", "_opacity", "_z", "_batch", "_group", "_top", "_bottom", "_rect")
  
     def __init__(
@@ -523,7 +600,7 @@ class _CapsuleRenderer:
         radius: float,
         spine: float,
         rotation: float = 0.0,
-        color: tuple = (255, 255, 255, 255),
+        color: tuple[int, ...] = (255, 255, 255, 255),
         batch: pyglet.graphics.Batch = None,
         group: pyglet.graphics.Group = None,
     ):
@@ -542,100 +619,117 @@ class _CapsuleRenderer:
         self._rect = None
         self._rebuild()
  
-    # ======================================== PROPERTIES ========================================
+    # ======================================== GETTERS ========================================
     @property
     def x(self) -> float:
+        """Renvoie la position horizontale"""
         return self._x
- 
-    @x.setter
-    def x(self, value: float) -> None:
-        self._x = value
-        self._rebuild()
- 
+    
     @property
     def y(self) -> float:
+        """Renvoie la position verticale"""
         return self._y
+    
+    @property
+    def rotation(self) -> float:
+        """Renvoie l'angle de rotation en degrés"""
+        return self._rotation
+    
+    @property
+    def color(self) -> tuple:
+        """Renvoie la couleur de remplissage"""
+        return self._color
+    
+    @property
+    def opacity(self) -> int:
+        """Renvoie l'opacité"""
+        return self._opacity
+    
+    @property
+    def batch(self) -> Batch:
+        """Renvoie le batch pyglet"""
+        return self._batch
+    
+    @property
+    def group(self) -> Group:
+        """Renvoie le groupe pyglet"""
+        return self._group
+    
+    @property
+    def visible(self) -> bool:
+        """Vérifie la visibilité"""
+        return self._top.visible
+ 
+    # ======================================== SETTERS ========================================
+    @x.setter
+    def x(self, value: float) -> None:
+        """Fixe la position horizontale"""
+        self._x = value
+        self._rebuild()    
  
     @y.setter
     def y(self, value: float) -> None:
+        """Fixe la position verticale"""
         self._y = value
         self._rebuild()
  
-    @property
-    def rotation(self) -> float:
-        return self._rotation
- 
     @rotation.setter
     def rotation(self, value: float) -> None:
+        """Fixe l'angle de rotation"""
         self._rotation = value
         self._rebuild()
  
-    @property
-    def color(self) -> tuple:
-        return self._color
- 
     @color.setter
     def color(self, value: tuple) -> None:
+        """Fixe la couleur de remplissage"""
         self._color = value
         self._top.color = value
         self._bottom.color = value
         self._rect.color = value
  
-    @property
-    def opacity(self) -> int:
-        return self._opacity
- 
     @opacity.setter
     def opacity(self, value: int) -> None:
+        """Fixe l'opacité"""
         self._opacity = value
         self._top.opacity = value
         self._bottom.opacity = value
         self._rect.opacity = value
  
-    @property
-    def batch(self) -> Batch:
-        return self._batch
- 
     @batch.setter
     def batch(self, value: Batch) -> None:
+        """Fixe le batch pyglet"""
         self._batch = value
         self._top.batch = value
         self._bottom.batch = value
         self._rect.batch = value
  
-    @property
-    def group(self) -> Group:
-        return self._group
- 
     @group.setter
     def group(self, value: Group) -> None:
+        """Fixe la groupe pyglet"""
         self._group = value
         self._top.group = value
         self._bottom.group = value
         self._rect.group = value
-
-    @property
-    def visible(self) -> bool:
-        return self._top.visible
     
     @visible.setter
     def visible(self, value: bool) -> None:
+        """Fixe la visibilité"""
         self._top.visible = value
         self._bottom.visible = value
         self._rect.visible = value
  
     # ======================================== LIFE CYCLE ========================================
     def delete(self) -> None:
+        """Libère les ressources pyglet"""
         self._top.delete()
         self._bottom.delete()
         self._rect.delete()
  
-    # ======================================== INTERNALS ========================================
+    # ======================================== HELPERS ========================================
     def _rebuild(self) -> None:
         """Reconstruit les trois primitives à partir de l'état courant"""
         ax, ay, bx, by = _capsule_centers(self._x, self._y, self._spine, self._rotation)
         rect_pts = _capsule_rect_vertices(ax, ay, bx, by, self._radius)
- 
         if self._top is None:
             self._top = pyglet.shapes.Circle(ax, ay, self._radius, color=self._color, batch=self._batch, group=self._group)
             self._bottom = pyglet.shapes.Circle(bx, by, self._radius, color=self._color, batch=self._batch, group=self._group)
@@ -656,10 +750,7 @@ class _CapsuleRenderer:
  
 # ======================================== BORDER HELPERS ========================================
 def _local_contour(shape: Shape) -> np.ndarray:
-    """
-    Génère le contour local d'une shape (centré sur l'origine, scale=1, rotation=0).
-    Retourne un array (N, 2).
-    """
+    """Génère le contour local d'une shape"""
     if isinstance(shape, VertexShape):
         return np.array(shape.local_vertices(), dtype=np.float32)
  
@@ -693,39 +784,46 @@ def _capsule_local_contour(shape: Capsule) -> np.ndarray:
  
  
 def _build_strip(contour: np.ndarray, width: float) -> np.ndarray:
-    """
-    Génère un triangle strip (N+1)*2 points autour d'un contour fermé.
-    Retourne un array ((N+1)*2, 2).
-    """
+    """Génère un triangle strip (N+1)*2 points autour d'un contour fermé"""
+    # Topologie
     n = len(contour)
     prev_pts = contour[(np.arange(n) - 1) % n]
     next_pts = contour[(np.arange(n) + 1) % n]
  
     def edge_normals(a: np.ndarray, b: np.ndarray) -> np.ndarray:
+        """Calcul les normales des arrêtes"""
         d = b - a
         lengths = np.linalg.norm(d, axis=1, keepdims=True)
         lengths = np.where(lengths == 0, 1, lengths)
         d /= lengths
         return np.column_stack((-d[:, 1], d[:, 0]))
  
+    # Normales des arrêtes entrantes et sortantes
     n1 = edge_normals(prev_pts, contour)
     n2 = edge_normals(contour, next_pts)
+
+    # Calcul des bissectrices
     miter = n1 + n2
     miter_len = np.linalg.norm(miter, axis=1, keepdims=True)
     miter_len = np.where(miter_len == 0, 1, miter_len)
     miter /= miter_len
- 
+    
+    # Ajustement de la longueur
     dot = np.einsum('ij,ij->i', n1, miter).reshape(-1, 1)
     dot = np.where(np.abs(dot) < 0.01, 0.01, dot)
     half = width / 2.0
     miter_dist = np.clip(half / dot, -width * 3, width * 3)
  
+    # Calcul des contours offset
     outer = contour + miter * miter_dist
     inner = contour - miter * miter_dist
  
+    # Construction du strip
     strip = np.empty(((n + 1) * 2, 2), dtype=np.float32)
     strip[0::2][:n] = outer
     strip[1::2][:n] = inner
+
+    # Fermeture du strip
     strip[-2] = outer[0]
     strip[-1] = inner[0]
  
@@ -740,9 +838,7 @@ def _apply_transform(pts: np.ndarray, cx: float, cy: float, scale: float, rotati
     return (pts * scale) @ rot.T + np.array([cx, cy], dtype=np.float32)
  
 # ======================================== CAPSULE HELPERS ========================================
-def _capsule_centers(
-    cx: float, cy: float, spine: float, rotation: float
-) -> tuple[float, float, float, float]:
+def _capsule_centers(cx: float, cy: float, spine: float, rotation: float) -> tuple[float, float, float, float]:
     """Retourne les centres (ax, ay, bx, by) des deux demi-sphères"""
     rad = math.radians(rotation)
     half = spine * 0.5
@@ -751,10 +847,7 @@ def _capsule_centers(
         cx + math.sin(rad) * half, cy - math.cos(rad) * half,
     )
  
- 
-def _capsule_rect_vertices(
-    ax: float, ay: float, bx: float, by: float, r: float
-) -> list[tuple[float, float]]:
+def _capsule_rect_vertices(ax: float, ay: float, bx: float, by: float, r: float) -> list[tuple[float, float]]:
     """Retourne les 4 coins du rectangle central de la capsule"""
     dx = bx - ax
     dy = by - ay

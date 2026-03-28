@@ -16,14 +16,14 @@ class ShapeRenderer(Component):
         shape(Shape, optional): forme du rendu
         offset(Vector, optional): décalage par rapport au Transform
         filling(bool, optional): activation du remplissage
-        filling_color(Color, optional): couleur de remplissage
+        color(Color, optional): couleur de remplissage
         border_width(int, optinal): épaisseur de la bordure
         border_color(Color, optional): couleur de la bordure
         opacity(Real, optional): facteur d'opacité
         z(int, optional): ordre de rendu
         visible(bool, optional): visibilité
     """
-    __slots__ = ("_shape", "_offset", "_filling", "_filling_color", "_border_width", "_border_color", "_opacity", "_z", "_visible")
+    __slots__ = ("_shape", "_offset", "_filling", "_color", "_border_width", "_border_color", "_opacity", "_z", "_visible", "_invalid_cache")
     requires = ("Transform",)
 
     def __init__(
@@ -31,7 +31,7 @@ class ShapeRenderer(Component):
             shape: Shape = None,
             offset: Vector = (0.0, 0.0),
             filling: bool = True,
-            filling_color: Color = (255, 255, 255, 1.0),
+            color: Color = (255, 255, 255, 1.0),
             border_width: int = 0,
             border_color: Color = (0, 0, 0, 1.0),
             opacity: Real = 1.0,
@@ -41,12 +41,13 @@ class ShapeRenderer(Component):
         self._shape: Shape = expect(shape, Shape)
         self._offset: Vector =Vector(offset)
         self._filling: bool = expect(filling, bool)
-        self._filling_color: Color = Color(filling_color)
+        self._color: Color = Color(color)
         self._border_width: int = int(expect(border_width, Real))
         self._border_color: Color = Color(border_color)
         self._opacity: float = float(clamped(expect(opacity, Real)))
         self._z: int = expect(z, int)
         self._visible: bool = expect(visible, bool)
+        self._invalid_cache: set[str] = set()
     
     # ======================================== CONVERSIONS ========================================
     def __repr__(self) -> str:
@@ -63,11 +64,11 @@ class ShapeRenderer(Component):
     
     def to_tuple(self) -> tuple[Shape, Vector, bool, Color, int, Color, float, int]:
         """Renvoie le composant sous forme de tuple"""
-        return (self._shape, self._offset, self._filling, self._filling_color, self._border_width, self._border_color, self._opacity, self._z)
+        return (self._shape, self._offset, self._filling, self._color, self._border_width, self._border_color, self._opacity, self._z)
     
     def to_list(self) -> list:
         """Renvoie le composant sous forme de liste"""
-        return [self._shape, self._offset, self._filling, self._filling_color, self._border_width, self._border_color, self._opacity, self._z]
+        return [self._shape, self._offset, self._filling, self._color, self._border_width, self._border_color, self._opacity, self._z]
     
     # ======================================== GETTERS ========================================
     @property
@@ -86,9 +87,9 @@ class ShapeRenderer(Component):
         return self._filling
     
     @property
-    def filling_color(self) -> Color:
+    def color(self) -> Color:
         """Renvoie la couleur du remplissage"""
-        return self._filling_color
+        return self._color
     
     @property
     def border_width(self) -> int:
@@ -115,36 +116,43 @@ class ShapeRenderer(Component):
     def offset(self, value: Vector):
         """Fixe le décalage par rapport au tranform"""
         self._offset = Vector(value)
+        self._invalidate("offset")
 
     @filling.setter
     def filling(self, value: bool):
         """Fixe l'état du remplissage"""
         self._filling = expect(value, bool)
+        self._invalidate("filling")
 
-    @filling_color.setter
-    def filling_color(self, value: Color):
+    @color.setter
+    def color(self, value: Color):
         """Fixe la couleur de remplissage"""
-        self._filling_color = expect(value, Color)
+        self._color = expect(value, Color)
+        self._invalidate("color")
 
     @border_width.setter
     def border_width(self, value: int):
         """Fixe l'épaisseur de la bordure"""
         self._border_width = int(expect(value, Real))
+        self._invalidate("border_width")
     
     @border_color.setter
     def border_color(self, value: Color):
         """Fixe la couleur de la bordure"""
         self._border_color = Color(value)
+        self._invalidate("border_color")
 
     @opacity.setter
     def opacity(self, value: Real):
         """Fixe le facteur d'opacité"""
         self._opacity = float(clamped(expect(value, Real)))
+        self._invalidate("opacity")
 
     @z.setter
     def z(self, value: int):
         """Fixe l'ordre de rendu"""
         self._z = expect(value, int)
+        self._invalidate("z")
     
     # ======================================== PREDICATES ========================================
     def is_visible(self) -> bool:
@@ -159,3 +167,13 @@ class ShapeRenderer(Component):
     def hide(self):
         """Cache la forme"""
         self._visible = False
+
+    # ======================================== INTERNALS ========================================
+    def _invalidate(self, attribut: str) -> None:
+        """Invalidation d'un paramètre"""
+        self._invalid_cache.add(attribut)
+
+    def _flush(self) -> set:
+        """Consomme le cache d'invalidation"""
+        cache, self._invalid_cache = self._invalid_cache, set()
+        return cache
