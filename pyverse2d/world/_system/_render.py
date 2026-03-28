@@ -4,6 +4,7 @@ from __future__ import annotations
 from ..._flag import UpdatePhase
 from ...abc import System
 from ...asset import Text, Font
+from ...math import Vector
 from .._world import World, Entity
 from .._component import Transform, SpriteRenderer, ShapeRenderer, TextRenderer
 from ..._rendering import Pipeline, PygletShapeRenderer
@@ -13,6 +14,7 @@ import pyglet.sprite
 import pyglet.text
 import pyglet.image
 
+import math
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -250,12 +252,23 @@ class RenderSystem(System):
 
 
 # ======================================== WORLD CENTER ========================================
-def _world_center(shape, tr: Transform, offset: tuple[float, float]) -> tuple[float, float]:
-    """Calcule le centre géométrique monde en tenant compte de l'anchor"""
+def _world_center(shape, tr: Transform, offset: Vector) -> tuple[float, float]:
     x_min, y_min, x_max, y_max = shape.bounding_box
-    anchor_x = x_min + tr.anchor.x * (x_max - x_min)
-    anchor_y = y_min + tr.anchor.y * (y_max - y_min)
+
+    # Anchor en espace local
+    local_ax = x_min + tr.anchor.x * (x_max - x_min)
+    local_ay = y_min + tr.anchor.y * (y_max - y_min)
+
+    # Scale + rotation de l'anchor
+    rad = math.radians(tr.rotation)
+    cos_r, sin_r = math.cos(rad), math.sin(rad)
+    scaled_ax = local_ax * tr.scale
+    scaled_ay = local_ay * tr.scale
+    rotated_ax = scaled_ax * cos_r - scaled_ay * sin_r
+    rotated_ay = scaled_ax * sin_r + scaled_ay * cos_r
+
+    # Centre monde
     return (
-        tr.x - anchor_x * tr.scale + offset[0] * tr.scale,
-        tr.y - anchor_y * tr.scale + offset[1] * tr.scale,
+        tr.x - rotated_ax + offset[0] * tr.scale,
+        tr.y - rotated_ay + offset[1] * tr.scale,
     )
