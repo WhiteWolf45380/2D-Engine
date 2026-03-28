@@ -260,7 +260,7 @@ def _world_center(shape, tr: Transform, offset: Vector) -> tuple[float, float]:
     local_ay = y_min + tr.anchor.y * (y_max - y_min)
 
     # Scale + rotation de l'anchor
-    rad = math.radians(tr.rotation)
+    rad = math.radians(-tr.rotation)
     cos_r, sin_r = math.cos(rad), math.sin(rad)
     scaled_ax = local_ax * tr.scale
     scaled_ay = local_ay * tr.scale
