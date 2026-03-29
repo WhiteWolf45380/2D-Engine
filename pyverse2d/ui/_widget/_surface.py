@@ -21,7 +21,6 @@ class Surface(Widget):
         filling(bool, optional): remplissage
         color(Color, optional): couleur de remplissage
         opacité(Real, optional): opacité [0; 1]
-        parent(Widget, optional): Composant UI parent
     """
     __slots__ = ("_shape", "_color")
 
@@ -32,10 +31,9 @@ class Surface(Widget):
             anchor: Point = (0.5, 0.5),
             color: Color = (125, 125, 125),
             opacity: Real = 1.0,
-            parent: Widget = None,
         ):
         # Initialisation du widget
-        super().__init__(parent, position, anchor, opacity)
+        super().__init__(position, anchor, opacity)
         self._shape: Shape = expect(shape, Shape)
         self._shape_renderer: PygletShapeRenderer = None
 

@@ -9,7 +9,10 @@ from ..._rendering import Pipeline, RenderContext
 from abc import ABC, abstractmethod
 from bisect import insort
 from numbers import Real
-from typing import Callable
+from typing import Callable, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ...scene import UILayer
 
 # ======================================== ABSTRACT CLASS ========================================
 class Widget(ABC):
@@ -17,22 +20,21 @@ class Widget(ABC):
     Classe abstraite des composants UI
 
     Args:
-        parent(Widget, optional): composant parent
         position(Point, optional): position
         anchor(Point, optional): ancre locale
         opacity(float, optional): opacité
     """
-    __slots__ = ("_parent", "_children", "_position", "_anchor", "_opacity", "_active", "_visible", "_activate_process", "_deactivate_process", "_show_process", "_hide_process")
+    __slots__ = ("_layer", "_parent", "_children", "_position", "_anchor", "_opacity", "_active", "_visible", "_activate_process", "_deactivate_process", "_show_process", "_hide_process")
 
     def __init__(
             self,
-            parent: Widget = None,
             position: Point = (0, 0),
             anchor: Point = (0.5, 0.5),
             opacity: float = 1.0
         ):
         # Arbre
-        self._parent: Widget = expect(parent, (Widget, None))
+        self._layer: UILayer = None
+        self._parent: Widget = None
         self._children: list[WidgetWrapper] = []
 
         # position
@@ -53,6 +55,11 @@ class Widget(ABC):
         self._hide_process: list[Callable] = []
 
     # ======================================== GETTERS ========================================
+    @property
+    def layer(self) -> UILayer | None:
+        """Renvoie le layer"""
+        return self._layer
+
     @property
     def parent(self) -> Widget| None:
         """Renvoie le composant parent"""
@@ -290,11 +297,12 @@ class Widget(ABC):
             name(str, optional): identifiant local du composant
             z(int, optional): ordre de rendu local
         """
-        if child in self._children:
-            raise ValueError(f"{child} is already a child of this widget")
+        if child._layer != self._layer:
+            raise ValueError(f"{child} is in another layer")
         if child.parent is not None:
             raise ValueError(f"{child} has already a parent")
         wrapper = WidgetWrapper(expect(child, Widget), expect(name, (str, None)), expect(z, int))
+        child._layer = self._layer
         child._parent = self
         insort(self._children, wrapper)
 
@@ -306,6 +314,7 @@ class Widget(ABC):
             child(Widget): composant à dissocier
         """
         if expect(child, Widget) in self._children:
+            child._layer = None
             child._parent = None
             self._children.remove(child)
 
@@ -321,12 +330,14 @@ class Widget(ABC):
             if child.name == name:
                 to_remove.append(child)
         for wrapper in to_remove:
+            wrapper.widget._layer = None
             wrapper.widget._parent = None
             self._children.remove(wrapper)
 
     def clear_children(self) -> None:
         """Retire tous les enfants"""
         for child in self._children:
+            child.widget._layer = None
             child.widget._parent = None
         self._children.clear()
     

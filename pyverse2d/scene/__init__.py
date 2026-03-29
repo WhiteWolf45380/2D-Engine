@@ -7,6 +7,7 @@ from ._camera import Camera
 from ._viewport import Viewport
 from ._world_layer import WorldLayer
 from ._tile_layer import TileLayer
+from ._ui_layer import UILayer
 from ._scene import Scene
 
 # ======================================== STATE ========================================
@@ -95,6 +96,7 @@ __all__ = [
 
     "WorldLayer",
     "TileLayer",
+    "UILayer",
     "Scene",
 
     "get_current",
