@@ -676,6 +676,11 @@ class _CapsuleRenderer:
  
     # ======================================== GETTERS ========================================
     @property
+    def position(self) -> tuple[float, float]:
+        """Renvoie la position"""
+        return self._x, self._y
+
+    @property
     def x(self) -> float:
         """Renvoie la position horizontale"""
         return self._x
@@ -716,6 +721,12 @@ class _CapsuleRenderer:
         return self._top.visible
  
     # ======================================== SETTERS ========================================
+    @position.setter
+    def position(self, value: tuple[float, float]) -> None:
+        """Fixe la position"""
+        self._x, self._y = value
+        self._rebuild()
+
     @x.setter
     def x(self, value: float) -> None:
         """Fixe la position horizontale"""
