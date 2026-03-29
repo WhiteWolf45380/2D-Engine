@@ -113,8 +113,8 @@ class Surface(Widget):
     
     def draw(self, pipeline: Pipeline, context: RenderContext) -> None:
         """Affichage"""
-        if self._renderer is None:
-            self._renderer = PygletShapeRenderer(
+        if self._shape_renderer is None:
+            self._shape_renderer = PygletShapeRenderer(
                 shape = self._shape,
                 x = context.origin.x,
                 y = context.origin.y,
@@ -129,7 +129,7 @@ class Surface(Widget):
             )
 
         else:
-            self._renderer.update(
+            self._shape_renderer.update(
                 x = context.origin.x,
                 y = context.origin.y,
                 anchor_x = self.anchor_x,
@@ -147,9 +147,9 @@ class Surface(Widget):
         Libère les ressources pyglet et se détache de son parent.
         À appeler explicitement quand le widget n'est plus utilisé.
         """
-        if self._renderer is not None:
-            self._renderer.delete()
-            self._renderer = None
+        if self._shape_renderer is not None:
+            self._shape_renderer.delete()
+            self._shape_renderer = None
  
         if self._parent is not None:
             self._parent.remove_child(self)
