@@ -22,7 +22,10 @@ class Surface(Widget):
         color(Color, optional): couleur de remplissage
         opacité(Real, optional): opacité [0; 1]
     """
-    __slots__ = ("_shape", "_color")
+    __slots__ = (
+        "_shape", "_shape_renderer",
+        "_color", "_scale", "_rotation"
+    )
 
     def __init__(
             self,
