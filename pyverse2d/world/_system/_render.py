@@ -3,15 +3,11 @@ from __future__ import annotations
 
 from ..._flag import UpdatePhase
 from ...abc import System
-from ...asset import Text, Font
-from ...math import Vector
 from .._world import World, Entity
 from .._component import Transform, SpriteRenderer, ShapeRenderer, TextRenderer
-from ..._rendering import Pipeline, PygletShapeRenderer
+from ..._rendering import Pipeline, PygletShapeRenderer, PygletSpriteRenderer, PygletLabelRenderer
 
 import pyglet
-import pyglet.sprite
-import pyglet.text
 import pyglet.image
 
 from typing import TYPE_CHECKING
@@ -32,9 +28,9 @@ class RenderSystem(System):
     exclusive = True
 
     def __init__(self):
-        self._sprites: dict = {}
+        self._sprites: dict[int, PygletSpriteRenderer] = {}
         self._shapes: dict[int, PygletShapeRenderer] = {}
-        self._labels: dict = {}
+        self._labels: dict[int, PygletLabelRenderer] = {}
         self._image_cache: dict = {}
 
     # ======================================== UPDATE ========================================
@@ -85,26 +81,23 @@ class RenderSystem(System):
     # ======================================== SYNC SHAPE ========================================
     def _sync_shape(self, entity: Entity, tr: Transform, pipeline: Pipeline):
         """Crée ou met à jour le renderer de shape de l'entité"""
-        sr: ShapeRenderer = entity.shape_renderer
+        sr: ShapeRenderer = entity.get(ShapeRenderer)
         eid = entity.id
 
-        # Sprite invisible
         if not sr.is_visible():
             if eid in self._shapes:
                 self._shapes[eid].visible = False
             return
 
-        # Calcul du z-order
         z = sr.z * 3 + _ORDER_SHAPE
 
-        # Construction du ShapeRenderer pyglet
         if eid not in self._shapes:
             self._shapes[eid] = PygletShapeRenderer(
                 shape = sr.shape,
                 x = tr.x + sr.offset_x * tr.scale,
                 y = tr.y + sr.offset_y * tr.scale,
                 anchor_x = tr.anchor_x,
-                anchor_y = tr.anchor_x,
+                anchor_y = tr.anchor_y,
                 scale = tr.scale,
                 rotation = tr.rotation,
                 filling = sr.filling,
@@ -128,13 +121,13 @@ class RenderSystem(System):
                 border_width = sr.border_width,
                 border_color = sr.border_color,
                 opacity = sr.opacity,
-                z=z
+                z = z,
             )
             self._shapes[eid].visible = True
 
     # ======================================== SYNC SPRITE ========================================
     def _sync_sprite(self, entity: Entity, tr: Transform, pipeline: Pipeline):
-        """Crée ou met à jour le Sprite pyglet de l'entité"""
+        """Crée ou met à jour le renderer de sprite de l'entité"""
         sr: SpriteRenderer = entity.get(SpriteRenderer)
         eid = entity.id
 
@@ -146,26 +139,6 @@ class RenderSystem(System):
         raw = self._load_image(sr.image.path)
         if raw is None:
             return
-
-        anchor_x = int(tr.anchor.x * raw.width)
-        anchor_y = int(tr.anchor.y * raw.height)
-
-        if eid not in self._sprites:
-            region = raw.get_region(0, 0, raw.width, raw.height)
-            region.anchor_x = anchor_x
-            region.anchor_y = anchor_y
-            group = pipeline.get_group(sr.z * 3 + _ORDER_SPRITE)
-            self._sprites[eid] = pyglet.sprite.Sprite(region, batch=pipeline.batch, group=group)
-        else:
-            sprite = self._sprites[eid]
-            if sprite.image.get_texture() is not raw.get_texture():
-                region = raw.get_region(0, 0, raw.width, raw.height)
-                region.anchor_x = anchor_x
-                region.anchor_y = anchor_y
-                sprite.image = region
-            else:
-                sprite.image.anchor_x = anchor_x
-                sprite.image.anchor_y = anchor_y
 
         if sr.image.width: scale_x = sr.image.width / raw.width
         else: scale_x = None
@@ -179,19 +152,42 @@ class RenderSystem(System):
         flip_x = -1 if sr.flip_x else 1
         flip_y = -1 if sr.flip_y else 1
 
-        sprite: pyglet.sprite.Sprite = self._sprites[eid]
-        sprite.visible = True
-        sprite.x = tr.x + sr.offset[0] * tr.scale
-        sprite.y = tr.y + sr.offset[1] * tr.scale
-        sprite.rotation = tr.rotation
-        sprite.scale_x = tr.scale * scale_x * sr.image.scale_factor * flip_x
-        sprite.scale_y = tr.scale * scale_y * sr.image.scale_factor * flip_y
-        sprite.color = sr.tint.rgb8
-        sprite.opacity = int(sr.opacity * 255)
+        z = sr.z * 3 + _ORDER_SPRITE
+
+        if eid not in self._sprites:
+            self._sprites[eid] = PygletSpriteRenderer(
+                texture = raw,
+                x = tr.x + sr.offset[0] * tr.scale,
+                y = tr.y + sr.offset[1] * tr.scale,
+                anchor_x = tr.anchor.x,
+                anchor_y = tr.anchor.y,
+                scale_x = tr.scale * scale_x * sr.image.scale_factor * flip_x,
+                scale_y = tr.scale * scale_y * sr.image.scale_factor * flip_y,
+                rotation = tr.rotation,
+                opacity = sr.opacity,
+                color = sr.tint,
+                z = z,
+                pipeline = pipeline,
+            )
+        else:
+            self._sprites[eid].update(
+                texture = raw,
+                x = tr.x + sr.offset[0] * tr.scale,
+                y = tr.y + sr.offset[1] * tr.scale,
+                anchor_x = tr.anchor.x,
+                anchor_y = tr.anchor.y,
+                scale_x = tr.scale * scale_x * sr.image.scale_factor * flip_x,
+                scale_y = tr.scale * scale_y * sr.image.scale_factor * flip_y,
+                rotation = tr.rotation,
+                opacity = sr.opacity,
+                color = sr.tint,
+                z = z,
+            )
+            self._sprites[eid].visible = True
 
     # ======================================== SYNC TEXT ========================================
     def _sync_text(self, entity: Entity, tr: Transform, pipeline: Pipeline):
-        """Crée ou met à jour le Label pyglet de l'entité"""
+        """Crée ou met à jour le renderer de label de l'entité"""
         tc: TextRenderer = entity.get(TextRenderer)
         eid = entity.id
 
@@ -200,47 +196,44 @@ class RenderSystem(System):
                 self._labels[eid].visible = False
             return
 
-        t: Text = tc.text
-        f: Font = t.font
+        z = tc.z * 3 + _ORDER_LABEL
 
         if eid not in self._labels:
-            group = pipeline.get_group(tc.z * 3 + _ORDER_LABEL)
-            self._labels[eid] = pyglet.text.Label(
-                t.text,
-                font_name = f.name,
-                font_size = int(f.size * tr.scale),
+            self._labels[eid] = PygletLabelRenderer(
+                text = tc.text,
+                x = tr.x + tc.offset[0] * tr.scale,
+                y = tr.y + tc.offset[1] * tr.scale,
+                anchor_x = tr.anchor[0],
+                anchor_y = tr.anchor[1],
                 rotation = tr.rotation,
                 weight = tc.weight,
                 italic = tc.italic,
-                color = tc.color.rgba8,
-                multiline = tc.multiline or tc.width is not None,
-                align = tc.align,
+                color = tc.color,
+                opacity = tc.opacity,
                 width = tc.width,
-                anchor_x = "left",
-                anchor_y = "bottom",
-                batch = pipeline.batch,
-                group = group,
+                multiline = tc.multiline,
+                align = tc.align,
+                z = z,
+                pipeline = pipeline,
             )
-            label = self._labels[eid]
-            label.x = tr.x - (tr.anchor[0] * label.content_width + tc.offset[0]) * tr.scale
-            label.y = tr.y - (tr.anchor[1] * label.content_height + tc.offset[1]) * tr.scale
-            return
-
-        label: pyglet.text.Label = self._labels[eid]
-        label.visible = True
-        label.text = t.text
-        label.font_size = int(f.size * tr.scale)
-        label.rotation = tr.rotation
-        label.x = tr.x - (tr.anchor[0] * label.content_width + tc.offset[0]) * tr.scale
-        label.y = tr.y - (tr.anchor[1] * label.content_height + tc.offset[1]) * tr.scale
-        label.font_name = f.name
-        label.weight = tc.weight
-        label.italic = tc.italic
-        label.color = tc.color.rgba8
-        label.opacity = int(tc.opacity * 255)
-        label.width = tc.width
-        label.multiline = tc.multiline or tc.width is not None
-        label.align = tc.align
+        else:
+            self._labels[eid].update(
+                text = tc.text,
+                x = tr.x + tc.offset[0] * tr.scale,
+                y = tr.y + tc.offset[1] * tr.scale,
+                anchor_x = tr.anchor[0],
+                anchor_y = tr.anchor[1],
+                rotation = tr.rotation,
+                weight = tc.weight,
+                italic = tc.italic,
+                color = tc.color,
+                opacity = tc.opacity,
+                width = tc.width,
+                multiline = tc.multiline,
+                align = tc.align,
+                z = z,
+            )
+            self._labels[eid].visible = True
 
     # ======================================== IMAGE CACHE ========================================
     def _load_image(self, path: str) -> pyglet.image.AbstractImage | None:
