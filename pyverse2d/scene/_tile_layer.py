@@ -7,10 +7,11 @@ from .._rendering._pipeline import Pipeline
 from ..abc import Layer
 from ..tile import TileMap, TileRenderer
 
+from pyglet import gl
 from numbers import Real
 from contextlib import contextmanager, nullcontext
 from pyglet.gl import glEnable, glDisable, glScissor, glGetBooleanv, glGetIntegerv, GL_SCISSOR_TEST, GL_SCISSOR_BOX
-from ctypes import c_bool, c_int
+from ctypes import c_int
 
 # ======================================== LAYER ========================================
 class TileLayer(Layer):
@@ -187,7 +188,7 @@ class TileLayer(Layer):
 # ======================================== HELPERS ========================================
 @contextmanager
 def _scissor_context(x: int, y: int, w: int, h: int):
-    was_enabled = (c_bool * 1)()
+    was_enabled = (gl.GLboolean * 1)()
     prev_box = (c_int * 4)()
     glGetBooleanv(GL_SCISSOR_TEST, was_enabled)
     glGetIntegerv(GL_SCISSOR_BOX, prev_box)
