@@ -58,7 +58,7 @@ class CollisionMapper:
             tw = self._tile_map.tile_width
             th = self._tile_map.tile_height
             entity = Entity(
-                Transform(pos=(wx + tw / 2, wy + th / 2)),
+                Transform(position=(wx + tw / 2, wy + th / 2)),
                 Collider(shape=shape, category=category, mask=mask),
                 RigidBody(friction=friction, restitution=restitution),
             )
@@ -68,7 +68,7 @@ class CollisionMapper:
         for col, row, w, h, friction, restitution, category, mask in self._merged_rects():
             wx, wy = self._tile_map.tile_to_world(col, row)
             entity = Entity(
-                Transform(pos=(wx + w / 2, wy + h / 2)),
+                Transform(position=(wx + w / 2, wy + h / 2)),
                 Collider(shape=Rect(w, h), category=category, mask=mask),
                 RigidBody(friction=friction, restitution=restitution),
             )
