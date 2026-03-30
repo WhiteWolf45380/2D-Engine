@@ -14,21 +14,21 @@ class Transform(Component):
     Composant gérant le positionnement
 
     Args:
-        pos(Point): position
+        position(Point): position
         anchor(Point, optional): ancre de positionnement (écart normalisé à l'origine)
         rotation(float, optional): angle de rotation en radians
         scale(float, otional): facteur de redimensionnement
     """
-    __slots__ = ("_pos", "_anchor", "_rotation", "_scale")
+    __slots__ = ("_position", "_anchor", "_rotation", "_scale")
 
     def __init__(
             self,
-            pos: Point = (0.0, 0.0),
+            position: Point = (0.0, 0.0),
             anchor: Point = (0.5, 0.5),
             rotation: float = 0.0,
             scale: float = 1.0,
         ):
-        self._pos: Point = Point(pos)
+        self._position: Point = Point(position)
         self._anchor: Point = Point(anchor)
         self._rotation: float = float(expect(rotation, Real))
         self._scale: float = float(not_null(positive(expect(scale, Real))))
@@ -36,7 +36,7 @@ class Transform(Component):
     # ======================================== CONVERSIONS ========================================
     def __repr__(self) -> str:
         """Renvoie une représentation du composant"""
-        return f"Transform(x={self._pos.x}, y={self._pos.y}, anchor={self._anchor}, rotation={self._rotation}, scale={self._scale})"
+        return f"Transform(x={self._position.x}, y={self._position.y}, anchor={self._anchor}, rotation={self._rotation}, scale={self._scale})"
     
     def __iter__(self) -> Iterator:
         """Renvoie le composant dans un itérateur"""
@@ -48,27 +48,27 @@ class Transform(Component):
     
     def to_tuple(self) -> tuple[Point, Point, float, float]:
         """Renvoie le composant sous forme tuple"""
-        return (self._pos, self._anchor, self._rotation, self._scale)
+        return (self._position, self._anchor, self._rotation, self._scale)
     
     def to_list(self) -> list:
         """Renvoie le composant sous forme de liste"""
-        return [self._pos, self._anchor, self._rotation, self._scale]
+        return [self._position, self._anchor, self._rotation, self._scale]
 
     # ======================================== GETTERS ========================================
     @property
-    def pos(self) -> Point:
+    def position(self) -> Point:
         """Renvoie le point de position"""
-        return self._pos
+        return self._position
 
     @property
     def x(self) -> float:
         """Renvoie la coordonnée horizontale"""
-        return self._pos.x
+        return self._position.x
     
     @property
     def y(self) -> float:
         """Renvoie la coordonnée verticale"""
-        return self._pos.y
+        return self._position.y
     
     @property
     def anchor(self) -> Point:
@@ -96,20 +96,20 @@ class Transform(Component):
         return self._scale
 
     # ======================================== SETTERS ========================================
-    @pos.setter
-    def pos(self, value: Point) -> None:
+    @position.setter
+    def position(self, value: Point) -> None:
         """Fixe le point de position"""
-        self._pos = Point(value)
+        self._position = Point(value)
 
     @x.setter
     def x(self, value: Real) -> None:
         """Fixe la coordonnée horizontale"""
-        self._pos.x = value
+        self._position.x = value
     
     @y.setter
     def y(self, value: Real) -> None:
         """Fixe la coordonnée verticale"""
-        self._pos.y = value
+        self._position.y = value
 
     @anchor.setter
     def anchor(self, value: Point) -> None:
@@ -139,7 +139,7 @@ class Transform(Component):
     # ======================================== PUBLIC METHODS ========================================
     def copy(self) -> Transform:
         """Renvoie une copie du composant"""
-        return Transform(self._pos.copy(), self._anchor, self._rotation, self._scale)
+        return Transform(self._position.copy(), self._anchor, self._rotation, self._scale)
     
     def translate(self, vector: Vector):
         """
@@ -148,4 +148,4 @@ class Transform(Component):
         Args:
             vector(Vector): vecteur de translation
         """
-        self._pos += expect(vector, Vector)
+        self._position += expect(vector, Vector)
