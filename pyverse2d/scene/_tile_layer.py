@@ -161,10 +161,14 @@ class TileLayer(Layer):
         cr_max = min(chunk_rows, int((vy + vh - oy) // chunk_h) + 1)
 
         # Génération du contexte de rendu
-        if self._parallax_clamp:
-            sx = int(ox - cam.final_x + screen.half_width)
-            sy = int(oy - cam.final_y + screen.half_height)
-            ctx = _scissor_context(sx, sy, int(tm.cols * tw), int(tm.rows * th))
+        if self._parallax_clamp and self._parallax != (1.0, 1.0):
+            map_x0 = ox
+            map_y0 = oy
+            sx = int((map_x0 - cam.final_x) * cam.zoom + screen.half_width)
+            sy = int((map_y0 - cam.final_y) * cam.zoom + screen.half_height)
+            sw = int(tm.cols * tw * cam.zoom)
+            sh = int(tm.rows * th * cam.zoom)
+            ctx = _scissor_context(sx, sy, sw, sh)
         else:
             ctx = nullcontext()
         
