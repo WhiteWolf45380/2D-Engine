@@ -138,7 +138,7 @@ class Surface(Widget):
                 rotation = self._rotation,
                 color = self._color,
                 opacity = context.opacity,
-                pipeline=Pipeline,
+                pipeline=pipeline,
                 z=context.z,
             )
  
