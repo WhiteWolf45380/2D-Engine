@@ -21,7 +21,7 @@ class UILayer(Layer):
     """
     __slots__ = ("_wrappers", "_opacity")
 
-    def __init__(self, opacity: Real = 1.0, camera_mode: CameraMode = CameraMode.WORLD):
+    def __init__(self, opacity: Real = 1.0, camera_mode: CameraMode = CameraMode.SCREEN):
         super().__init__(camera_mode)
         self._wrappers: list[WidgetWrapper] = []
         self._opacity: float = clamped(float(expect(opacity, Real)))
