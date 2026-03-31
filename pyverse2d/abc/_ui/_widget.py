@@ -378,9 +378,9 @@ class Widget(ABC):
 
     # ======================================== LIFE CYCLE ========================================
     @abstractmethod
-    def update(self, dt: float) -> None: ...
+    def _update(self, dt: float) -> None: ...
 
-    def _update(self, dt: float) -> Super:
+    def update(self, dt: float) -> Super:
         """Actualisation"""
         if not self._active:
             return Super.STOP
@@ -390,14 +390,14 @@ class Widget(ABC):
 
         # Actualisation des enfants
         for child in self._children:
-            child.widget._update(dt)
+            child.widget.update(dt)
 
         return Super.NONE
     
     @abstractmethod
-    def draw(self, pipeline: Pipeline, context: RenderContext): ...
+    def _draw(self, pipeline: Pipeline, context: RenderContext): ...
 
-    def _draw(self, pipeline: Pipeline, context: RenderContext) -> Super:
+    def draw(self, pipeline: Pipeline, context: RenderContext) -> Super:
         """Affichage"""
         if not self._visible:
             return Super.STOP
@@ -414,12 +414,24 @@ class Widget(ABC):
 
         # Affichage des enfants
         for child in self._children:
-            child.widget._draw(pipeline, context)
+            child.widget.draw(pipeline, context)
 
         # Restauration du contexte de rendu
         context.opacity = opacity
         context.origin = origin
 
+        return Super.NONE
+    
+    @abstractmethod
+    def _destroy(self) -> None: ...
+
+    def destroy(self) -> Super:
+        """Destruction"""
+        self._destroy()
+        if self._parent is not None:
+            self._parent.remove_child(self)
+        for child in self._children:
+            child.widget.destroy()
         return Super.NONE
     
     # ======================================== HELPERS ========================================
