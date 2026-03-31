@@ -150,6 +150,3 @@ class Surface(Widget):
         if self._shape_renderer is not None:
             self._shape_renderer.delete()
             self._shape_renderer = None
- 
-        if self._parent is not None:
-            self._parent.remove_child(self)

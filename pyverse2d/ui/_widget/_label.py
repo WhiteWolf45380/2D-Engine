@@ -268,4 +268,3 @@ class Label(Widget):
         if self._text_renderer:
             self._text_renderer.delete()
             self._text_renderer = None
-        super().destroy()
