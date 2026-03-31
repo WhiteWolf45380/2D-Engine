@@ -255,15 +255,61 @@ class Label(Widget):
         self._margin = positive(not_null(expect(value, int)))
 
     # ======================================== LIFE CYCLE ========================================
-    def update(self, dt) -> None:
+    def _update(self, dt: float) -> None:
         """Actualisation"""
         ...
 
-    def draw(self, pipeline, context) -> None:
+    def _draw(self, pipeline: Pipeline, context: RenderContext) -> None:
         """Affichage"""
-        ...
+        if self._text_renderer is None:
+            self._text_renderer = PygletLabelRenderer(
+                text = self._text,
+                x = context.origin.x,
+                y = context.origin.y,
+                anchor_x = self.anchor_x,
+                anchor_y = self.anchor_y,
+                rotation = self._rotation,
+                weight = self._weight,
+                italic = self._italic,
+                underline = self._underline,
+                color = self._color,
+                opacity = self._opacity,
+                width = self._width,
+                height = self._height,
+                multiline = self._multiline,
+                wrap_lines = self._wrap_lines,
+                align = self._align,
+                margin = self._margin,
+                line_spacing = self._line_spacing,
+                z = context.z,
+                pipeline = pipeline,
+            )
+    
+        else:
+            self._text_renderer.update(
+                text = self._text,
+                x = context.origin.x,
+                y = context.origin.y,
+                anchor_x = self.anchor_x,
+                anchor_y = self.anchor_y,
+                rotation = self._rotation,
+                weight = self._weight,
+                italic = self._italic,
+                underline = self._underline,
+                color = self._color,
+                opacity = self._opacity,
+                width = self._width,
+                height = self._height,
+                multiline = self._multiline,
+                wrap_lines = self._wrap_lines,
+                align = self._align,
+                margin = self._margin,
+                line_spacing = self._line_spacing,
+                z = context.z,
+                pipeline = pipeline,
+            )
 
-    def destroy(self) -> None:
+    def _destroy(self) -> None:
         """Libère les ressources pyglet"""
         if self._text_renderer:
             self._text_renderer.delete()

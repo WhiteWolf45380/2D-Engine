@@ -386,7 +386,7 @@ class Widget(ABC):
             return Super.STOP
         
         # Actualisation personnel
-        self.update(dt)
+        self._update(dt)
 
         # Actualisation des enfants
         for child in self._children:
@@ -410,7 +410,7 @@ class Widget(ABC):
         self._update_render_context(context)
 
         # Affichage personnel
-        self.draw(pipeline, context)
+        self._draw(pipeline, context)
 
         # Affichage des enfants
         for child in self._children:

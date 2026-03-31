@@ -107,11 +107,11 @@ class Surface(Widget):
         self._rotation += float(expect(angle, Real))
 
     # ======================================== LIFE CYCLE ========================================
-    def update(self, dt: float) -> None:
+    def _update(self, dt: float) -> None:
         """Actualisation"""
         ...
     
-    def draw(self, pipeline: Pipeline, context: RenderContext) -> None:
+    def _draw(self, pipeline: Pipeline, context: RenderContext) -> None:
         """Affichage"""
         if self._shape_renderer is None:
             self._shape_renderer = PygletShapeRenderer(
@@ -142,7 +142,7 @@ class Surface(Widget):
                 z=context.z,
             )
  
-    def destroy(self) -> None:
+    def _destroy(self) -> None:
         """
         Libère les ressources pyglet et se détache de son parent.
         À appeler explicitement quand le widget n'est plus utilisé.
