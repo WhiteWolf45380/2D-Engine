@@ -1,6 +1,6 @@
 # ======================================== IMPORTS ========================================
 from types import UnionType
-from typing import Tuple, get_args, get_origin, Union
+from typing import Tuple, get_args, get_origin, Union, Literal
 from numbers import Real
 
 # ======================================== TYPE CHECK ========================================
@@ -138,6 +138,13 @@ def expect(value: object, types: type | Tuple[type, ...]):
                     expect(v, vt)
                 except TypeError as e:
                     raise TypeError(f"at key {k!r}: {e}") from e
+        return value
+    
+    # Literal[T1, T2, ...]
+    if origin is Literal:
+        if value not in args:
+            readable = " | ".join(repr(a) for a in args)
+            raise TypeError(f"expected Literal[{readable}], got ({value!r})")
         return value
 
     raise TypeError(f"unsupported type annotation: {types!r}")

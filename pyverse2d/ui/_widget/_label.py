@@ -89,7 +89,7 @@ class Label(Widget):
         self._line_spacing: int = expect(line_spacing, int) if line_spacing is not None else None
         self._wrap_lines: bool = expect(wrap_lines, bool)
         self._align: HorizontalAlign = expect(align, HorizontalAlign)
-        self._margin: int = positive(not_null(expect(margin, int)))
+        self._margin: int = positive(expect(margin, int))
     
     # ======================================== PROPERTIES ========================================
     @property
