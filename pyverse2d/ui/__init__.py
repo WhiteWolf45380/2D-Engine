@@ -1,6 +1,7 @@
 # ======================================== IMPORTS ========================================
 from ._widget import (
-    Surface
+    Surface,
+    Label,
 )
 
 from ._behavior import (
@@ -13,6 +14,7 @@ from ._behavior import (
 # ======================================== EXPORTS ========================================
 __all__ = [
     "Surface",
+    "Label",
 
     "ClickBehavior",
     "HoverBehavior",
