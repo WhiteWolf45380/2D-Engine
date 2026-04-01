@@ -105,14 +105,15 @@ class PygletSpriteRenderer:
         raw = self._load_image(self._image.path)
         if raw is None:
             return
-
-        raw.anchor_x = int(self._anchor_x * raw.width)
-        raw.anchor_y = int(self._anchor_y * raw.height)
-
+ 
+        region = raw.get_region(0, 0, raw.width, raw.height)
+        region.anchor_x = int(self._anchor_x * raw.width)
+        region.anchor_y = int(self._anchor_y * raw.height)
+ 
         eff_sx, eff_sy = self._effective_scales(raw)
-
+ 
         self._sprite = pyglet.sprite.Sprite(
-            raw,
+            region,
             x=self._x,
             y=self._y,
             batch=self._pipeline.batch if self._pipeline else None,
@@ -294,7 +295,7 @@ class PygletSpriteRenderer:
 
     def _handle_anchor(self) -> None:
         """Actualisation de l'ancre"""
-        self._sprite.image.anchor = int(self._anchor_x * self._sprite.image.width), int(self._anchor_y * self._sprite.image.height)
+        self._sprite.image.anchor_x, self._sprite.image.anchor_y = int(self._anchor_x * self._sprite.image.width), int(self._anchor_y * self._sprite.image.height)
 
     def _handle_scales(self) -> None:
         """Actualisation du facteur de redimensionnement"""
