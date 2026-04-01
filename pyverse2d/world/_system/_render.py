@@ -139,7 +139,7 @@ class RenderSystem(System):
 
         if eid not in self._sprites:
             self._sprites[eid] = PygletSpriteRenderer(
-                texture = sr.image,
+                image = sr.image,
                 x = tr.x + sr.offset[0] * tr.scale,
                 y = tr.y + sr.offset[1] * tr.scale,
                 anchor_x = tr.anchor.x,
@@ -156,7 +156,7 @@ class RenderSystem(System):
             )
         else:
             self._sprites[eid].update(
-                texture = sr.image,
+                image = sr.image,
                 x = tr.x + sr.offset[0] * tr.scale,
                 y = tr.y + sr.offset[1] * tr.scale,
                 anchor_x = tr.anchor.x,
