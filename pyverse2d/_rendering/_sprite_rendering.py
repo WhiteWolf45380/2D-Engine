@@ -291,7 +291,7 @@ class PygletSpriteRenderer:
     # ======================================== HANDLERS ========================================
     def _handle_position(self) -> None:
         """Actualisation de la position"""
-        self._sprite.position = self._x, self._y
+        self._sprite.position = self._x, self._y, 0
 
     def _handle_anchor(self) -> None:
         """Actualisation de l'ancre"""
