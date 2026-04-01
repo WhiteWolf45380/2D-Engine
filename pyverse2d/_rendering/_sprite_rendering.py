@@ -10,8 +10,8 @@ import pyglet.sprite
 # ======================================== CONSTANTS ========================================
 _UNSET = object()   # élément non défini
 _HANDLER_GROUPS = {
-    "position_x": "position",
-    "position_y": "position",
+    "x": "position",
+    "y": "position",
     "anchor_x": "anchor",
     "anchor_y": "anchor",
     "scale_x": "scales",
