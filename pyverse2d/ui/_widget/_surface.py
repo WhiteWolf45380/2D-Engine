@@ -70,6 +70,11 @@ class Surface(Widget):
         """Renvoie l'angle de rotation en degrés"""
         return self._rotation
     
+    @property
+    def hitbox(self) -> Shape:
+        """Renvoie la hitbox de la surface"""
+        return self._shape
+    
     # ======================================== SETTERS ========================================
     @shape.setter
     def shape(self, value: Shape) -> None:

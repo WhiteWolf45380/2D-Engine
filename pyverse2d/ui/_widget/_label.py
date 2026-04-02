@@ -6,6 +6,7 @@ from ..._rendering import Pipeline, RenderContext, PygletLabelRenderer
 from ...asset import Text, Color
 from ...abc import Widget
 from ...math import Point
+from ...shape import Rect
 
 from numbers import Real
 from typing import Literal
@@ -254,6 +255,11 @@ class Label(Widget):
     @margin.setter
     def margin(self, value: int) -> None:
         self._margin = positive(not_null(expect(value, int)))
+
+    @property
+    def hitbox(self):
+        """Hitbox du label"""
+        return Rect(self._text_renderer.content_width, self._text_renderer.content_height)
 
     # ======================================== LIFE CYCLE ========================================
     def _update(self, dt: float) -> None:

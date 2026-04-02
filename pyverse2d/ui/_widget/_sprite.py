@@ -4,6 +4,7 @@ from ..._rendering import Pipeline, RenderContext, PygletSpriteRenderer
 from ...abc import Widget
 from ...asset import Image, Color
 from ...math import Point
+from ...shape import Rect
 
 from numbers import Real
 
@@ -123,6 +124,11 @@ class Sprite(Widget):
     @color.setter
     def color(self, value: Color) -> None:
         self._color = Color(value) if value is not None else None
+
+    @property
+    def hitbox(self):
+        """Hitbox du sprite"""
+        return Rect(self._image.width, self._image.height)
     
     # ======================================== TRANSFORMATIONS ========================================
     def flip(self, horizontal: bool = False, vertical: bool = False) -> None:
