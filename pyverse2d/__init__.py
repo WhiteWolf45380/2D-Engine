@@ -5,7 +5,7 @@ from ._version import __version__
 import pyglet
 
 # ======================================== PRIMITIVES ========================================
-from . import abc, math, shape, asset, request
+from . import abc, math, shape, asset
 from ._flag import Key as key
 
 # ======================================== STATE ========================================
@@ -92,7 +92,6 @@ __all__ = [
     "math",
     "shape",
     "asset",
-    "request",
     "world",
     "tile",
     "ui",
