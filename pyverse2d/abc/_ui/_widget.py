@@ -508,8 +508,6 @@ class Widget(ABC):
         self._update_render_context(context)
 
         # Affichage personnel
-        for behavior in self.get_behaviors():
-            behavior.draw(pipeline, context)
         self._draw(pipeline, context)
 
         # Affichage des enfants

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from .._flag import Key
 from ..abc import Manager
+from ..math import Point
 
 from ._context import ContextManager
 
@@ -20,7 +21,7 @@ class InputsManager(Manager):
         "_listeners",
         "_step", "_pressed", "_released_this_frame",
         "_any_listeners", "_all_listeners", "_triggered_combos",
-        "_mouse_x", "_mouse_y",
+        "_relative_origin", "_mouse_x", "_mouse_y",
         "_scroll_dx", "_scroll_dy",
     )
 
@@ -40,6 +41,7 @@ class InputsManager(Manager):
         self._triggered_combos: set = set()
 
         # Paramètres dynamiques
+        self._relative_origin: Point = Point(0, 0)
         self._mouse_x: float = 0.0
         self._mouse_y: float = 0.0
         self._scroll_dx: float = 0.0
@@ -90,55 +92,7 @@ class InputsManager(Manager):
             self._scroll_dx = scroll_x
             self._scroll_dy = scroll_y
 
-    # ======================================== PRESS / RELEASE ========================================
-    def _on_press(self, event_id: int) -> None:
-        """Traite une pression"""
-        self._step.append(event_id)
-
-        for listener in list(self._listeners.get(event_id, [])):
-            if not listener.active:
-                continue
-            if listener.up:
-                continue
-            if listener.repeat:
-                continue
-            if listener.condition and not listener.condition():
-                continue
-            listener._fire(event_id)
-
-        for listener in list(self._any_listeners):
-            if not listener.active:
-                continue
-            if event_id in listener.exclude:
-                continue
-            if listener.condition and not listener.condition():
-                continue
-            listener._fire(event_id)
-
-    def _on_release(self, event_id: int) -> None:
-        """Traite un relâchement"""
-        self._pressed[event_id] = False
-        self._released_this_frame.append(event_id)
-
-        for listener in list(self._listeners.get(event_id, [])):
-            if not listener.active:
-                continue
-            if not listener.up:
-                continue
-            if listener.condition and not listener.condition():
-                continue
-            listener._fire(event_id)
-
-    # ======================================== HELPERS D'INSERTION ========================================
-    def _insert_by_priority(self, lst: list, listener: Listener) -> None:
-        """Insère un listener dans une liste triée par priorité décroissante"""
-        for i, l in enumerate(lst):
-            if listener.priority > l.priority:
-                lst.insert(i, listener)
-                return
-        lst.append(listener)
-
-    # ======================================== LISTENERS SIMPLES ========================================
+    # ======================================== LISTENERS ========================================
     def add_listener(
             self,
             key: Key.Input,
@@ -199,7 +153,6 @@ class InputsManager(Manager):
                 if l.callback == callback:
                     l.invalidate()
 
-    # ======================================== WHEN ANY ========================================
     def when_any(
             self,
             callback: Callable,
@@ -243,7 +196,6 @@ class InputsManager(Manager):
         self._insert_by_priority(self._any_listeners, listener)
         return listener
 
-    # ======================================== WHEN ALL ========================================
     def when_all(
             self,
             keys: list[Key.Input],
@@ -278,7 +230,7 @@ class InputsManager(Manager):
         self._insert_by_priority(self._all_listeners, listener)
         return listener
 
-    # ======================================== SUPPRESSION GLOBALE ========================================
+    # ======================================== LIFE CYCLE ========================================
     def remove_callback(self, callback: Callable) -> None:
         """
         Supprime un callback de tous les types de listeners
@@ -349,7 +301,7 @@ class InputsManager(Manager):
         self._scroll_dx = 0.0
         self._scroll_dy = 0.0
 
-    # ======================================== INTERROGATION ========================================
+    # ======================================== KEY EVENTS ========================================
     def _is_currently_pressed(self, event_id: int) -> bool:
         """
         Vérifie si une touche est pressée cette frame ou maintenue
@@ -386,21 +338,41 @@ class InputsManager(Manager):
         """
         return event_id in self._released_this_frame
 
-    # ======================================== SOURIS ========================================
+    # ======================================== MOUSE ========================================
     @property
     def mouse_x(self) -> float:
-        """Renvoie la position X de la souris"""
+        """Renvoie la position X absolue de la souris"""
         return self._mouse_x
 
     @property
     def mouse_y(self) -> float:
-        """Renvoie la position Y de la souris"""
+        """Renvoie la position Y absolue de la souris"""
         return self._mouse_y
 
     @property
     def mouse_pos(self) -> tuple[float, float]:
-        """Renvoie la position de la souris"""
+        """Renvoie la position absolue de la souris"""
         return self._mouse_x, self._mouse_y
+    
+    @property
+    def relative_origin(self) -> Point:
+        """Renvoie l'origine relative pour les coordonnées de la souris"""
+        return self._relative_origin
+    
+    @property
+    def relative_mouse_x(self) -> float:
+        """Renvoie la position X relative de la souris"""
+        return self._mouse_x - self._relative_origin.x
+
+    @property
+    def relative_mouse_y(self) -> float:
+        """Renvoie la position Y relative de la souris"""
+        return self._mouse_y - self._relative_origin.y
+    
+    @property
+    def relative_mouse_pos(self) -> tuple[float, float]:
+        """Renvoie la position relative de la souris"""
+        return self.relative_mouse_x, self.relative_mouse_y
 
     @property
     def scroll_x(self) -> float:
@@ -412,10 +384,67 @@ class InputsManager(Manager):
         """Renvoie le défilement vertical de la molette cette frame"""
         return self._scroll_dy
     
+    def set_relative_origin(self, point: Point) -> None:
+        """Définit l'origine relative pour les coordonnées de la souris
+
+        Args:
+            x(float): coordonnée X de l'origine relative
+            y(float): coordonnée Y de l'origine relative
+        """
+        self._relative_origin = Point(point)
+    
     # ======================================== LIFE CYCLE ========================================
     def update(self, dt: float) -> None:
         """Actualisation"""
         self.flush()
+
+    # ======================================== INTERNALS ========================================
+    def _on_press(self, event_id: int) -> None:
+        """Traite une pression"""
+        self._step.append(event_id)
+
+        for listener in list(self._listeners.get(event_id, [])):
+            if not listener.active:
+                continue
+            if listener.up:
+                continue
+            if listener.repeat:
+                continue
+            if listener.condition and not listener.condition():
+                continue
+            listener._fire(event_id)
+
+        for listener in list(self._any_listeners):
+            if not listener.active:
+                continue
+            if event_id in listener.exclude:
+                continue
+            if listener.condition and not listener.condition():
+                continue
+            listener._fire(event_id)
+
+    def _on_release(self, event_id: int) -> None:
+        """Traite un relâchement"""
+        self._pressed[event_id] = False
+        self._released_this_frame.append(event_id)
+
+        for listener in list(self._listeners.get(event_id, [])):
+            if not listener.active:
+                continue
+            if not listener.up:
+                continue
+            if listener.condition and not listener.condition():
+                continue
+            listener._fire(event_id)
+
+    # ======================================== HELPERS ========================================
+    def _insert_by_priority(self, lst: list, listener: Listener) -> None:
+        """Insère un listener dans une liste triée par priorité décroissante"""
+        for i, l in enumerate(lst):
+            if listener.priority > l.priority:
+                lst.insert(i, listener)
+                return
+        lst.append(listener)
     
 # ======================================== LISTENER ========================================
 class Listener:

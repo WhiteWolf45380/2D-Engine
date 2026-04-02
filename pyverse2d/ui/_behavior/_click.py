@@ -131,10 +131,6 @@ class ClickBehavior(Behavior):
         """Actualisation"""
         pass
 
-    def draw(self, pipeline: Pipeline, context: RenderContext) -> None:
-        """Affichage"""
-        pass
-
     # ======================================== INTERNALS ========================================
     def _is_hovered(self) -> bool:
         """Vérifie si le widget est survolé"""

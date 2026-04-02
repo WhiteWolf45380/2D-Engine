@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from .._internal import expect, positive
 from ..asset import Color
+from ..math import Point
 
 from numbers import Real
 
@@ -23,15 +24,13 @@ class Viewport:
 
     def __init__(
         self,
-        x: Real = 0.0,
-        y: Real = 0.0,
+        origin: Point = (0, 0),
         width: Real = 0.0,
         height: Real = 0.0,
         border_width: int = 0,
         border_color: Color = (0, 0, 0, 1.0),
     ):
-        self._x: float = float(expect(x, Real))
-        self._y: float = float(expect(y, Real))
+        self._origin: Point = Point(origin)
         self._width: float = float(positive(expect(width, Real)))
         self._height: float = float(positive(expect(height, Real)))
         self._border_width: int = expect(border_width, int)
@@ -39,14 +38,19 @@ class Viewport:
 
     # ======================================== GETTERS ========================================
     @property
+    def origin(self) -> Point:
+        """Renvoie la position (x, y)"""
+        return self._origin
+
+    @property
     def x(self) -> float:
         """Renvoie la position horizontale"""
-        return self._x
+        return self._origin.x
 
     @property
     def y(self) -> float:
         """Renvoie la position verticale"""
-        return self._y
+        return self._origin.y
 
     @property
     def width(self) -> float:
@@ -69,15 +73,20 @@ class Viewport:
         return self._border_color
 
     # ======================================== SETTERS ========================================
+    @origin.setter
+    def origin(self, value: Point):
+        """Fixe la position (x, y)"""
+        self._origin = Point(value)
+
     @x.setter
     def x(self, value: Real):
         """Fixe la coordonnée horizontale du viewport"""
-        self._x = float(expect(value, Real))
+        self._origin.x = value
 
     @y.setter
     def y(self, value: Real):
         """Fixe la coordonnée verticale du viewport"""
-        self._y = float(expect(value, Real))
+        self._origin.y = value
 
     @width.setter
     def width(self, value: Real):
@@ -110,4 +119,4 @@ class Viewport:
         """
         w = self._width  if self._width != 0.0 else virtual_width
         h = self._height if self._height != 0.0 else virtual_height
-        return (self._x, self._y, w, h)
+        return (self.x, self.y, w, h)

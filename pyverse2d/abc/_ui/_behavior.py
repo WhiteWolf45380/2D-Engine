@@ -61,6 +61,3 @@ class Behavior(ABC):
     # ======================================== LIFE CYCLE ========================================
     @abstractmethod
     def update(self, dt: float) -> None: ...
-
-    @abstractmethod
-    def draw(self, pipeline: Pipeline, context: RenderContext) -> None: ...

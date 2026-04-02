@@ -1,6 +1,7 @@
 # ======================================== IMPORTS ========================================
 from ..._rendering import Pipeline, RenderContext
 from ...abc import Behavior
+from ...math import Point
 
 from pyverse2d import inputs, ui_manager
 
@@ -38,6 +39,8 @@ class HoverBehavior(Behavior):
         """Actualisation"""
         pass
 
-    def draw(self, pipeline: Pipeline, context: RenderContext) -> None:
-        """Affichage"""
-        pass
+    # ======================================== HELPERS ========================================
+    def _collides(self, point: Point) -> bool:
+        """Vérifie si un point est dans le widget"""
+        widget = self._owner
+        return widget is not None and widget.collides(point)

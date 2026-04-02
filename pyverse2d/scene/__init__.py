@@ -10,6 +10,8 @@ from ._tile_layer import TileLayer
 from ._ui_layer import UILayer
 from ._scene import Scene
 
+from pyverse2d import inputs
+
 # ======================================== STATE ========================================
 _stack: list[Scene] = []
 _update_states: tuple[SceneState, ...] = (SceneState.RUNNING, SceneState.HIDDEN)
@@ -71,7 +73,9 @@ def update(dt: float):
     """Actualisation des scènes"""
     for scene in _stack:
         if scene.state in _update_states:
+            inputs.set_relative_origin(scene.viewport.origin)
             scene.update(dt)
+    inputs.set_relative_origin((0, 0))
 
 def draw(pipeline: Pipeline):
     """Affichage des scènes"""
