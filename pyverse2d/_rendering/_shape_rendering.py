@@ -359,28 +359,26 @@ class _FillRenderer:
             z(int): z-order
             pipeline(Pipeline): pipeline de rendu
         """
-        rgba = color.rgba8
-        a = int(opacity * 255)
+        r, g, b, a = color.rgba8
+        a = int(a * opacity)
 
         if isinstance(shape, VertexShape):
             pts = [tuple(v) for v in shape.world_vertices(cx, cy, scale, rotation)]
-            self._gl_shape = pyglet.shapes.Polygon(*pts, color=rgba, batch=pipeline.batch, group=pipeline.get_group(z=z))
+            self._gl_shape = pyglet.shapes.Polygon(*pts, color=(r, g, b, a), batch=pipeline.batch, group=pipeline.get_group(z=z))
 
         elif isinstance(shape, Circle):
             cx_, cy_, r_ = shape.world_transform(cx, cy, scale, 0)
-            self._gl_shape = pyglet.shapes.Circle(cx_, cy_, r_, color=rgba, batch=pipeline.batch, group=pipeline.get_group(z=z))
+            self._gl_shape = pyglet.shapes.Circle(cx_, cy_, r_, color=(r, g, b, a), batch=pipeline.batch, group=pipeline.get_group(z=z))
 
         elif isinstance(shape, Ellipse):
             cx_, cy_, rx, ry, _ = shape.world_transform(cx, cy, scale, 0)
-            self._gl_shape = pyglet.shapes.Ellipse(cx_, cy_, rx, ry, color=rgba, batch=pipeline.batch, group=pipeline.get_group(z=z))
+            self._gl_shape = pyglet.shapes.Ellipse(cx_, cy_, rx, ry, color=(r, g, b, a), batch=pipeline.batch, group=pipeline.get_group(z=z))
             self._gl_shape.rotation = rotation
 
         elif isinstance(shape, Capsule):
             ax, ay, bx, by, r_ = shape.world_transform(cx, cy, scale, 0)
             spine = math.dist((ax, ay), (bx, by))
-            self._gl_shape = _CapsuleRenderer(cx, cy, r_, spine, rotation=rotation, color=rgba, batch=pipeline.batch, group=pipeline.get_group(z=z))
-
-        self._gl_shape.opacity = a
+            self._gl_shape = _CapsuleRenderer(cx, cy, r_, spine, rotation=rotation, color=(r, g, b, a), batch=pipeline.batch, group=pipeline.get_group(z=z))
     
     # ======================================== GETTERS ========================================
     @property
@@ -437,11 +435,14 @@ class _FillRenderer:
 
     def handle_color(self, psr: PygletShapeRenderer) -> None:
         """Actualisation de la couleur de remplissage"""
-        self._gl_shape.color = psr.color.rgba8
+        r, g, b, a = psr.color.rgba8
+        a = int(a * psr.opacity)
+        self._gl_shape.color = (r, g, b, a)
 
     def handle_opacity(self, psr: PygletShapeRenderer) -> None:
         """Actualisation de l'opacité"""
-        self._gl_shape.opacity = int(255 * psr.opacity)
+        a = int(psr.color.a * psr.opacity)
+        self._gl_shape.opacity = a
     
     def handle_z(self, psr: PygletShapeRenderer) -> None:
         """Actualisation du z-order"""

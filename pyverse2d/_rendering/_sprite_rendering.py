@@ -102,6 +102,9 @@ class PygletSpriteRenderer:
 
     def _build(self) -> None:
         """Construit le sprite pyglet"""
+        r, g, b, a = self._color.rgba if self._color is not None else (255, 255, 255, 255)
+        a = int(a * self._opacity)
+
         raw = self._load_image(self._image.path)
         if raw is None:
             return
@@ -122,9 +125,7 @@ class PygletSpriteRenderer:
         self._sprite.scale_x = eff_sx
         self._sprite.scale_y = eff_sy
         self._sprite.rotation = self._rotation
-        self._sprite.opacity = int(self._opacity * 255)
-        if self._color is not None:
-            self._sprite.color = self._color.rgb8
+        self._sprite.color = (r, g, b, a)
 
     def _effective_scales(self, raw: pyglet.image.AbstractImage) -> tuple[float, float]:
         """
@@ -307,13 +308,17 @@ class PygletSpriteRenderer:
         """Actualisation de la rotation"""
         self._sprite.rotation = self._rotation
 
-    def _handle_opacity(self) -> None:
-        """Actualisation de l'opacité"""
-        self._sprite.opacity = int(self._opacity * 255)
-
     def _handle_color(self) -> None:
         """Actualisation de la couleur de teinte"""
-        self._sprite.color = self._color.rgb8 if self._color is not None else (255, 255, 255)
+        r, g, b, a = self._color.rgba8 if self._color is not None else (255, 255, 255, 255)
+        a = int(a * self._opacity)
+        self._sprite.color = (r, g, b, a)
+
+    def _handle_opacity(self) -> None:
+        """Actualisation de l'opacité"""
+        r, g, b, a = self._color.rgba8 if self._color is not None else (255, 255, 255, 255)
+        a = int(a * self._opacity)
+        self._sprite.opacity = (r, g, b, a)
 
     def _handle_z(self) -> None:
         """Actualisation du z-order"""

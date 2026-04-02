@@ -103,7 +103,8 @@ class PygletLabelRenderer:
     def _build(self) -> None:
         """Construit le label pyglet et applique tous les styles"""
         font = self._text.font
-        a = int(self._opacity * 255)
+        r, g, b, a = self._color.rgba8 if self._color is not None else (255, 255, 255, 255)
+        a = int(a * self._opacity)
 
         self._label = pyglet.text.Label(
             text=self._text.text,
@@ -111,7 +112,7 @@ class PygletLabelRenderer:
             font_size=font.size,
             weight=self._weight,
             italic=self._italic,
-            color=self._color.rgba8 if self._color else (255, 255, 255, 255),
+            color=(r, g, b, a),
             anchor_x="left",
             anchor_y="bottom",
             width=self._width,
@@ -121,7 +122,6 @@ class PygletLabelRenderer:
             batch=self._pipeline.batch if self._pipeline else None,
             group=self._pipeline.get_group(z=self._z) if self._pipeline else None,
         )
-        self._label.opacity = a
         self._apply_styles()
         self._refresh_position()
 
@@ -373,11 +373,14 @@ class PygletLabelRenderer:
 
     def _handle_color(self) -> None:
         """Actualisation de la couleur"""
-        self._label.color = self._color.rgba8 if self._color else (255, 255, 255, 255)
+        r, g, b, a = self._color.rgba8 if self._color is not None else (255, 255, 255, 255)
+        a = int(a * self._opacity)
+        self._label.color = (r, g, b, a)
 
     def _handle_opacity(self) -> None:
         """Actualisation de l'opacité"""
-        self._label.opacity = int(self._opacity * 255)
+        a = self._color.a if self._color is not None else 255
+        self._label.opacity = a * self._opacity
 
     def _handle_width(self) -> None:
         """Actualisation de la largeur"""
