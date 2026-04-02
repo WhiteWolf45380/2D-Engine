@@ -8,7 +8,7 @@ from ._context import ContextManager
 
 from pyglet.window import Window as PygletWindow
 
-from typing import TYPE_CHECKING, Any, Callable, ClassVar
+from typing import TYPE_CHECKING, Any, Callable
 if TYPE_CHECKING:
     from .._rendering import Window
 
@@ -23,7 +23,6 @@ class InputsManager(Manager):
         "_mouse_x", "_mouse_y",
         "_scroll_dx", "_scroll_dy",
     )
-    Listener: ClassVar[type[Listener]] = Listener
 
     def __init__(self, context_manager: ContextManager):
         # Contexte de managers
