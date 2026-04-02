@@ -397,6 +397,7 @@ class Widget(ABC):
 
         Les comportements sont exclusifs par widget
         """
+        expect(behavior, Behavior)
         if getattr(self, f"_{behavior._ID}", None) is not None:
             raise ValueError(f"This widget already has a {type(behavior).__name__}, try to remove it first")
         behavior.attach(self)

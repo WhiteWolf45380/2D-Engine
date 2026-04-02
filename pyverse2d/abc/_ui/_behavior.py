@@ -7,7 +7,6 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ..._rendering import Pipeline, RenderContext
     from ...scene import UILayer
     from ._widget import Widget
 
@@ -47,7 +46,7 @@ class Behavior(ABC):
         """
         if self._owner is not None:
             raise ValueError("This behavior is already attached")
-        self._owner = expect(widget, Widget)
+        self._owner = widget
         self._attach(widget)
     
     @abstractmethod
