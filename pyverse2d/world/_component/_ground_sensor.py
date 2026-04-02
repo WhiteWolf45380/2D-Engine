@@ -21,7 +21,7 @@ class GroundSensor(Component):
         max_step_height(Real, optional)
         coyote_time(Real, optional): durée de grâce en secondes après perte du sol
     """
-    __slots__ = ("_threshold", "_stability_angle", "_ground_damping", "_max_step_height", "_coyote_time", "_coyote_elapsed", "_climb_ny_min", "_ground_normal")
+    __slots__ = ("_threshold", "_stability_angle", "_ground_damping", "_max_step_height", "_coyote_time", "_coyote_elapsed", "_grounded", "_stability_ny_min", "_ground_normal")
     requires = ("Transform", "Collider")
 
     def __init__(self, threshold: Real = 0.65, stability_angle: Real = 90.0, ground_damping: Real = 0.0, max_step_height: Real = 0.0, coyote_time: Real = 0.08):
