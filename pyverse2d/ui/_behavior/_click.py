@@ -1,7 +1,6 @@
 # ======================================== IMPORTS ========================================
 from ..._flag import Key
 from ..._managers._inputs import Listener
-from ..._rendering import Pipeline, RenderContext
 from ...abc import Behavior, Widget
 
 from pyverse2d import inputs

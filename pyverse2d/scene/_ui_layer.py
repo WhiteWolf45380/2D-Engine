@@ -121,7 +121,7 @@ class UILayer(Layer):
     # ======================================== LOOP ========================================
     def update(self, dt: float) -> None:
         """Actualisation du layer"""
-        for wrapper in self._wrappers:
+        for wrapper in reversed(self._wrappers):
             wrapper.widget.update(dt)
 
     def draw(self, pipeline: Pipeline) -> None:

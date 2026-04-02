@@ -71,7 +71,7 @@ def pop():
 # ======================================== LOOP ========================================
 def update(dt: float):
     """Actualisation des scènes"""
-    for scene in _stack:
+    for scene in reversed(_stack):
         if scene.state in _update_states:
             inputs.set_relative_origin(scene.viewport.origin)
             scene.update(dt)

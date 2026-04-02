@@ -2,9 +2,11 @@
 from __future__ import annotations
 
 from ..._internal import expect
-from ...abc import Component
+from ...abc import Component, Request
 from ...asset import Animation, Image
-from ...request import AnimationRequest
+
+from dataclasses import dataclass
+from typing import Callable, ClassVar
 
 # ======================================== COMPONENT ========================================
 class Animator(Component):
@@ -16,6 +18,7 @@ class Animator(Component):
     """
     __slots__ = ("_idle", "_current_request", "_current_animation", "_frame", "_elapsed",  "_requests")
     requires = ("SpriteRenderer",)
+    AnimationRequest: ClassVar[type[AnimationRequest]] = AnimationRequest
 
     def __init__(self, idle: Animation = None):
         self._idle: Animation = expect(idle, (Animation, None))
@@ -94,3 +97,29 @@ class Animator(Component):
             tag(str): label des requêtes à supprimer
         """
         self._requests = [request for request in self._requests if request.tag != tag]
+
+
+# ======================================== REQUEST ========================================
+@dataclass(frozen=True)
+class AnimationRequest(Request):
+    """
+    Requête d'animation
+
+    Args:
+        animation(Animation): animation à activer
+        loop(bool, optional): répétition de l'animation
+        cutable(bool, optional): supprimer / reset si elle perd la main
+        priority(int, optional): niveau de priorité de l'animation
+        tag(str, optional): label de l'animation
+        condition(callable, optional): condition d'activation de l'animation
+        on_start(callable, optional): fonction de début d'animation
+        on_end(callable, optional): fonction de fin d'animation
+    """
+    animation: Animation
+    loop: bool = False
+    cutable: bool = True
+    priority: int = 0
+    tag: str | None = None
+    condition: Callable[[], bool] | None = None
+    on_start: Callable[[], None] | None = None
+    on_end: Callable[[], None] | None = None

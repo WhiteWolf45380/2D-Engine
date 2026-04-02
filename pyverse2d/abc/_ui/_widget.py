@@ -3,8 +3,9 @@ from __future__ import annotations
 
 from ..._internal import expect, clamped
 from ..._flag import Super
-from ...math import Point
 from ..._rendering import Pipeline, RenderContext
+from ...math import Point
+from ...abc import Shape
 
 from ._behavior import Behavior
 
@@ -175,6 +176,10 @@ class Widget(ABC):
     def visible(self) -> bool:
         """Renvoie la visibilité"""
         return self._visible
+    
+    @property
+    @abstractmethod
+    def hitbox(self) -> Shape: ...
 
     # ======================================== SETTERS ========================================
     @position.setter
@@ -230,6 +235,12 @@ class Widget(ABC):
     def is_visible(self) -> bool:
         """Vérifie la visibilité"""
         return self._visible
+    
+    def collidespoint(self, point: Point) -> bool:
+        """Vérifie la collision avec un point"""
+        scale = getattr(self, "_scale", 1.0)
+        rotation = getattr(self, "_rotation", 0.0)
+        return self.hitbox.world_contains(point, self.x, self.y, anchor_x=self._anchor_x, anchor_y=self._anchor_y, scale=scale, rotation=rotation)
 
     # ========================================  STATE ========================================
     def activate(self, propagate: bool = True) -> None:
@@ -487,7 +498,7 @@ class Widget(ABC):
             behavior.update(dt)
 
         # Actualisation des enfants
-        for child in self._children:
+        for child in reversed(self._children):
             child.widget.update(dt)
 
         return Super.NONE

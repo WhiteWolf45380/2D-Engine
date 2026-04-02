@@ -2,11 +2,15 @@
 from __future__ import annotations
 
 from ...abc import System
-from ...asset import Animation
-from ...request import AnimationRequest
 
 from .._world import World
 from .._component import Animator, SpriteRenderer
+
+from typing import TypeAlias
+from dataclasses import dataclass
+
+# ======================================== Alias ========================================
+AnimationRequest: TypeAlias = dataclass
 
 # ======================================== SYSTEM ========================================
 class AnimationSystem(System):

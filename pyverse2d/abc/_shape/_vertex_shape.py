@@ -99,6 +99,15 @@ class VertexShape(Shape):
     def __eq__(self, other: VertexShape) -> bool: ...
 
     # ======================================== PREDICATES ========================================
+    def contains(self, point) -> bool:
+        """Teste si un point est dans le polygone"""
+        px, py = float(point[0]), float(point[1])
+        x, y = self._vertices[:, 0], self._vertices[:, 1]
+        x_next, y_next = np.roll(x, -1), np.roll(y, -1)
+        
+        cross = ((y <= py) != (y_next <= py)) & (px < (x_next - x) * (py - y) / (y_next - y) + x)
+        return bool(np.sum(cross) % 2 == 1)
+
     def is_convex(self) -> bool:
         """Vérifie que le polygone est convexe"""
         edges = self.edges

@@ -169,7 +169,7 @@ class Scene:
         Args:
             dt(float): delta time
         """
-        for layer in self._layers:
+        for layer in reversed(self._layers):
             if not layer.is_active():
                 continue
             layer.update(dt)

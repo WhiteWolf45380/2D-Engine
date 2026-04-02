@@ -27,6 +27,59 @@ class UIManager(Manager):
         self._selected: Widget = None       # Widget selectionné
         self._focused: Widget = None        # Widget concentré
 
+    # ======================================== STATES ========================================
+    @property
+    def hovered(self) -> Widget | None:
+        """Widget survolé"""
+        return self._hovered
+    
+    @property
+    def selected(self) -> Widget | None:
+        """Widget selectionné"""
+        return self._selected
+    
+    @property
+    def focused(self) -> Widget | None:
+        """Widget concentré"""
+        return self._focused
+    
+    def unhover(self) -> None:
+        """Enlève le survol"""
+        self._hovered = None
+    
+    def unselect(self) -> None:
+        """Enlève la selection"""
+        self._selected = None
+    
+    def unfocus(self) -> None:
+        """Enlève la concentration"""
+        self._focused = None
+
+    # ======================================== REQUESTS ========================================
+    def ask_hover(self, widget: Widget) -> None:
+        """Demande à survoler un widget"""
+        if self._hovered is not None:
+            return False
+        self._hovered = widget
+        return True
+
+    def ask_select(self, widget: Widget) -> None:
+        """Demande à selectionner un widget"""
+        if self._selected is not None:
+            return False
+        self._selected = widget
+        return True
+
+    def ask_focus(self, widget: Widget) -> None:
+        """Demande à concentrer un widget"""
+        if self._focused is not None:
+            return False
+        self._focused = widget
+        return True
+
+    # ======================================== LIFE CYCLE ========================================
     def update(self, dt: float) -> None:
         """Actualisation"""
-        ...
+        self._hovered = None
+        self._selected = None
+        self._focused = None

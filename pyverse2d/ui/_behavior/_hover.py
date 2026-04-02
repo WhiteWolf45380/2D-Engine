@@ -1,9 +1,10 @@
 # ======================================== IMPORTS ========================================
-from ..._rendering import Pipeline, RenderContext
-from ...abc import Behavior
+from ...abc import Behavior, Request
 from ...math import Point
 
 from pyverse2d import inputs, ui_manager
+
+from dataclasses import dataclass
 
 # ======================================== BEHAVIOR ========================================
 class HoverBehavior(Behavior):
@@ -34,13 +35,37 @@ class HoverBehavior(Behavior):
         """Hook de détachement"""
         pass
 
+    def on_enter(self) -> None:
+        """Au moment du survol"""
+        pass
+
+    def when_hovered(self) -> Request:
+        """Durant le survol"""
+        pass
+
+    def on_leave(self) -> None:
+        """Au moment de la fin du survol"""
+        pass
+
     # ======================================== LIFE CYCLE ========================================
     def update(self, dt: float) -> None:
         """Actualisation"""
-        pass
+        # Détection du survol
+        if ui_manager.hovered is None and self._collides(inputs.relative_mouse_pos):
+            hovered = ui_manager.ask_hover(self._owner)
+        else:
+            hovered = False
+
+        # Hooks de changement d'état
+        if hovered:
+            if not self._hovered:
+                self.on_enter()
+            self.when_hovered()
+        elif not hovered and self._hovered:
+            self.on_leave()
+        self._hovered = hovered
 
     # ======================================== HELPERS ========================================
     def _collides(self, point: Point) -> bool:
         """Vérifie si un point est dans le widget"""
-        widget = self._owner
-        return widget is not None and widget.collides(point)
+        return self._owner.collidespoint(point)
