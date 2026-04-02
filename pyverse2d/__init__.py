@@ -16,9 +16,13 @@ _pipeline: Pipeline | None = None
 _fps: int = 60
 
 # ======================================== MANAGERS ========================================
-from ._managers import ContextManager, InputsManager, UIManager
+from ._managers import ContextManager, TimeManager, InputsManager, UIManager
 
 _context_manager: ContextManager = ContextManager()
+
+# Time
+time: TimeManager = TimeManager(_context_manager)
+_context_manager.time = time
 
 # Inputs
 inputs: InputsManager = InputsManager(_context_manager)
@@ -68,7 +72,8 @@ def run(update: callable = None):
     if _window is None:
         raise RuntimeError("No window set, try set_window() before run()")
 
-    def _update(dt: float):
+    def _update(raw_dt: float):
+        dt = time._compute_dt(raw_dt)
         for manager in _context_manager:
             manager.update(dt)
         scene.update(dt)
