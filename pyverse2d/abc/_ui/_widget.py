@@ -68,6 +68,7 @@ class Widget(ABC):
         self._hide_process: list[Callable] = []
 
         # Behaviors
+        self._behaviors: set[str] = set()
         self._click: ClickBehavior = None
         self._hover: HoverBehavior = None
         self._select: SelectBehavior = None
@@ -411,6 +412,10 @@ class Widget(ABC):
         """
         id_ = behavior if isinstance(behavior, str) else behavior._ID
         return getattr(self, f"_{id_}", None)
+    
+    def get_behaviors(self) -> tuple[Behavior]:
+        """Renvoie les comportements attachés"""
+        return tuple(behavior for id_ in self._behaviors if (behavior := getattr(self, f"_{id_}", None)) is not None)
 
     def has_behavior(self, behavior: type[Behavior] | str) -> bool:
         """Vérfie la possession d'un comportement
@@ -420,6 +425,11 @@ class Widget(ABC):
         """
         id_ = behavior if isinstance(behavior, str) else behavior._ID
         return getattr(self, f"_{id_}", None) is not None
+    
+    @property
+    def behaviors(self) -> tuple[Behavior]:
+        """Renvoie les comportements attachés"""
+        return self.get_behaviors()
 
     @property
     def click(self) -> ClickBehavior:
@@ -473,6 +483,8 @@ class Widget(ABC):
         
         # Actualisation personnel
         self._update(dt)
+        for behavior in self.get_behaviors():
+            behavior.update(dt)
 
         # Actualisation des enfants
         for child in self._children:
@@ -496,6 +508,8 @@ class Widget(ABC):
         self._update_render_context(context)
 
         # Affichage personnel
+        for behavior in self.get_behaviors():
+            behavior.draw(pipeline, context)
         self._draw(pipeline, context)
 
         # Affichage des enfants
@@ -519,6 +533,13 @@ class Widget(ABC):
         for child in self._children:
             child.widget.destroy()
         return Super.NONE
+    
+    # ======================================== INTERNALS ========================================
+    def _switch_layer(self, layer: UILayer | None) -> None:
+        """Change le layer du composant et de ses enfants"""
+        self._layer = layer
+        for child in self._children:
+            child.widget._switch_layer(layer)
     
     # ======================================== HELPERS ========================================
     def _get_wrapper(self, child: Widget) -> WidgetWrapper:

@@ -61,7 +61,7 @@ class UILayer(Layer):
             raise ValueError("Cannot add a child widget directly, try to add its parent")
         if widget._layer is not None:
             raise ValueError(f"This widget {widget} is already in a scene")
-        widget._layer = self
+        widget._switch_layer(self)
         wrapper = WidgetWrapper(widget, name, z)
         insort(self._wrappers, wrapper)
     
@@ -73,7 +73,7 @@ class UILayer(Layer):
             widget(Widget): composant à ajouter
         """
         if widget in self._wrappers:
-            widget._layer = None
+            widget._switch_layer(None)
             self._wrappers.remove(widget)
 
     def remove_by_name(self, name: str) -> None:
@@ -88,7 +88,7 @@ class UILayer(Layer):
             if wrapper.name == name:
                 to_remove.append(wrapper.widget)
         for widget in to_remove:
-            widget._layer = None
+            widget._switch_layer(None)
             self._wrappers.remove(widget)
 
     def reorder(self, widget: Widget, z: int) -> None:

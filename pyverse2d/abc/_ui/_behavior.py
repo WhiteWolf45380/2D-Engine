@@ -7,6 +7,8 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from ..._rendering import Pipeline, RenderContext
+    from ...scene import UILayer
     from ._widget import Widget
 
 # ======================================== IMPORTS ========================================
@@ -16,13 +18,24 @@ class Behavior(ABC):
     Args:
         id_: identifiant du comportement
     """
-    __slots__ = ("_owner")
+    __slots__ = ("_owner",)
     _ID: str = "default"
 
-    def __init__(self, id_: str):
+    def __init__(self):
         self._owner: Widget = None
 
-    # ======================================== WIDGET ========================================
+    # ======================================== PROPERTIES ========================================
+    @property
+    def layer(self) -> UILayer | None:
+        """Layer du composant possesseur"""
+        return self._layer
+
+    @property
+    def owner(self) -> Widget:
+        """Composant possesseur"""
+        return self._owner
+
+    # ======================================== HOOKS ========================================
     @abstractmethod
     def _attach(self, widget: Widget) -> None: ...
 
@@ -44,3 +57,10 @@ class Behavior(ABC):
         """Supprime l'assignation au ``Widget`` possesseur"""
         self._owner = None
         self._detach()
+
+    # ======================================== LIFE CYCLE ========================================
+    @abstractmethod
+    def update(self, dt: float) -> None: ...
+
+    @abstractmethod
+    def draw(self, pipeline: Pipeline, context: RenderContext) -> None: ...
