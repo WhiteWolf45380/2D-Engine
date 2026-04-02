@@ -102,7 +102,7 @@ class PygletSpriteRenderer:
 
     def _build(self) -> None:
         """Construit le sprite pyglet"""
-        r, g, b, a = self._color.rgba if self._color is not None else (255, 255, 255, 255)
+        r, g, b, a = self._color.rgba8 if self._color is not None else (255, 255, 255, 255)
         a = int(a * self._opacity)
 
         raw = self._load_image(self._image.path)
