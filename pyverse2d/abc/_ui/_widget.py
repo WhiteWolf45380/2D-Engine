@@ -37,7 +37,7 @@ class Widget(ABC):
         "_position", "_anchor",
         "_opacity", "_active", "_visible",
         "_activate_process", "_deactivate_process", "_show_process", "_hide_process",
-        "_click", "_hover", "_select", "_focus",
+        "_behaviors", "_click", "_hover", "_select", "_focus",
     )
 
     def __init__(
