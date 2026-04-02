@@ -1,6 +1,10 @@
 # ======================================== IMPORTS ========================================
+from __future__ import annotations
+
 import pyglet.window.key as _key
 import pyglet.window.mouse as _mouse
+
+from typing import TypeAlias
 
 # ======================================== FLAG ========================================
 class Key:
@@ -85,3 +89,8 @@ class Key:
     MOUSELEFT = _mouse.LEFT
     MOUSERIGHT = _mouse.RIGHT
     MOUSEMIDDLE = _mouse.MIDDLE
+
+    # Alias
+    Input: TypeAlias = int
+    MouseInput: TypeAlias = int
+    KeyboardInput: TypeAlias = int
