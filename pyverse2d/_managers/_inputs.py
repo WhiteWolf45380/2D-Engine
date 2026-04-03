@@ -67,25 +67,25 @@ class InputsManager(Manager):
 
         @pyglet_window.event
         def on_mouse_press(x, y, button, modifiers):
-            self._mouse_x = x
-            self._mouse_y = y
+            self._mouse_x = x - pyglet_window.width // 2
+            self._mouse_y = y - pyglet_window.height // 2
             self._on_press(button)
 
         @pyglet_window.event
         def on_mouse_release(x, y, button, modifiers):
-            self._mouse_x = x
-            self._mouse_y = y
+            self._mouse_x = x - pyglet_window.width // 2
+            self._mouse_y = y - pyglet_window.height // 2
             self._on_release(button)
 
         @pyglet_window.event
         def on_mouse_motion(x, y, dx, dy):
-            self._mouse_x = x
-            self._mouse_y = y
+            self._mouse_x = x - pyglet_window.width // 2
+            self._mouse_y = y - pyglet_window.height // 2
 
         @pyglet_window.event
         def on_mouse_drag(x, y, dx, dy, buttons, modifiers):
-            self._mouse_x = x
-            self._mouse_y = y
+            self._mouse_x = x - pyglet_window.width // 2
+            self._mouse_y = y - pyglet_window.height // 2
 
         @pyglet_window.event
         def on_mouse_scroll(x, y, scroll_x, scroll_y):
