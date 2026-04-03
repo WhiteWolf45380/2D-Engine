@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ...scene import UILayer
+    from ...scene import GuiLayer
     from ._widget import Widget
 
 # ======================================== IMPORTS ========================================
@@ -26,9 +26,9 @@ class Behavior(ABC):
 
     # ======================================== PROPERTIES ========================================
     @property
-    def layer(self) -> UILayer | None:
+    def layer(self) -> GuiLayer | None:
         """Layer du composant possesseur"""
-        return self._layer
+        return self._owner.layer if self._owner is not None else None
 
     @property
     def owner(self) -> Widget:
@@ -41,19 +41,28 @@ class Behavior(ABC):
         return self._enabled
 
     # ======================================== STATE ========================================
-    def attach(self, widget: Widget) -> None:
+    def attach(self, widget: Widget, _from_widget: bool = False) -> None:
         """Assigne un ``Widget`` possesseur
 
         Args:
             widget: composant UI maître
+            _from_widget: origine de l'appel
         """
+        if not _from_widget:
+            return widget.add_behavior(self)
         if self._owner is not None:
             raise ValueError("This behavior is already attached")
         self._owner = widget
         self._on_attach()
 
-    def detach(self) -> None:
-        """Supprime l'assignation au ``Widget`` possesseur"""
+    def detach(self, _from_widget: bool = False) -> None:
+        """Supprime l'assignation au ``Widget`` possesseur
+
+        Args:
+        _from_widget: origine de l'appel
+        """
+        if not _from_widget:
+            return self._owner.remove_behavior(self)
         self._on_detach()
         self._owner = None
 
@@ -61,12 +70,14 @@ class Behavior(ABC):
         """Active le ``Behavior``"""
         if self._enabled:
             return
+        self._enabled = True
         self._on_enable()
 
     def disable(self) -> None:
         """Désactive le ``Behavior``"""
         if not self._enabled:
             return
+        self._enabled = False
         self._on_disable()
 
     # ======================================== HOOKS ========================================

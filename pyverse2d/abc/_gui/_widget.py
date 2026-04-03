@@ -15,7 +15,7 @@ from numbers import Real
 from typing import Callable, Type, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ...scene import UILayer
+    from ...scene import GuiLayer
     from ...gui import (
         ClickBehavior,
         HoverBehavior,
@@ -47,7 +47,7 @@ class Widget(ABC):
             opacity: float = 1.0
         ):
         # Arbre
-        self._layer: UILayer = None
+        self._layer: GuiLayer = None
         self._parent: Widget = None
         self._children: list[WidgetWrapper] = []
 
@@ -75,157 +75,138 @@ class Widget(ABC):
         self._select: SelectBehavior = None
         self._focus: FocusBehavior = None
 
-    # ======================================== GETTERS ========================================
+    # ======================================== PROPERTIES ========================================
     @property
-    def layer(self) -> UILayer | None:
-        """Renvoie le layer"""
+    def layer(self) -> GuiLayer | None:
+        """Layer gui maître"""
         return self._layer
 
     @property
     def parent(self) -> Widget| None:
-        """Renvoie le composant parent"""
+        """``Widget`` parent"""
         return self._parent
     
     @property
     def root(self) -> Widget:
-        """Renvoie le composant racine"""
+        """``Widget`` racine"""
         if self._parent is None:
             return self
         return self._parent.root
 
     @property
     def children(self) -> tuple[Widget]:
-        """Renvoie la liste des composants enfants"""
+        """Liste des ``Widgets`` enfants"""
         return tuple(wrapper.widget for wrapper in self._children)
-    
-    def child(self, name: str) -> Widget:
-        """
-        Renvoie un composant enfant par son identifiant
-
-        Args:
-            name(str): identifiant du composant
-        """
-        expect(name, str)
-        for child in self._children:
-            if child.name == name:
-                return child.widget
-        raise ValueError(f"This widget has no child named {name}")
     
     @property
     def position(self) -> Point:
-        """Renvoie la position"""
+        """Position
+
+        La position peut être un objet ``Point`` ou un tuple ``(x, y)``.
+        """
         return self._position
+    
+    @position.setter
+    def position(self, value: Point) -> None:
+        self._position = Point(value)
     
     @property
     def x(self) -> float:
-        """Renvoie la position horizontale"""
+        """Position horizontale
+
+        La coordonnée doit être un ``Réel``.
+        """
         return self._position.x
+    
+    @x.setter
+    def x(self, value: Real) -> None:
+        self._position.x = value
     
     @property
     def y(self) -> float:
-        """Renvoie la position verticale"""
+        """Position verticale
+        
+        La coordonnée doit être un ``Réel``.
+        """
         return self._position.y
+    
+    @y.setter
+    def y(self, value: Real) -> None:
+        self._position.y = value
     
     @property
     def absolute_position(self) -> Point:
-        """Renvoie la position absolue"""
+        """Position absolue"""
         if self._parent is None:
             return self._position
         return self._parent.absolute_position + self._position
     
     @property
     def absolute_x(self) -> float:
-        """Renvoie la position horizontale absolue"""
+        """Position horizontale absolue"""
         if self._parent is None:
             return self._position.x
         return self._parent.absolute_x + self._position.x
     
     @property
     def absolute_y(self) -> float:
-        """Renvoie la position verticale absolue"""
+        """Position verticale absolue"""
         if self._parent is None:
             return self._position.y
         return self._parent.absolute_y + self._position.y
     
     @property
     def anchor(self) -> Point:
-        """Renvoie l'ancre locale"""
+        """Ancre relative locale
+
+        L'ancre peut être un objet ``Point`` ou un tuple ``(ax, ay)``.
+        Les coordonnées de l'ancre doivent être comprises dans l'intervalle [0, 1].
+        """
         return self._anchor
+    
+    @anchor.setter
+    def anchor(self, value: Point) -> None:
+        self._anchor = Point(value)
     
     @property
     def anchor_x(self) -> float:
-        """Renvoie l'ancre horizontale"""
+        """Ancre horizontale relative locale
+
+        La coordonnée doit être un réel compris dans l'invervalle [0, 1].
+        """
         return self._anchor.x
+    
+    @anchor_x.setter
+    def anchor_x(self, value: Real) -> None:
+        self._anchor.x = value
     
     @property
     def anchor_y(self) -> float:
-        """Renvoie l'ancre verticale"""
+        """Ancre verticale relative locale
+        
+        La coordonnée doit être un réel compris dans l'intervalle [0, 1].
+        """
         return self._anchor.y
+    
+    @anchor_y.setter
+    def anchor_y(self, value: Real) -> None:
+        self._anchor.y = value
     
     @property
     def opacity(self) -> float:
-        """Renvoie l'opacité"""
+        """Opacité relative
+
+        L'opacité doit être un ``Réel`` compris dans l'invervalle [0, 1].
+        """
         return self._opacity
     
-    @property
-    def active(self) -> bool:
-        """Renvoie l'activité"""
-        return self._active
-    
-    @property
-    def visible(self) -> bool:
-        """Renvoie la visibilité"""
-        return self._visible
+    @opacity.setter
+    def opacity(self, value: Real) -> None:
+        self._opacity: float = clamped(float(expect(value, Real)))
     
     @property
     @abstractmethod
     def hitbox(self) -> Shape: ...
-
-    # ======================================== SETTERS ========================================
-    @position.setter
-    def position(self, value: Point) -> None:
-        """Fixe la position"""
-        self._position = Point(value)
-    
-    @x.setter
-    def x(self, value: Real) -> None:
-        """Fixe la position horizontale"""
-        self._position.x = value
-
-    @y.setter
-    def y(self, value: Real) -> None:
-        """Fixe la position verticale"""
-        self._position.y = value
-    
-    @anchor.setter
-    def anchor(self, value: Point) -> None:
-        """Fixe l'ancre locale"""
-        self._anchor = Point(value)
-
-    @anchor_x.setter
-    def anchor_x(self, value: Real) -> None:
-        """Fixe l'ancre horizontale"""
-        self._anchor.x = value
-
-    @anchor_y.setter
-    def anchor_y(self, value: Real) -> None:
-        """Fixe l'ancre verticale"""
-        self._anchor.y = value
-
-    @opacity.setter
-    def opacity(self, value: Real) -> None:
-        """Fixe l'opacité"""
-        self._opacity: float = clamped(float(expect(value, Real)))
-
-    @active.setter
-    def active(self, value: bool) -> None:
-        """Fixe l'activité"""
-        self._active = expect(value, bool)
-
-    @visible.setter
-    def visible(self, value: bool) -> None:
-        """Fixe la visibilité"""
-        self._visible = expect(value, bool)
 
     # ======================================== PREDICATES ========================================
     def is_active(self) -> bool:
@@ -251,6 +232,9 @@ class Widget(ABC):
             propagate(bool, optional): propage l'état aux enfants
         """
         self._active = True
+
+        for behavior in self._behaviors:
+            getattr(self, f"_{behavior}").enable()
         for fn in self._activate_process:
             fn(self)
         if propagate:
@@ -265,6 +249,8 @@ class Widget(ABC):
             propagate(bool, optional): propage l'état aux enfants
         """
         self._active = False
+        for behavior in self._behaviors:
+            getattr(self, f"_{behavior}").disable()
         for fn in self._deactivate_process:
             fn(self)
         if propagate:
@@ -322,6 +308,80 @@ class Widget(ABC):
             self.hide(propagate=propagate)
         else:
             self.show(propagate=propagate)
+    
+    # ======================================== BEHAVIORS ========================================
+    def add_behavior(self, behavior: Behavior) -> None:
+        """Ajoute un comportement
+
+        Les comportements sont exclusifs par widget
+        """
+        expect(behavior, Behavior)
+        if getattr(self, f"_{behavior._ID}", None) is not None:
+            raise ValueError(f"This widget already has a {type(behavior).__name__}, try to remove it first")
+        behavior.attach(self, _from_widget=True)
+        self._behaviors.add(behavior._ID)
+        setattr(self, f"_{behavior._ID}", behavior)
+
+    def remove_behavior(self, behavior: Behavior | Type[Behavior]) -> None:
+        """Retire un comportement
+
+        Args:
+            behavior: élément ``Behavior`` ou ``Type`` de behavior à retirer
+        """
+        if getattr(self, f"_{behavior._ID}", None) is None:
+            raise ValueError(f"This widget has no {type(behavior).__name__}")
+        elif isinstance(behavior, Behavior) and getattr(self, f"_{behavior._ID}", None) != behavior:
+            raise ValueError("This widget does not own that behavior")
+        behavior.detach(_from_widget=True)
+        self._behaviors.remove(behavior._ID)
+        setattr(self, f"_{behavior._ID}", None)
+
+    def get_behavior(self, behavior: type[Behavior] | str) -> Behavior | None:
+        """Renvoie un comportement
+
+        Args:
+            behavior: ``Type`` ou ``id`` du comportement
+        """
+        id_ = behavior if isinstance(behavior, str) else behavior._ID
+        return getattr(self, f"_{id_}", None)
+    
+    def get_behaviors(self) -> tuple[Behavior]:
+        """Renvoie les comportements attachés"""
+        return tuple(behavior for id_ in self._behaviors if (behavior := getattr(self, f"_{id_}", None)) is not None)
+
+    def has_behavior(self, behavior: type[Behavior] | str) -> bool:
+        """Vérfie la possession d'un comportement
+
+        Args:
+            behavior: ``Type`` ou ``id`` du comportement
+        """
+        id_ = behavior if isinstance(behavior, str) else behavior._ID
+        return getattr(self, f"_{id_}", None) is not None
+    
+    @property
+    def behaviors(self) -> tuple[Behavior]:
+        """Renvoie les comportements attachés"""
+        return self.get_behaviors()
+
+    @property
+    def click(self) -> ClickBehavior:
+        """Comportement de clique"""
+        return self._click
+
+    @property
+    def hover(self) -> HoverBehavior:
+        """Comportement de survol"""
+        return self._hover
+
+    @property
+    def select(self) -> SelectBehavior:
+        """Comportement de sélection"""
+        return self._select
+
+    @property
+    def focus(self) -> FocusBehavior:
+        """Comportement de concentration"""
+        return self._focus
 
     # ======================================== CHILDREN ========================================
     def add_child(self, child: Widget, name: str = None, z: int = 1):
@@ -390,80 +450,19 @@ class Widget(ABC):
             wrapper.z = z
             self._children.remove(child)
             insort(self._children, wrapper)
-
-    # ======================================== BEHAVIORS ========================================
-    def add_behavior(self, behavior: Behavior) -> None:
-        """Ajoute un comportement
-
-        Les comportements sont exclusifs par widget
-        """
-        expect(behavior, Behavior)
-        if getattr(self, f"_{behavior._ID}", None) is not None:
-            raise ValueError(f"This widget already has a {type(behavior).__name__}, try to remove it first")
-        behavior.attach(self)
-        self._behaviors.add(behavior._ID)
-        setattr(self, f"_{behavior._ID}", behavior)
-
-    def remove_behavior(self, behavior: Behavior | Type[Behavior]) -> None:
-        """Retire un comportement
-
-        Args:
-            behavior: élément ``Behavior`` ou ``Type`` de behavior à retirer
-        """
-        if isinstance(behavior, Behavior) and getattr(self, f"_{behavior._ID}", None) != behavior:
-            raise ValueError("This widget does not own that behavior")
-        elif getattr(self, f"_{behavior._ID}", None) is None:
-            raise ValueError(f"This widget has no {type(behavior).__name__}")
-        behavior.detach(self)
-        self._behaviors.remove(behavior._ID)
-        setattr(self, f"_{behavior._ID}", None)
-
-    def get_behavior(self, behavior: type[Behavior] | str) -> Behavior | None:
-        """Renvoie un comportement
-
-        Args:
-            behavior: ``Type`` ou ``id`` du comportement
-        """
-        id_ = behavior if isinstance(behavior, str) else behavior._ID
-        return getattr(self, f"_{id_}", None)
     
-    def get_behaviors(self) -> tuple[Behavior]:
-        """Renvoie les comportements attachés"""
-        return tuple(behavior for id_ in self._behaviors if (behavior := getattr(self, f"_{id_}", None)) is not None)
-
-    def has_behavior(self, behavior: type[Behavior] | str) -> bool:
-        """Vérfie la possession d'un comportement
+    def child(self, name: str) -> Widget:
+        """
+        Renvoie un ``Widget`` enfant par son identifiant
 
         Args:
-            behavior: ``Type`` ou ``id`` du comportement
+            name(str): identifiant du composant
         """
-        id_ = behavior if isinstance(behavior, str) else behavior._ID
-        return getattr(self, f"_{id_}", None) is not None
-    
-    @property
-    def behaviors(self) -> tuple[Behavior]:
-        """Renvoie les comportements attachés"""
-        return self.get_behaviors()
-
-    @property
-    def click(self) -> ClickBehavior:
-        """Comportement de clique"""
-        return self._click
-
-    @property
-    def hover(self) -> HoverBehavior:
-        """Comportement de survol"""
-        return self._hover
-
-    @property
-    def select(self) -> SelectBehavior:
-        """Comportement de sélection"""
-        return self._select
-
-    @property
-    def focus(self) -> FocusBehavior:
-        """Comportement de concentration"""
-        return self._focus
+        expect(name, str)
+        for child in self._children:
+            if child.name == name:
+                return child.widget
+        raise ValueError(f"This widget has no child named {name}")
 
     # ======================================== HOOKS ========================================
     def on_activate(self, fn: Callable) -> Callable:
@@ -547,7 +546,7 @@ class Widget(ABC):
         return Super.NONE
     
     # ======================================== INTERNALS ========================================
-    def _switch_layer(self, layer: UILayer | None) -> None:
+    def _switch_layer(self, layer: GuiLayer | None) -> None:
         """Change le layer du composant et de ses enfants"""
         self._layer = layer
         for child in self._children:

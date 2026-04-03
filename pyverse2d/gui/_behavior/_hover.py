@@ -69,7 +69,7 @@ class HoverBehavior(Behavior):
         if self._hovered:
             self._on_leave.trigger()
             self._hovered = False
-            ui.hover()
+            ui.unhover()
 
     # ======================================== LIFE CYCLE ========================================
     def update(self, dt: float) -> None:
