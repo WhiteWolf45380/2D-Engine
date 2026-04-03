@@ -29,6 +29,9 @@ class InputsManager(Manager):
         # Contexte de managers
         self._ctx: ContextManager = context_manager
 
+        # Fenêtre
+        self._window: Window = None
+
         # Listeners
         self._listeners: dict[int, list[Listener]] = {}
         self._any_listeners: list[Listener] = []
@@ -44,6 +47,7 @@ class InputsManager(Manager):
         self._relative_origin: Point = Point(0, 0)
         self._mouse_x: float = 0.0
         self._mouse_y: float = 0.0
+        self._mouse_out: float = False
         self._scroll_dx: float = 0.0
         self._scroll_dy: float = 0.0
 
@@ -55,6 +59,7 @@ class InputsManager(Manager):
         Args:
             window: fenêtre à assigner
         """
+        self._window = window
         pyglet_window: PygletWindow = window.native
 
         @pyglet_window.event
@@ -67,21 +72,21 @@ class InputsManager(Manager):
 
         @pyglet_window.event
         def on_mouse_press(x, y, button, modifiers):
-            self._mouse_x, self._mouse_y = window.window_to_screen(x - window.width // 2, y - window.height // 2)
+            self._compute_mouse(x, y)
             self._on_press(button)
 
         @pyglet_window.event
         def on_mouse_release(x, y, button, modifiers):
-            self._mouse_x, self._mouse_y = window.window_to_screen(x - window.width // 2, y - window.height // 2)
+            self._compute_mouse(x, y)
             self._on_release(button)
 
         @pyglet_window.event
         def on_mouse_motion(x, y, dx, dy):
-            self._mouse_x, self._mouse_y = window.window_to_screen(x - window.width // 2, y - window.height // 2)
+            self._compute_mouse(x, y)
 
         @pyglet_window.event
         def on_mouse_drag(x, y, dx, dy, buttons, modifiers):
-            self._mouse_x, self._mouse_y = window.window_to_screen(x - window.width // 2, y - window.height // 2)
+            self._compute_mouse(x, y)
 
         @pyglet_window.event
         def on_mouse_scroll(x, y, scroll_x, scroll_y):
@@ -388,6 +393,10 @@ class InputsManager(Manager):
             y(float): coordonnée Y de l'origine relative
         """
         self._relative_origin = Point(point)
+
+    def is_mouse_out(self) -> bool:
+        """Vérifie la souris est en dehors de l'écran"""
+        return self._mouse_out
     
     # ======================================== LIFE CYCLE ========================================
     def update(self, dt: float) -> None:
@@ -441,6 +450,14 @@ class InputsManager(Manager):
                 lst.insert(i, listener)
                 return
         lst.append(listener)
+
+    def _compute_mouse(self, x: float, y: float) -> None:
+        """Calcule la position de la souris"""
+        lx, ly = self._window.window_to_screen(x, y)
+        self._mouse_x = lx - self._window.screen.half_width
+        self._mouse_y = ly - self._window.screen.half_height
+        hw, hh = self._window.screen.half_width, self._window.screen.half_height
+        self._mouse_out = not (-hw <= self._mouse_x <= hw and -hh <= self._mouse_y <= hh)
     
 # ======================================== LISTENER ========================================
 class Listener:

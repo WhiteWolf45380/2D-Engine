@@ -48,11 +48,7 @@ class Window:
         self._screen = screen
 
         # Style de la fenêtre
-        style = (
-            pyglet.window.Window.WINDOW_STYLE_BORDERLESS
-            if borderless
-            else pyglet.window.Window.WINDOW_STYLE_DEFAULT
-        )
+        style = pyglet.window.Window.WINDOW_STYLE_BORDERLESS if borderless else pyglet.window.Window.WINDOW_STYLE_DEFAULT
 
         # Fenêtre OS
         self._window = pyglet.window.Window(
@@ -76,10 +72,7 @@ class Window:
 
         # Dimensions minimales
         if resizable and (min_width is not None or min_height is not None):
-            self._window.set_minimum_size(
-                min_width  or 1,
-                min_height or 1,
-            )
+            self._window.set_minimum_size(min_width or 1, min_height or 1,)
 
         # Projection
         self._viewport: tuple[int, int, int, int] = (0, 0, width, height)
@@ -158,12 +151,15 @@ class Window:
 
     # ======================================== SETTERS ========================================
     def set_caption(self, caption: str):
+        """Fixe le nom de la fenêtre"""
         self._window.set_caption(caption)
 
     def set_fullscreen(self, value: bool):
+        """Fixe le plein écran"""
         self._window.set_fullscreen(value)
 
     def set_visible(self, value: bool):
+        """Fixe la visibilité"""
         self._window.set_visible(value)
 
     def set_size(self, width: int, height: int):
@@ -181,14 +177,15 @@ class Window:
 
     def center(self):
         """Centre la fenêtre sur l'écran principal"""
-        display  = pyglet.display.get_display()
+        display = pyglet.display.get_display()
         monitors = display.get_screens()
-        monitor  = monitors[0]
+        monitor = monitors[0]
         x = (monitor.width  - self._window.width)  // 2
         y = (monitor.height - self._window.height) // 2
         self._window.set_location(x, y)
 
     def close(self):
+        """Ferme la fenêtre"""
         self._window.close()
     
     # ======================================== PROJECTION ========================================
@@ -198,7 +195,7 @@ class Window:
             return
 
         screen_ratio = self._screen.ratio
-        win_ratio    = win_w / win_h
+        win_ratio = win_w / win_h
 
         # Bandes latérales
         if win_ratio > screen_ratio:
@@ -216,7 +213,6 @@ class Window:
 
         # Matrice de projection
         self._viewport = (x, y, w, h)
-
         self._window.projection = Mat4.orthogonal_projection(
             left=-self._screen.half_width,
             right=self._screen.half_width,
