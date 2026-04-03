@@ -105,7 +105,9 @@ class VertexShape(Shape):
         x, y = self._vertices[:, 0], self._vertices[:, 1]
         x_next, y_next = np.roll(x, -1), np.roll(y, -1)
         
-        cross = ((y <= py) != (y_next <= py)) & (px < (x_next - x) * (py - y) / (y_next - y) + x)
+        mask = (y <= py) != (y_next <= py)
+        dy = np.where(mask, y_next - y, 1.0)
+        cross = mask & (px < (x_next - x) * (py - y) / dy + x)
         return bool(np.sum(cross) % 2 == 1)
 
     def is_convex(self) -> bool:
