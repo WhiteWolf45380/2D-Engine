@@ -21,7 +21,7 @@ class InputsManager(Manager):
         "_window",
         "_listeners", "_any_listeners", "_all_listeners",
         "_step", "_pressed", "_released_this_frame", "_triggered_combos",
-        "_relative_origin", "_mouse_x", "_mouse_y", "mouse_out",
+        "_relative_origin", "_mouse_x", "_mouse_y", "_mouse_out",
         "_mouse_dx", "_mouse_dy", "_drag_dx", "_drag_dy", "_scroll_dx", "_scroll_dy",
     )
 
