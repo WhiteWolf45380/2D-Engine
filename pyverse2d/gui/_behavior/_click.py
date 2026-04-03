@@ -109,6 +109,20 @@ class ClickBehavior(Behavior):
         """Supprime toutes les actions"""
         for name in list(self._down_listeners.keys()):
             self.remove(name)
+    
+    def enable_all(self) -> None:
+        """Active toutes les actions"""
+        for listener in self._down_listeners.values():
+            listener.enable()
+        for listener in self._up_listeners.values():
+            listener.enable()
+    
+    def disable_all(self) -> None:
+        """Désactive toutes les actions"""
+        for listener in self._down_listeners.values():
+            listener.disable()
+        for listener in self._up_listeners.values():
+            listener.disable()
 
     # ======================================== HOOKS ========================================
     def _on_attach(self) -> None:
@@ -121,11 +135,11 @@ class ClickBehavior(Behavior):
 
     def _on_enable(self) -> None:
         """Hook d'activation"""
-        pass
+        self.enable_all()
 
     def _on_disable(self) -> None:
         """Hook de désactivation"""
-        self._disable_all()
+        self.disable_all()
 
     # ======================================== LIFE CYCLE ========================================
     def update(self, dt: float) -> None:
@@ -140,17 +154,3 @@ class ClickBehavior(Behavior):
     def _collides(self, point: Point) -> bool:
         """Vérifie si un point est dans le widget"""
         return self._owner.collidespoint(point)
-    
-    def _enable_all(self) -> None:
-        """Active toutes les actions"""
-        for listener in self._down_listeners.values():
-            listener.enable()
-        for listener in self._up_listeners.values():
-            listener.enable()
-    
-    def _disable_all(self) -> None:
-        """Désactive toutes les actions"""
-        for listener in self._down_listeners.values():
-            listener.disable()
-        for listener in self._up_listeners.values():
-            listener.disable()

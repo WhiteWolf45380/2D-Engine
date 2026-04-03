@@ -14,7 +14,7 @@ class HoverBehavior(Behavior):
     __slots__ = (
         "_hovered",
         "_on_enter", "_on_leave",
-        "_when_hovered", "_when_unhovered"
+        "_when_hovered", "_when_unhovered",
     )
     _ID: str = "hover"
 
