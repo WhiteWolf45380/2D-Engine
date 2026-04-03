@@ -18,9 +18,9 @@ class InputsManager(Manager):
     """Gestionnaire des entrées utilisateur"""
     __slots__ = (
         "_ctx",
-        "_listeners",
-        "_step", "_pressed", "_released_this_frame",
-        "_any_listeners", "_all_listeners", "_triggered_combos",
+        "_window",
+        "_listeners", "_any_listeners", "_all_listeners",
+        "_step", "_pressed", "_released_this_frame", "_triggered_combos",
         "_relative_origin", "_mouse_x", "_mouse_y",
         "_scroll_dx", "_scroll_dy",
     )
