@@ -4,8 +4,6 @@ from ...math import Point
 
 from pyverse2d import inputs, ui_manager
 
-from dataclasses import dataclass
-
 # ======================================== BEHAVIOR ========================================
 class HoverBehavior(Behavior):
     """Behavior gérant le survol"""

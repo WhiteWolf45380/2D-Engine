@@ -33,7 +33,7 @@ ui_manager: UIManager = UIManager(_context_manager)
 _context_manager.ui_manager = ui_manager
 
 # ======================================== NODES ========================================
-from . import world, tile, ui, scene
+from . import world, tile, gui, scene
 
 # ======================================== SETTERS ========================================
 def set_window(window: Window):
@@ -94,14 +94,14 @@ __all__ = [
     "asset",
     "world",
     "tile",
-    "ui",
+    "gui",
     "scene",
 
     "key",
 
     "_context_manager",
     "inputs",
-    "ui_manager",
+    "ui",
 
     "set_window",
     "set_fps",

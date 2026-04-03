@@ -16,7 +16,7 @@ from typing import Callable, Type, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ...scene import UILayer
-    from ...ui import (
+    from ...gui import (
         ClickBehavior,
         HoverBehavior,
         SelectBehavior,
