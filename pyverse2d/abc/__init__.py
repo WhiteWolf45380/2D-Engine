@@ -12,7 +12,7 @@ from ._manager import Manager
 
 from ._ecs import Component, System
 
-from ._ui import Behavior, Widget
+from ._gui import Behavior, Widget
 
 from ._layer import Layer
 

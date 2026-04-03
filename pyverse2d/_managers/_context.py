@@ -7,7 +7,7 @@ class ContextManager:
     __slots__ = (
         "time",
         "inputs",
-        "ui_manager",
+        "ui",
     )
 
     def __iter__(self) -> Iterator:

@@ -29,8 +29,8 @@ inputs: InputsManager = InputsManager(_context_manager)
 _context_manager.inputs = inputs
 
 # Ui
-ui_manager: UIManager = UIManager(_context_manager)
-_context_manager.ui_manager = ui_manager
+ui: UIManager = UIManager(_context_manager)
+_context_manager.ui = ui
 
 # ======================================== NODES ========================================
 from . import world, tile, gui, scene
