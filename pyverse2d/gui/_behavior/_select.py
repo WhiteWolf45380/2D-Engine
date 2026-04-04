@@ -32,7 +32,7 @@ class SelectBehavior(Behavior):
         super().__init__()
 
         # Selection
-        self._selection_group: SelectionGroup = expect(selection_group, (SelectionGroup, None))
+        self._selection_group: SelectionGroup = selection_group
         self._selected: bool = False
 
         # Hooks
