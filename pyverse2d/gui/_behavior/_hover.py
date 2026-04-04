@@ -5,7 +5,7 @@ from ..._internal import CallbackList
 from ...abc import Behavior
 from ...math import Point
 
-from pyverse2d import inputs, ui
+from pyverse2d import mouse, ui
 
 # ======================================== BEHAVIOR ========================================
 class HoverBehavior(Behavior):
@@ -81,7 +81,7 @@ class HoverBehavior(Behavior):
     def update(self, dt: float) -> None:
         """Actualisation"""
         # Détection du survol
-        if ui.hovered is None and self._collides(inputs.relative_mouse_position):
+        if ui.hovered is None and self._collides(mouse.viewport_position):
             hovered = ui.ask_hover(self._owner)
         else:
             hovered = False

@@ -7,7 +7,7 @@ from ..._flag import Key
 from ...abc import Behavior
 from ...math import Point
 
-from pyverse2d import inputs, ui
+from pyverse2d import mouse, inputs
 
 from typing import TYPE_CHECKING
 
@@ -147,7 +147,7 @@ class SelectBehavior(Behavior):
     def _is_hovered(self) -> bool:
         """Vérifie si le widget est survolé"""
         if self._owner.hover is None:
-            return self._collides(inputs.relative_mouse_position)
+            return self._collides(mouse.viewport_position)
         return self._owner.hover.is_hovered()
 
     def _collides(self, point: Point) -> bool:

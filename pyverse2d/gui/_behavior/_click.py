@@ -1,10 +1,10 @@
 # ======================================== IMPORTS ========================================
-from ..._flag import Key
+from ..._managers import MouseManager
 from ..._managers._inputs import _Listener
 from ...abc import Behavior
 from ...math import Point
 
-from pyverse2d import inputs
+from pyverse2d import mouse, inputs
 
 from typing import Callable, Any
 
@@ -28,7 +28,7 @@ class ClickBehavior(Behavior):
     def add(
         self,
         name: str = None,
-        key: Key.MouseInput = Key.MOUSELEFT,
+        key: MouseManager.Button = mouse.B_LEFT,
         callback: Callable = None,
         args: list[Any] = None,
         kwargs: dict[str, Any] = None,
@@ -96,7 +96,7 @@ class ClickBehavior(Behavior):
             inputs.remove_listener(self._up_listeners[name])
             del self._up_listeners[name]
     
-    def remove_with_filters(self, key: Key.MouseInput = None, callback: Callable = None) -> None:
+    def remove_with_filters(self, key: MouseManager.Button = None, callback: Callable = None) -> None:
         """Supprime les actions correspondant aux filtres
 
         Args:
@@ -153,7 +153,7 @@ class ClickBehavior(Behavior):
     def _is_hovered(self) -> bool:
         """Vérifie si le widget est survolé"""
         if self._owner.hover is None:
-            return self._collides(inputs.relative_mouse_position)
+            return self._collides(mouse.viewport_position)
         return self._owner.hover.is_hovered()
     
     def _collides(self, point: Point) -> bool:

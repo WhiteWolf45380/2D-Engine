@@ -1,13 +1,11 @@
 # ======================================== IMPORTS ========================================
 from ..._internal import expect, CallbackList
-from ..._flag import Key
+from ..._managers import InputsManager
 from ..._managers._inputs import _Listener
 from ...abc import Behavior
 from ...math import Point
 
-from pyverse2d import inputs
-
-from typing import Callable
+from pyverse2d import key, mouse, inputs
 
 # ======================================== BEHAVIOR ========================================
 class FocusBehavior(Behavior):
@@ -36,8 +34,8 @@ class FocusBehavior(Behavior):
         # Paramètres
         self._once: bool = expect(once, bool)
         self._unfocus_on_outside_click: bool = expect(unfocus_on_outside_click, bool)
-        self._unfocus_keys: set[Key.Input] = set(Key.ESCAPE)
-        self._ghost_keys: set[Key.Input] = set()
+        self._unfocus_keys: set[InputsManager.Input] = set(key.K_ESCAPE)
+        self._ghost_keys: set[InputsManager.Input] = set()
 
         # Hooks
         self._on_keydown: CallbackList = CallbackList
@@ -69,7 +67,7 @@ class FocusBehavior(Behavior):
             self._apply_outside_click()
 
     # ======================================== UNFOCUS KEYS ========================================
-    def add_unfocus_key(self, key: Key.Input) -> None:
+    def add_unfocus_key(self, key: InputsManager.Input) -> None:
         """Ajoute une clé de fin de concentration
         
         Args:
@@ -77,7 +75,7 @@ class FocusBehavior(Behavior):
         """
         self._unfocus_keys.add(key)
     
-    def remove_unfocus_key(self, key: Key.Input) -> None:
+    def remove_unfocus_key(self, key: InputsManager.Input) -> None:
         """Retire une clé de fin de concentration
 
         Args:
@@ -113,9 +111,9 @@ class FocusBehavior(Behavior):
     def _generate_outside_listeners(self) -> tuple[_Listener, ...]:
         """Génère les listeners de clique en dehors du ``Widget``"""
         condition = lambda: not self._is_hovered()
-        left = inputs.add_listener(key=Key.MOUSELEFT, callback=self._handle_outside_click, condition=condition)
-        middle = inputs.add_listener(key=Key.MOUSEMIDDLE, callback=self._handle_outside_click, condition=condition)
-        right = inputs.add_listener(key=Key.MOUSERIGHT, callback=self._handle_outside_click, condition=condition)
+        left = inputs.add_listener(key=mouse.B_LEFT, callback=self._handle_outside_click, condition=condition)
+        middle = inputs.add_listener(key=mouse.B_RIGHT, callback=self._handle_outside_click, condition=condition)
+        right = inputs.add_listener(key=mouse.B_MIDDLE, callback=self._handle_outside_click, condition=condition)
         return (left, middle, right)
 
     def _handle_outside_click(self) -> None:
