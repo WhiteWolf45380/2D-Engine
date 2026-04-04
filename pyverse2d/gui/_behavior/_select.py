@@ -1,8 +1,9 @@
 # ======================================== IMPORTS ========================================
 from __future__ import annotations
 
-from ..._internal import expect, CallbackList
+from ..._internal import CallbackList
 from ..._managers._inputs import _Listener
+from ..._flag import Key
 from ...abc import Behavior
 from ...math import Point
 
@@ -77,7 +78,7 @@ class SelectBehavior(Behavior):
         """Hook d'attachement"""
         self._register()
         self._listener: _Listener = inputs.add_listener(
-            key = inputs.Key.MOUSELEFT,
+            key = Key.MOUSELEFT,
             callback = self._handle_click,
             condition = self._is_hovered,
         )
