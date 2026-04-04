@@ -225,6 +225,16 @@ class PygletSpriteRenderer:
     def pipeline(self) -> Pipeline:
         """Renvoie la pipeline de rendu"""
         return self._pipeline
+    
+    @property
+    def width(self) -> int:
+        """Renvoie la largeur de la texture"""
+        return self._sprite.width
+    
+    @property
+    def height(self) -> int:
+        """Renvoie la hauteur de la texture"""
+        return self._sprite.height
 
     @property
     def visible(self) -> bool:
