@@ -20,7 +20,7 @@ class CallbackList:
         """Supprime une fonction"""
         self._callbacks.remove(func)
 
-    def trigger(self) -> None:
+    def trigger(self, *args, **kwargs) -> None:
         """Appelle les fonctions"""
         for func in self._callbacks:
-            func()
+            func(*args, **kwargs)

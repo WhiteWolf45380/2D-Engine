@@ -6,6 +6,9 @@ class ContextManager:
     """Contexte des managers"""
     __slots__ = (
         "time",
+        "event",
+        "key",
+        "mouse",
         "inputs",
         "ui",
     )

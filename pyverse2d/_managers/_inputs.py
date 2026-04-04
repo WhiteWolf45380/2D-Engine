@@ -17,8 +17,6 @@ if TYPE_CHECKING:
 class InputsManager(Manager):
     """Gestionnaire des entrées utilisateur"""
     __slots__ = (
-        "_ctx",
-        "_window",
         "_listeners", "_any_listeners", "_all_listeners",
         "_step", "_pressed", "_released_this_frame", "_triggered_combos",
         "_relative_origin", "_mouse_x", "_mouse_y", "_mouse_out",
@@ -26,11 +24,8 @@ class InputsManager(Manager):
     )
 
     def __init__(self, context_manager: ContextManager):
-        # Contexte de managers
-        self._ctx: ContextManager = context_manager
-
-        # Fenêtre
-        self._window: Window = None
+        # Initialisation du gestionnaire
+        super().__init__(context_manager)
 
         # Listeners
         self._listeners: dict[int, list[_Listener]] = {}

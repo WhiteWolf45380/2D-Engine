@@ -42,6 +42,9 @@ class SelectBehavior(Behavior):
         self._when_selected: CallbackList = CallbackList()
         self._when_deselected: CallbackList = CallbackList()
 
+        # Listeners
+        self._listener: _Listener = None
+
     # ======================================== PROPERTIES ========================================
     @property
     def selection_group(self) -> SelectionGroup:

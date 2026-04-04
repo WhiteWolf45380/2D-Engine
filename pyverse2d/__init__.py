@@ -16,13 +16,25 @@ _pipeline: Pipeline | None = None
 _fps: int = 60
 
 # ======================================== MANAGERS ========================================
-from ._managers import ContextManager, TimeManager, InputsManager, UIManager
+from ._managers import ContextManager, TimeManager, EventManager, KeyManager, MouseManager, InputsManager, UIManager
 
 _context_manager: ContextManager = ContextManager()
 
 # Time
 time: TimeManager = TimeManager(_context_manager)
 _context_manager.time = time
+
+# Event
+event: EventManager = EventManager(_context_manager)
+_context_manager.event = event
+
+# Key
+event: KeyManager = KeyManager(_context_manager)
+_context_manager.key = key
+
+# Mouse
+mouse: MouseManager = MouseManager(_context_manager)
+_context_manager.mouse = mouse
 
 # Inputs
 inputs: InputsManager = InputsManager(_context_manager)
@@ -73,13 +85,25 @@ def run(update: callable = None):
         raise RuntimeError("No window set, try set_window() before run()")
 
     def _update(raw_dt: float):
+        # Calcul du delta-time
         dt = time._compute_dt(raw_dt)
+
+        # Actualisation des gestionnaires
         for manager in _context_manager:
             manager.update(dt)
+        
+        # Actualisation des scenes
         scene.update(dt)
+
+        # Appel de la fonction externe
         if update is not None:
             update(dt)
 
+        # Nettoyage
+        for manager in _context_manager:
+            manager.flush()
+
+    # Lancement
     pyglet.clock.schedule_interval(_update, 1 / _fps)
     pyglet.app.run()
 
@@ -97,9 +121,11 @@ __all__ = [
     "gui",
     "scene",
 
-    "key",
-
     "_context_manager",
+    "time",
+    "event",
+    "key",
+    "mouse",
     "inputs",
     "ui",
 
