@@ -128,6 +128,8 @@ class Sprite(Widget):
     @property
     def hitbox(self):
         """Hitbox du sprite"""
+        if self._image_renderer is None:
+            return Rect(1, 1)
         return Rect(self._image_renderer.width, self._image_renderer.height)
     
     # ======================================== TRANSFORMATIONS ========================================
