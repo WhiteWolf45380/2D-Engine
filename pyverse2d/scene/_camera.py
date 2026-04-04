@@ -41,7 +41,6 @@ class Camera:
     __slots__ = (
         "_position", "_offset", "_zoom",
         "_transition", "_follow",
-        "_final_position",
     )
 
     TransitionRequest: ClassVar[Type[TransitionRequest]] = TransitionRequest
@@ -56,9 +55,6 @@ class Camera:
         # Etat
         self._transition: TransitionRequest = None
         self._follow: FollowRequest = None
-
-        # Paramètres flottants
-        self._final_position: Point = self._position.copy()
 
     # ======================================== PROPERTIES ========================================
     @property
@@ -99,7 +95,7 @@ class Camera:
 
     @property
     def offset(self) -> Vector:
-        """Vecteur de décalage par rapport à la position
+        """Vecteur de décalage par rapport à la position suivie
 
         Le vecteur peut être un objet ``Vector`` ou un tuple ``(vx, vy)``
         """
@@ -108,11 +104,10 @@ class Camera:
     @offset.setter
     def offset(self, value: Vector) -> None:
         self._offset = Vector(value)
-        self._compute_final_position()
     
     @property
     def offset_x(self) -> float:
-        """Décalage horizontal par rapport à la position
+        """Décalage horizontal par rapport à la position suivie
         
         La composante doit être un ``Réel``
         """
@@ -121,11 +116,10 @@ class Camera:
     @offset_x.setter
     def offset_x(self, value: Real) -> None:
         self._offset._x = value
-        self._compute_final_position()
     
     @property
     def offset_y(self) -> float:
-        """Décalage vertical par rapport à la position
+        """Décalage vertical par rapport à la position suivie
         
         La composante doit être un ``Réel``
         """
@@ -134,7 +128,6 @@ class Camera:
     @offset_y.setter
     def offset_y(self, value: Real) -> None:
         self._offset.y = value
-        self._compute_final_position()
 
     @property
     def zoom(self) -> float:
@@ -147,21 +140,6 @@ class Camera:
     @zoom.setter
     def zoom(self, value: Real):
         self._zoom = positive(not_null(float(expect(value, Real))))
-
-    @property
-    def final_position(self) -> Point:
-        """Renvoie la position finale"""
-        return self._final_position
-
-    @property
-    def final_x(self) -> float:
-        """position horizontale finale"""
-        return self._final_position.x
-    
-    @property
-    def final_y(self) -> float:
-        """position verticale finale"""
-        return self._final_position.y
 
     # ======================================== PREDICATES ========================================
     def is_following(self) -> bool:
@@ -248,8 +226,7 @@ class Camera:
     # ======================================== RENDER ========================================
     def view_matrix(self) -> Mat4:
         """Produit la matrice de vue à appliquer à l'écran"""
-        fx, fy = self.final_position
-        translate = Mat4.from_translation(Vec3(-fx, -fy, 0))
+        translate = Mat4.from_translation(Vec3(-self._position.x, -self._position.y, 0))
         scale = Mat4.from_scale(Vec3(self._zoom, self._zoom, 1))
         return translate @ scale
     
@@ -275,7 +252,7 @@ class Camera:
         entity = self._follow.entity
         if not entity.is_active() or not entity.has(Transform):
             return self.unfollow()
-        target = entity.transform.position
+        target = (entity.transform.position.x + self._offset.x, entity.transform.position.y + self._offset.y)
         t = 1 - self._follow.smoothing ** dt
         x, y = _step_position(self._position.x, self._position.y, target.x, target.y, t)
         if self._follow.max_speed is not None:
@@ -295,12 +272,6 @@ class Camera:
             self._position.x = x
         if y is not None:
             self._position.y = y
-        self._compute_final_position()
-
-    def _compute_final_position(self) -> None:
-        """Calcul la position finale"""
-        self._final_position.x = self._position.x + self._offset.x
-        self._final_position.y = self._position.y + self._offset.y
 
 # ======================================== HELPERS ========================================
 def _step_position(start_x: float, start_y: float, end_x: float, end_y: float, t: float) -> tuple[float, float]:
