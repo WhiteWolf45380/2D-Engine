@@ -252,9 +252,9 @@ class Camera:
         entity = self._follow.entity
         if not entity.is_active() or not entity.has(Transform):
             return self.unfollow()
-        target = (entity.transform.position.x + self._offset.x, entity.transform.position.y + self._offset.y)
+        target_x, target_y = entity.transform.position.x + self._offset.x, entity.transform.position.y + self._offset.y
         t = 1 - self._follow.smoothing ** dt
-        x, y = _step_position(self._position.x, self._position.y, target.x, target.y, t)
+        x, y = _step_position(self._position.x, self._position.y, target_x, target_y, t)
         if self._follow.max_speed is not None:
             dx = x - self._position.x
             dy = y - self._position.y
