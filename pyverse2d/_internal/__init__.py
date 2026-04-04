@@ -5,6 +5,8 @@ from ._validators import (
     not_null,
     not_in,
     positive,
+    over,
+    under,
     clamped,
     rgba,
 )
@@ -19,6 +21,8 @@ __all__ = [
     "not_null",
     "not_in",
     "positive",
+    "over",
+    "under",
     "clamped",
     "rgba",
 

@@ -224,7 +224,7 @@ def positive(value: object, arg: str = "Argument"):
     # Par défaut
     return  value
 
-def over(value: object, threshold: Real, arg: str = "Argument"):
+def over(value: object, threshold: Real, include: bool = True, arg: str = "Argument"):
     """
     Vérifie que la valeur soit supérieure à un seuil
 
@@ -234,12 +234,12 @@ def over(value: object, threshold: Real, arg: str = "Argument"):
         arg(str): nom de l'argument à vérifier
     """
     if isinstance(value, Real):
-        if value <= threshold:
+        if (value <= threshold if include else value < threshold):
             raise ValueError(f"{arg} must be over {threshold}")
         return value
     return value
 
-def under(value: object, threshold: Real, arg: str = "Argument"):
+def under(value: object, threshold: Real, include: bool = True, arg: str = "Argument"):
     """
     Vérifie que la valeur soit inférieure à un seuil
 
@@ -249,12 +249,12 @@ def under(value: object, threshold: Real, arg: str = "Argument"):
         arg(str): nom de l'argument à vérifier
     """
     if isinstance(value, Real):
-        if value >= threshold:
+        if (value >= threshold if include else value > threshold):
             raise ValueError(f"{arg} must be under {threshold}")
         return value
     return value
 
-def clamped(value: object, min: Real = 0.0, max: Real = 1.0, arg: str = "Argument"):
+def clamped(value: object, min: Real = 0.0, max: Real = 1.0, include_min: bool = True, include_max: bool = True, arg: str = "Argument"):
     
     """
     Vérifie que la valeur soit comprise entre min et max
@@ -271,8 +271,8 @@ def clamped(value: object, min: Real = 0.0, max: Real = 1.0, arg: str = "Argumen
     
     # Nombres
     if isinstance(value, Real):
-        if float(value) < min or float(value) > max:
-            raise ValueError(f"{arg} must be between {min} and {max}")
+        if (float(value) < min if include_min else float(value) <= min) or (float(value) > max if include_max else float(value) >= max):
+            raise ValueError(f"{arg} must be between {min} {'included' if include_min else 'excluded'} and {max} {'included' if include_max else 'excluded'}")
         return value
     
     # Par défaut

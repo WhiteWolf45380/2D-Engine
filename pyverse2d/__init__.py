@@ -74,7 +74,7 @@ def run(update: callable = None):
 
     def _update(raw_dt: float):
         # Calcul du delta-time
-        dt = time._compute_dt(raw_dt)
+        dt = time.tick(raw_dt)
 
         # Actualisation des gestionnaires
         for manager in _context_manager:
@@ -92,7 +92,7 @@ def run(update: callable = None):
             manager.flush()
 
     # Lancement
-    pyglet.clock.schedule_interval(_update, 1 / 60)
+    time.schedule(_update)
     pyglet.app.run()
 
 # ======================================== EXPORTS ========================================
