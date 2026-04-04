@@ -6,10 +6,15 @@ from ..math import Point
 
 from ._context import ContextManager
 
-from typing import TYPE_CHECKING
+import pyglet.window.mouse as _mouse
+from typing import TypeAlias
 
-if TYPE_CHECKING:
-    from .._rendering import Window
+# ======================================== STR ========================================
+_NAMES: dict[int, str] = {
+    _mouse.LEFT:   "Left Click",
+    _mouse.RIGHT:  "Right Click",
+    _mouse.MIDDLE: "Middle Click",
+}
 
 # ======================================== MANAGER ========================================
 class MouseManager(Manager):
@@ -21,7 +26,16 @@ class MouseManager(Manager):
         "_mouse_dx", "_mouse_dy",
         "_drag_dx", "_drag_dy",
         "_scroll_dx", "_scroll_dy",
+        "_step", "_pressed", "_released_this_frame",
     )
+
+    # Alias
+    Button: TypeAlias = int
+
+    # Boutons
+    B_LEFT = _mouse.LEFT
+    B_MIDDLE = _mouse.MIDDLE
+    B_RIGHT = _mouse.RIGHT
 
     def __init__(self, context_manager: ContextManager):
         # Initialisation du gestionnaire
@@ -40,6 +54,24 @@ class MouseManager(Manager):
         self._drag_dy: float = 0.0
         self._scroll_dx: float = 0.0
         self._scroll_dy: float = 0.0
+
+        # Boutons
+        self._step: list[int] = []
+        self._pressed: dict[int, bool] = {}
+        self._released_this_frame: list[int] = []
+
+        # Abonnements
+        self._ctx.event.on_mouse_motion(self._on_motion)
+        self._ctx.event.on_mouse_drag(self._on_drag)
+        self._ctx.event.on_mouse_press(self._on_press)
+        self._ctx.event.on_mouse_release(self._on_release)
+        self._ctx.event.on_mouse_enter(self._on_enter)
+        self._ctx.event.on_mouse_leave(self._on_leave)
+
+    # ======================================== BUTTONS ========================================
+    @staticmethod
+    def name(button: Button) -> str:
+        return _NAMES.get(button, "Unknown")
 
     # ======================================== PROPERTIES ========================================
     @property
@@ -122,11 +154,28 @@ class MouseManager(Manager):
         """Défilement vertical de la molette cette frame"""
         return self._scroll_dy
 
-    # ======================================== STATE ========================================
+    # ======================================== PREDICATES ========================================
     def is_out(self) -> bool:
         """Vérifie si la souris est hors du viewport"""
         return self._mouse_out
+    
+    def is_pressed(self, button: Button) -> bool:
+        """Vérifie si un bouton est maintenu enfoncé"""
+        return self._pressed.get(button, False)
 
+    def just_pressed(self, button: Button) -> bool:
+        """Vérifie si un bouton vient d'être pressé cette frame"""
+        return button in self._step
+
+    def just_released(self, button: Button) -> bool:
+        """Vérifie si un bouton vient d'être relâché cette frame"""
+        return button in self._released_this_frame
+
+    def is_currently_pressed(self, button: Button) -> bool:
+        """Vérifie si un bouton est pressé cette frame ou maintenu"""
+        return self._pressed.get(button, False) or button in self._step
+
+    # ======================================== COLLECTIONS ========================================
     def set_viewport_origin(self, point: Point) -> None:
         """Définit l'origine du viewport courant
 
@@ -148,8 +197,13 @@ class MouseManager(Manager):
         self._drag_dy = 0.0
         self._scroll_dx = 0.0
         self._scroll_dy = 0.0
+        for button in self._step:
+            if button not in self._released_this_frame:
+                self._pressed[button] = True
+        self._step.clear()
+        self._released_this_frame.clear()
 
-    # ======================================== HANDLERS ========================================
+    # ======================================== HOOKS ========================================
     def _on_motion(self, x: float, y: float, dx: float, dy: float) -> None:
         """Déplacement de la souris"""
         self._compute_position(x, y)
@@ -172,13 +226,12 @@ class MouseManager(Manager):
 
     def _on_enter(self, x: float, y: float) -> None:
         """Entrée dans la fenêtre"""
-        self._mouse_out = False
         self._compute_position(x, y)
 
     def _on_leave(self, x: float, y: float) -> None:
         """Sortie de la fenêtre"""
-        self._mouse_out = True
         self._compute_position(x, y)
+        self._mouse_out = True
 
     def _on_scroll(self, x: float, y: float, scroll_x: float, scroll_y: float) -> None:
         """Défilement de la molette"""

@@ -38,18 +38,6 @@ class InputsManager(Manager):
         self._released_this_frame: list = []
         self._triggered_combos: set = set()
 
-        # Souris
-        self._relative_origin: Point = Point(0, 0)
-        self._mouse_x: float = 0.0
-        self._mouse_y: float = 0.0
-        self._mouse_out: float = False
-        self._mouse_dx: float = 0.0
-        self._mouse_dy: float = 0.0
-        self._drag_dx: float = 0.0
-        self._drag_dy: float = 0.0
-        self._scroll_dx: float = 0.0
-        self._scroll_dy: float = 0.0
-
     # ======================================== BIND WINDOW ========================================
     def bind(self, window: Window) -> None:
         """
@@ -68,33 +56,6 @@ class InputsManager(Manager):
         @pyglet_window.event
         def on_key_release(symbol, modifiers):
             self._on_release(symbol)
-
-        @pyglet_window.event
-        def on_mouse_press(x, y, button, modifiers):
-            self._compute_mouse(x, y)
-            self._on_press(button)
-
-        @pyglet_window.event
-        def on_mouse_release(x, y, button, modifiers):
-            self._compute_mouse(x, y)
-            self._on_release(button)
-
-        @pyglet_window.event
-        def on_mouse_motion(x, y, dx, dy):
-            self._compute_mouse(x, y)
-            self._mouse_dx = dx * self._window.width / self._window.screen.width
-            self._mouse_dy = dy * self._window.height / self._window.screen.height
-
-        @pyglet_window.event
-        def on_mouse_drag(x, y, dx, dy, buttons, modifiers):
-            self._compute_mouse(x, y)
-            self._drag_dx = dx * self._window.width / self._window.screen.width
-            self._drag_dy = dy * self._window.height / self._window.screen.height
-
-        @pyglet_window.event
-        def on_mouse_scroll(x, y, scroll_x, scroll_y):
-            self._scroll_dx = scroll_x
-            self._scroll_dy = scroll_y
 
     # ======================================== LISTENERS ========================================
     def add_listener(
@@ -345,85 +306,6 @@ class InputsManager(Manager):
             event_id(int): identifiant de la touche
         """
         return event_id in self._released_this_frame
-
-    # ======================================== MOUSE ========================================
-    @property
-    def mouse_x(self) -> float:
-        """Renvoie la position X absolue de la souris"""
-        return self._mouse_x
-
-    @property
-    def mouse_y(self) -> float:
-        """Renvoie la position Y absolue de la souris"""
-        return self._mouse_y
-
-    @property
-    def mouse_position(self) -> tuple[float, float]:
-        """Renvoie la position absolue de la souris"""
-        return self._mouse_x, self._mouse_y
-    
-    @property
-    def relative_origin(self) -> Point:
-        """Renvoie l'origine relative pour les coordonnées de la souris"""
-        return self._relative_origin
-    
-    @property
-    def relative_mouse_x(self) -> float:
-        """Renvoie la position X relative de la souris"""
-        return self._mouse_x - self._relative_origin.x
-
-    @property
-    def relative_mouse_y(self) -> float:
-        """Renvoie la position Y relative de la souris"""
-        return self._mouse_y - self._relative_origin.y
-    
-    @property
-    def relative_mouse_position(self) -> tuple[float, float]:
-        """Renvoie la position relative de la souris"""
-        return self.relative_mouse_x, self.relative_mouse_y
-    
-    @property
-    def mouse_dx(self) -> float:
-        """Renvoie le déplacement horizontal de la souris"""
-        return self._mouse_dx
-    
-    @property
-    def mouse_dy(self) -> float:
-        """Renvoie le déplacement vertical de la souris"""
-        return self._mouse_dy
-    
-    @property
-    def drag_dx(self) -> float:
-        """Renvoie le glissement horizontal du maintient"""
-        return self._drag_dx
-    
-    @property
-    def drag_dy(self) -> float:
-        """Renvoie le glissement vertical du maintient"""
-        return self._drag_dy
-
-    @property
-    def scroll_x(self) -> float:
-        """Renvoie le défilement horizontal de la molette cette frame"""
-        return self._scroll_dx
-
-    @property
-    def scroll_y(self) -> float:
-        """Renvoie le défilement vertical de la molette cette frame"""
-        return self._scroll_dy
-    
-    def set_relative_origin(self, point: Point) -> None:
-        """Définit l'origine relative pour les coordonnées de la souris
-
-        Args:
-            x(float): coordonnée X de l'origine relative
-            y(float): coordonnée Y de l'origine relative
-        """
-        self._relative_origin = Point(point)
-
-    def is_mouse_out(self) -> bool:
-        """Vérifie la souris est en dehors de l'écran"""
-        return self._mouse_out
     
     # ======================================== LIFE CYCLE ========================================
     def update(self, dt: float) -> None:

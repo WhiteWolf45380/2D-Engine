@@ -1,7 +1,6 @@
 # ======================================== IMPORTS ========================================
 from ._camera_mode import CameraMode
 from ._component_type import ComponentType
-from ._key import Key
 from ._scene_state import SceneState
 from ._stack_mode import StackMode
 from ._super import Super
@@ -11,7 +10,6 @@ from ._update_phase import UpdatePhase
 __all__ = [
     "CameraMode",
     "ComponentType",
-    "Key",
     "SceneState",
     "StackMode",
     "Super",
