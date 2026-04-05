@@ -558,6 +558,10 @@ class _BorderRenderer:
         a = int(a * opacity)
 
         # Arrêtes
+        flat_3d = []
+        for i in range(0, len(flat), 2):
+            flat_3d.extend([flat[i], flat[i+1], 0.0])
+
         self._vlist = self._DEFAULT_SHADER.vertex_list(
             self._n,
             pyglet.gl.GL_TRIANGLE_STRIP,
@@ -575,7 +579,11 @@ class _BorderRenderer:
     def _refresh_vertices(self, psr: PygletShapeRenderer) -> None:
         """Réactualise les arrêtes"""
         strip = self._world_strip(psr.cx, psr.cy, psr.scale, psr.rotation, psr.border_width)
-        self._vlist.position[:] = strip.flatten().tolist()
+        flat = strip.flatten().tolist()
+        flat_3d = []
+        for i in range(0, len(flat), 2):
+            flat_3d.extend([flat[i], flat[i+1], 0.0])
+        self._vlist.position[:] = flat_3d
     
     # ======================================== GETTERS ========================================
     @property
