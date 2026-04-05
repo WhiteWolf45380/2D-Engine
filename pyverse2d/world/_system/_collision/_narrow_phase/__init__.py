@@ -1,7 +1,7 @@
 # ======================================== IMPORTS ========================================
 from __future__ import annotations
 
-from . import _circle, _ellipse, _capsule  # noqa: F401 (enregistrement des handlers via @register)
+from . import _circle, _ellipse, _capsule, _rounded_rect  # noqa: F401 (enregistrement des handlers via @register)
 
 from .....abc import VertexShape
 from .....shape import Circle, Ellipse, Capsule, RoundedRect
