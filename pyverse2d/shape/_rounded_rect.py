@@ -206,13 +206,13 @@ class RoundedRect(CompositeShape):
         sin_r = math.sin(rad)
 
         def rotate(lx: float, ly: float) -> tuple[float, float]:
-            return (x + lx * cos_r - ly * sin_r,
-                    y + lx * sin_r + ly * cos_r)
+            return (x + lx * cos_r + ly * sin_r,
+                    y - lx * sin_r + ly * cos_r)
 
         corners = [
-            rotate(-hx,  hy),   # top-left
-            rotate( hx,  hy),   # top-right
-            rotate( hx, -hy),   # bottom-right
-            rotate(-hx, -hy),   # bottom-left
+            rotate(-hx,  hy),
+            rotate( hx,  hy),
+            rotate( hx, -hy),
+            rotate(-hx, -hy),
         ]
         return (x, y, hx, hy, r, rotation, corners)

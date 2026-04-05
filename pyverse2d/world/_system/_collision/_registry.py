@@ -131,14 +131,15 @@ def point_in_convex_poly(px: float, py: float, pts: list) -> bool:
 def rounded_rect_contour(cx: float, cy: float, hx: float, hy: float, r: float, rotation: float, corners) -> NDArray[np.float32]:
     """Génère le contour polygon monde d'un RoundedRect depuis ses paramètres world_transform"""
     seg = max(8, int(r / 1.25))
-    corner_angles = [
+    rad = np.radians(rotation)
+    corner_offsets = [
         (np.pi * 0.5, np.pi),
         (0.0, np.pi * 0.5),
         (np.pi * 1.5, np.pi * 2.0),
         (np.pi, np.pi * 1.5),
     ]
     contour = []
-    for (ox, oy), (a_start, a_end) in zip(corners, corner_angles):
-        angles = np.linspace(a_start, a_end, seg + 1, endpoint=True)
+    for (ox, oy), (a_start, a_end) in zip(corners, corner_offsets):
+        angles = np.linspace(a_start + rad, a_end + rad, seg + 1, endpoint=False)
         contour.append(np.column_stack((ox + r * np.cos(angles), oy + r * np.sin(angles))))
     return np.vstack(contour).astype(np.float32)
