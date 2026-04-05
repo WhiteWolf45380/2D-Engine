@@ -7,9 +7,6 @@ from .._world import World, Entity
 from .._component import Transform, SpriteRenderer, ShapeRenderer, TextRenderer
 from ..._rendering import Pipeline, PygletShapeRenderer, PygletSpriteRenderer, PygletLabelRenderer
 
-import pyglet
-import pyglet.image
-
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:

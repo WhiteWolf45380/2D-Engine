@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from ._pipeline import Pipeline
 from ..abc import Shape, VertexShape
-from ..shape import Capsule, Circle, Ellipse
+from ..shape import Capsule, Circle, Ellipse, RoundedRect
 from ..asset import Color
 
 import pyglet
@@ -379,6 +379,18 @@ class _FillRenderer:
             ax, ay, bx, by, r_ = shape.world_transform(cx, cy, scale, 0)
             spine = math.dist((ax, ay), (bx, by))
             self._gl_shape = _CapsuleRenderer(cx, cy, r_, spine, rotation=rotation, color=(r, g, b, a), batch=pipeline.batch, group=pipeline.get_group(z=z))
+
+        elif isinstance(shape, RoundedRect):
+            _, _, _, _, r_, _, corners = shape.world_transform(cx, cy, scale, 0)
+            tl, tr, br, bl = corners
+            mid_x = (tl[0] + br[0]) * 0.5
+            mid_y = (tl[1] + br[1]) * 0.5
+            w = shape.width  * scale
+            h = shape.height * scale
+            self._gl_shape = pyglet.shapes.RoundedRectangle(mid_x, mid_y, w, h, r_, color=(r, g, b, a), batch=pipeline.batch, group=pipeline.get_group(z=z))
+            self._gl_shape.anchor_x = w * 0.5
+            self._gl_shape.anchor_y = h * 0.5
+            self._gl_shape.rotation = rotation
     
     # ======================================== GETTERS ========================================
     @property
@@ -634,6 +646,119 @@ class _BorderRenderer:
         self.delete()
         self._build(psr.cx, psr.cy, psr.scale, psr.rotation, psr.border_width, psr.border_color, psr.opacity, psr.z, psr.pipeline)
 
+# ======================================== BORDER HELPERS ========================================
+def _local_contour(shape: Shape) -> np.ndarray:
+    """Génère le contour local d'une shape"""
+    if isinstance(shape, VertexShape):
+        return np.array(shape.local_vertices(), dtype=np.float32)
+ 
+    elif isinstance(shape, Circle):
+        angles = np.linspace(0, 2 * np.pi, _CIRCLE_BORDER_SEGMENTS, endpoint=False)
+        return np.column_stack((np.cos(angles) * shape.radius, np.sin(angles) * shape.radius)).astype(np.float32)
+ 
+    elif isinstance(shape, Ellipse):
+        angles = np.linspace(0, 2 * np.pi, _ELLIPSE_BORDER_SEGMENTS, endpoint=False)
+        return np.column_stack((np.cos(angles) * shape.rx, np.sin(angles) * shape.ry)).astype(np.float32)
+ 
+    elif isinstance(shape, Capsule):
+        return _capsule_local_contour(shape).astype(np.float32)
+
+    elif isinstance(shape, RoundedRect):
+        return _rounded_rect_local_contour(shape).astype(np.float32)
+ 
+    raise TypeError(f"Shape non supportée : {type(shape)}")
+ 
+ 
+def _capsule_local_contour(shape: Capsule) -> np.ndarray:
+    """Contour local d'une capsule alignée sur l'axe X"""
+    half_len = shape.length / 2.0
+    r = shape.radius
+    half = _CAPSULE_BORDER_SEGMENTS // 2
+ 
+    angles_b = np.linspace(-np.pi / 2, np.pi / 2, half + 1)
+    angles_a = np.linspace(np.pi / 2, 3 * np.pi / 2, half + 1)
+ 
+    pts_b = np.column_stack((half_len + r * np.cos(angles_b), r * np.sin(angles_b)))
+    pts_a = np.column_stack((-half_len + r * np.cos(angles_a), r * np.sin(angles_a)))
+ 
+    return np.vstack((pts_b, pts_a))
+
+def _rounded_rect_local_contour(shape: RoundedRect) -> np.ndarray:
+    """Contour local d'un rectangle arrondi centré à l'origine"""
+    r   = shape.radius
+    hx  = shape.inner_width  * 0.5
+    hy  = shape.inner_height * 0.5
+    seg = max(8, int(r / 1.25))
+
+    corners = [
+        (-hx,  hy, np.pi * 0.5,  np.pi),
+        (-hx, -hy, np.pi, np.pi * 1.5),
+        ( hx, -hy, np.pi * 1.5, np.pi * 2.0),
+        ( hx,  hy, 0.0, np.pi * 0.5),
+    ]
+
+    pts = []
+    for cx, cy, a_start, a_end in corners:
+        angles = np.linspace(a_start, a_end, seg + 1, endpoint=True)
+        pts.append(np.column_stack((cx + r * np.cos(angles), cy + r * np.sin(angles))))
+
+    return np.vstack(pts)
+ 
+ 
+def _build_strip(contour: np.ndarray, width: float) -> np.ndarray:
+    """Génère un triangle strip (N+1)*2 points autour d'un contour fermé"""
+    # Topologie
+    n = len(contour)
+    prev_pts = contour[(np.arange(n) - 1) % n]
+    next_pts = contour[(np.arange(n) + 1) % n]
+ 
+    def edge_normals(a: np.ndarray, b: np.ndarray) -> np.ndarray:
+        """Calcul les normales des arrêtes"""
+        d = b - a
+        lengths = np.linalg.norm(d, axis=1, keepdims=True)
+        lengths = np.where(lengths == 0, 1, lengths)
+        d /= lengths
+        return np.column_stack((-d[:, 1], d[:, 0]))
+ 
+    # Normales des arrêtes entrantes et sortantes
+    n1 = edge_normals(prev_pts, contour)
+    n2 = edge_normals(contour, next_pts)
+
+    # Calcul des bissectrices
+    miter = n1 + n2
+    miter_len = np.linalg.norm(miter, axis=1, keepdims=True)
+    miter_len = np.where(miter_len == 0, 1, miter_len)
+    miter /= miter_len
+    
+    # Ajustement de la longueur
+    dot = np.einsum('ij,ij->i', n1, miter).reshape(-1, 1)
+    dot = np.where(np.abs(dot) < 0.01, 0.01, dot)
+    half = width / 2.0
+    miter_dist = np.clip(half / dot, -width * 3, width * 3)
+ 
+    # Calcul des contours offset
+    outer = contour + miter * miter_dist
+    inner = contour - miter * miter_dist
+ 
+    # Construction du strip
+    strip = np.empty(((n + 1) * 2, 2), dtype=np.float32)
+    strip[0::2][:n] = outer
+    strip[1::2][:n] = inner
+
+    # Fermeture du strip
+    strip[-2] = outer[0]
+    strip[-1] = inner[0]
+ 
+    return strip
+ 
+ 
+def _apply_transform(pts: np.ndarray, cx: float, cy: float, scale: float, rotation: float) -> np.ndarray:
+    """Applique translation + scale + rotation à un contour local"""
+    rad = math.radians(rotation)
+    cos_r, sin_r = math.cos(rad), math.sin(rad)
+    rot = np.array([[cos_r, -sin_r], [sin_r, cos_r]], dtype=np.float32)
+    return (pts * scale) @ rot.T + np.array([cx, cy], dtype=np.float32)
+
 # ======================================== CAPSULE RENDERER ========================================
 class _CapsuleRenderer:
     """
@@ -815,96 +940,7 @@ class _CapsuleRenderer:
             self._rect.delete()
             self._rect = pyglet.shapes.Polygon(*rect_pts, color=self._color, batch=self._batch, group=self._group)
             self._rect.opacity = self._opacity
- 
-# ======================================== BORDER HELPERS ========================================
-def _local_contour(shape: Shape) -> np.ndarray:
-    """Génère le contour local d'une shape"""
-    if isinstance(shape, VertexShape):
-        return np.array(shape.local_vertices(), dtype=np.float32)
- 
-    elif isinstance(shape, Circle):
-        angles = np.linspace(0, 2 * np.pi, _CIRCLE_BORDER_SEGMENTS, endpoint=False)
-        return np.column_stack((np.cos(angles) * shape.radius, np.sin(angles) * shape.radius)).astype(np.float32)
- 
-    elif isinstance(shape, Ellipse):
-        angles = np.linspace(0, 2 * np.pi, _ELLIPSE_BORDER_SEGMENTS, endpoint=False)
-        return np.column_stack((np.cos(angles) * shape.rx, np.sin(angles) * shape.ry)).astype(np.float32)
- 
-    elif isinstance(shape, Capsule):
-        return _capsule_local_contour(shape).astype(np.float32)
- 
-    raise TypeError(f"Shape non supportée : {type(shape)}")
- 
- 
-def _capsule_local_contour(shape: Capsule) -> np.ndarray:
-    """Contour local d'une capsule alignée sur l'axe X"""
-    half_len = shape.length / 2.0
-    r = shape.radius
-    half = _CAPSULE_BORDER_SEGMENTS // 2
- 
-    angles_b = np.linspace(-np.pi / 2, np.pi / 2, half + 1)
-    angles_a = np.linspace(np.pi / 2, 3 * np.pi / 2, half + 1)
- 
-    pts_b = np.column_stack((half_len + r * np.cos(angles_b), r * np.sin(angles_b)))
-    pts_a = np.column_stack((-half_len + r * np.cos(angles_a), r * np.sin(angles_a)))
- 
-    return np.vstack((pts_b, pts_a))
- 
- 
-def _build_strip(contour: np.ndarray, width: float) -> np.ndarray:
-    """Génère un triangle strip (N+1)*2 points autour d'un contour fermé"""
-    # Topologie
-    n = len(contour)
-    prev_pts = contour[(np.arange(n) - 1) % n]
-    next_pts = contour[(np.arange(n) + 1) % n]
- 
-    def edge_normals(a: np.ndarray, b: np.ndarray) -> np.ndarray:
-        """Calcul les normales des arrêtes"""
-        d = b - a
-        lengths = np.linalg.norm(d, axis=1, keepdims=True)
-        lengths = np.where(lengths == 0, 1, lengths)
-        d /= lengths
-        return np.column_stack((-d[:, 1], d[:, 0]))
- 
-    # Normales des arrêtes entrantes et sortantes
-    n1 = edge_normals(prev_pts, contour)
-    n2 = edge_normals(contour, next_pts)
 
-    # Calcul des bissectrices
-    miter = n1 + n2
-    miter_len = np.linalg.norm(miter, axis=1, keepdims=True)
-    miter_len = np.where(miter_len == 0, 1, miter_len)
-    miter /= miter_len
-    
-    # Ajustement de la longueur
-    dot = np.einsum('ij,ij->i', n1, miter).reshape(-1, 1)
-    dot = np.where(np.abs(dot) < 0.01, 0.01, dot)
-    half = width / 2.0
-    miter_dist = np.clip(half / dot, -width * 3, width * 3)
- 
-    # Calcul des contours offset
-    outer = contour + miter * miter_dist
-    inner = contour - miter * miter_dist
- 
-    # Construction du strip
-    strip = np.empty(((n + 1) * 2, 2), dtype=np.float32)
-    strip[0::2][:n] = outer
-    strip[1::2][:n] = inner
-
-    # Fermeture du strip
-    strip[-2] = outer[0]
-    strip[-1] = inner[0]
- 
-    return strip
- 
- 
-def _apply_transform(pts: np.ndarray, cx: float, cy: float, scale: float, rotation: float) -> np.ndarray:
-    """Applique translation + scale + rotation à un contour local"""
-    rad = math.radians(rotation)
-    cos_r, sin_r = math.cos(rad), math.sin(rad)
-    rot = np.array([[cos_r, -sin_r], [sin_r, cos_r]], dtype=np.float32)
-    return (pts * scale) @ rot.T + np.array([cx, cy], dtype=np.float32)
- 
 # ======================================== CAPSULE HELPERS ========================================
 def _capsule_centers(cx: float, cy: float, spine: float, rotation: float) -> tuple[float, float, float, float]:
     """Retourne les centres (ax, ay, bx, by) des deux demi-sphères"""

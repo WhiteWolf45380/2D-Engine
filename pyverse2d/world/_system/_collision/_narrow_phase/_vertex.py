@@ -10,8 +10,7 @@ from .....math import Vector
 from .....abc import VertexShape
 from .._registry import (
     Contact,
-    closest_pt_on_seg, closest_pt_seg_to_seg,
-    closest_pt_on_ellipse, point_in_convex_poly,
+    closest_pt_on_seg, closest_pt_seg_to_seg, point_in_convex_poly, rounded_rect_contour,
 )
 
 # ======================================== HELPERS ========================================
@@ -251,3 +250,8 @@ def capsule_vs_pts(ax: float, ay: float, bx: float, by: float, r: float, pts: ND
         best_nx, best_ny = -best_nx, -best_ny
 
     return Contact(Vector._make(best_nx, best_ny), r - min_dist)
+
+# ======================================== ROUNDED RECT VS POLYGONE ========================================
+def rounded_rect_vs_pts(cx: float, cy: float, hx: float, hy: float, r: float, rotation: float, corners, pts: NDArray[np.float32]) -> Contact | None:
+    """RoundedRect vs polygone convexe"""
+    return sat(rounded_rect_contour(cx, cy, hx, hy, r, rotation, corners), pts)

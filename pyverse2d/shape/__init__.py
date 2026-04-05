@@ -11,6 +11,7 @@ from ._regular_polygon import (
     RegularHexagon,
     RegularOctagon,
 )
+from ._rounded_rect import RoundedRect
 
 # ======================================== EXPORTS ========================================
 __all__ = [
@@ -24,4 +25,5 @@ __all__ = [
     "RegularPentagon",
     "RegularHexagon",
     "RegularOctagon",
+    "RoundedRect",
 ]
