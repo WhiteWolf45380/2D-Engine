@@ -525,7 +525,7 @@ class _BorderRenderer:
         self._visible: bool = True
         self._stored_colors: list = None
         self._local_contour: np.ndarray = _local_contour(shape)
-        self._build(cx, cy, scale, rotation, width, color, opacity, z, pipeline)
+        self._build(cx, cy, scale, rotation, width, align, color, opacity, z, pipeline)
 
     # ======================================== BUILD ========================================
     def _build(
