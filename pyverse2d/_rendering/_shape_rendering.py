@@ -489,6 +489,8 @@ class _BorderRenderer:
     """
     __slots__ = ("_vlist", "_n", "_width", "_batch", "_group", "_local_contour", "_visible")
 
+    _DEFAULT_SHADER = pyglet.graphics.get_default_shader()
+
     def __init__(
         self,
         shape: Shape,
@@ -556,7 +558,14 @@ class _BorderRenderer:
         a = int(a * opacity)
 
         # Arrêtes
-        self._vlist = self._batch.add(self._n, pyglet.gl.GL_TRIANGLE_STRIP, self._group, ('v2f', flat),('c4B', (r, g, b, a) * self._n))
+        self._vlist = self._DEFAULT_SHADER.vertex_list(
+            self._n,
+            pyglet.gl.GL_TRIANGLE_STRIP,
+            self._batch,
+            self._group,
+            position=('f', flat),
+            colors=('Bn', (r, g, b, a) * self._n),
+        )
 
     def _world_strip(self, cx: float, cy: float, scale: float, rotation: float, width: float) -> np.ndarray:
         """Génère le contour monde + strip"""
@@ -566,7 +575,7 @@ class _BorderRenderer:
     def _refresh_vertices(self, psr: PygletShapeRenderer) -> None:
         """Réactualise les arrêtes"""
         strip = self._world_strip(psr.cx, psr.cy, psr.scale, psr.rotation, psr.border_width)
-        self._vlist.vertices[:] = strip.flatten().tolist()
+        self._vlist.position[:] = strip.flatten().tolist()
     
     # ======================================== GETTERS ========================================
     @property
@@ -582,7 +591,7 @@ class _BorderRenderer:
             return
         self._visible = value
         target_batch = self._batch if value else None
-        self._vlist.migrate(target_batch, pyglet.gl.GL_TRIANGLE_STRIP, self._group, ('v2f', 'c4B'))
+        self._vlist.migrate(target_batch, pyglet.gl.GL_TRIANGLE_STRIP, self._group, self._DEFAULT_SHADER)
 
     # ======================================== LIFE CYCLE ========================================
     def update(self, psr: PygletShapeRenderer, changes: list[str]) -> None:
@@ -648,7 +657,7 @@ class _BorderRenderer:
 def _local_contour(shape: Shape) -> np.ndarray:
     """Génère le contour local d'une shape"""
     if isinstance(shape, VertexShape):
-        return np.array(shape.local_vertices(), dtype=np.float32)
+        return np.array(shape.vertices, dtype=np.float32)
  
     elif isinstance(shape, Circle):
         angles = np.linspace(0, 2 * np.pi, _CIRCLE_BORDER_SEGMENTS, endpoint=False)
