@@ -255,7 +255,7 @@ class PygletShapeRenderer:
         recompute_center: bool = False
 
         # Actualisation des paramètres
-        changes: list[str] = set()
+        changes: set[str] = set()
         for key, value in kwargs.items():
             current = getattr(self, f"_{key}", _UNSET)
             if current is _UNSET or value == current:
@@ -505,7 +505,7 @@ class _BorderRenderer:
         self._vlist = None
         self._n: int = 0
         self._width: int = width
-        self._program: pyglet.graphics.shader.ShaderProgram = pyglet.graphics.get_default_shader()
+        self._program: pyglet.graphics.shader.ShaderProgram = pyglet.shapes.get_default_shader()
         self._batch: Batch = None
         self._group: Group = None
         self._visible: bool = True

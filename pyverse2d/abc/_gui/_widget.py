@@ -566,7 +566,6 @@ class Widget(ABC):
         context.origin += self._position
         context.opacity *= self._opacity
 
-
 # ======================================== WRAPPER ========================================
 class WidgetWrapper:
     """Wrapper des composants UI"""
