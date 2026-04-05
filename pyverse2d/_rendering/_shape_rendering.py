@@ -10,6 +10,7 @@ import pyglet
 import pyglet.shapes
 import pyglet.gl
 from pyglet.graphics import Batch, Group
+from pyglet.graphics.shader import ShaderProgram
 
 from typing import Callable, TypeAlias, Literal
 import math
@@ -519,7 +520,7 @@ class _BorderRenderer:
         self._n: int = 0
         self._width: int = width
         self._align: BorderAlign = align
-        self._program: pyglet.graphics.shader.ShaderProgram = pyglet.shapes.get_default_shader()
+        self._program: ShaderProgram = pyglet.shapes.get_default_shader()
         self._batch: Batch = None
         self._group: Group = None
         self._visible: bool = True
@@ -560,7 +561,7 @@ class _BorderRenderer:
 
         # Paramètres
         self._batch = pipeline.batch
-        self._group = pipeline.get_group(z=z)
+        self._group = pyglet.shapes._ShapeGroup(pyglet.gl.GL_SRC_ALPHA, pyglet.gl.GL_ONE_MINUS_SRC_ALPHA, self._program, pipeline.get_group(z=z))
         self._width = width
 
         # Meshes
