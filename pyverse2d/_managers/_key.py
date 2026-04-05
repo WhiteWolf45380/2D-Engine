@@ -182,8 +182,12 @@ class KeyManager(Manager):
         return self._pressed.get(key, False) or key in self._step
 
     # ======================================== LIFE CYCLE ========================================
+    def update(self) -> None:
+        """Actualisation"""
+        pass
+
     def flush(self) -> None:
-        """Consolide l'état des touches"""
+        """Nettoyage"""
         for key in self._step:
             if key not in self._released_this_frame:
                 self._pressed[key] = True
