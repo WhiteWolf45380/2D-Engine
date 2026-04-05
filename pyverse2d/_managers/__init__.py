@@ -5,7 +5,7 @@ from ._event import EventManager
 from ._key import KeyManager
 from ._mouse import MouseManager
 from ._inputs import InputsManager
-from ._ui import UIManager
+from ._ui import UiManager
 
 # ======================================== EXPORTS ========================================
 __all__ = [
@@ -15,5 +15,5 @@ __all__ = [
     "KeyManager",
     "MouseManager",
     "InputsManager",
-    "UIManager"
+    "UiManager"
 ]

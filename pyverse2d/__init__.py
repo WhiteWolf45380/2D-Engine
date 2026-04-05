@@ -14,7 +14,7 @@ _window: Window | None = None
 _pipeline: Pipeline | None = None
 
 # ======================================== MANAGERS ========================================
-from ._managers import ContextManager, TimeManager, EventManager, KeyManager, MouseManager, InputsManager, UIManager
+from ._managers import ContextManager, TimeManager, EventManager, KeyManager, MouseManager, InputsManager, UiManager
 
 _context_manager: ContextManager = ContextManager()
 
@@ -39,7 +39,7 @@ inputs: InputsManager = InputsManager(_context_manager)
 _context_manager.inputs = inputs
 
 # Ui
-ui: UIManager = UIManager(_context_manager)
+ui: UiManager = UiManager(_context_manager)
 _context_manager.ui = ui
 
 # ======================================== NODES ========================================
@@ -100,7 +100,6 @@ __all__ = [
     "Screen",
     "Window",
 
-    "_context_manager",
     "time",
     "event",
     "key",

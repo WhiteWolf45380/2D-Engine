@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from ..abc import Widget
 
 # ======================================== GESTIONNAIRE ========================================
-class UIManager(Manager):
+class UiManager(Manager):
     """Gestionnaire de l'ui"""
     __slots__ = (
         "_ctx",
