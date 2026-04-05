@@ -63,5 +63,9 @@ class UIManager(Manager):
     # ======================================== LIFE CYCLE ========================================
     def update(self, dt: float) -> None:
         """Actualisation"""
+        pass
+
+    def flush(self) -> None:
+        """Nettoyage"""
         self._hovered = None
         self._focused = None
