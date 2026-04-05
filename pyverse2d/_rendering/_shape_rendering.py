@@ -19,9 +19,10 @@ import numpy as np
 _UNSET = object()   # élément non défini
 _CENTER_DEPS = frozenset({"x", "y", "anchor_x", "anchor_y"})    # paramètres influençant le centre
 
-_CIRCLE_BORDER_SEGMENTS = 64    # précision des cercles
-_ELLIPSE_BORDER_SEGMENTS = 64   # précision des ellipses
-_CAPSULE_BORDER_SEGMENTS = 32   # précision des capsules
+_CIRCLE_BORDER_SEGMENTS = 64        # précision des cercles
+_ELLIPSE_BORDER_SEGMENTS = 64       # précision des ellipses
+_CAPSULE_BORDER_SEGMENTS = 32       # précision des capsules
+_ROUNDED_RECT_BORDER_SEGMENTS = 16  # Précision des rectangles arrondis
 
 # ======================================== PUBLIC ========================================
 class PygletShapeRenderer:
@@ -387,10 +388,7 @@ class _FillRenderer:
             mid_y = (tl[1] + br[1]) * 0.5
             w = shape.width  * scale
             h = shape.height * scale
-            self._gl_shape = pyglet.shapes.RoundedRectangle(mid_x, mid_y, w, h, r_, color=(r, g, b, a), batch=pipeline.batch, group=pipeline.get_group(z=z))
-            self._gl_shape.anchor_x = w * 0.5
-            self._gl_shape.anchor_y = h * 0.5
-            self._gl_shape.rotation = rotation
+            self._gl_shape = _RoundedRectRenderer(mid_x, mid_y, w, h, r_, rotation=rotation, color=(r, g, b, a), batch=pipeline.batch, group=pipeline.get_group(z=z))
     
     # ======================================== GETTERS ========================================
     @property
@@ -688,21 +686,26 @@ def _rounded_rect_local_contour(shape: RoundedRect) -> np.ndarray:
     r   = shape.radius
     hx  = shape.inner_width  * 0.5
     hy  = shape.inner_height * 0.5
-    seg = max(8, int(r / 1.25))
 
+    seg = max(_ROUNDED_RECT_BORDER_SEGMENTS, int(r * 0.75))
     corners = [
-        (-hx,  hy, np.pi * 0.5,  np.pi),
+        ( hx,  hy, 0.0, np.pi * 0.5),
+        (-hx,  hy, np.pi * 0.5, np.pi),
         (-hx, -hy, np.pi, np.pi * 1.5),
         ( hx, -hy, np.pi * 1.5, np.pi * 2.0),
-        ( hx,  hy, 0.0, np.pi * 0.5),
     ]
 
     pts = []
     for cx, cy, a_start, a_end in corners:
-        angles = np.linspace(a_start, a_end, seg + 1, endpoint=True)
-        pts.append(np.column_stack((cx + r * np.cos(angles), cy + r * np.sin(angles))))
+        angles = np.linspace(a_start, a_end, seg, endpoint=False)
+        arc = np.column_stack((
+            cx + r * np.cos(angles),
+            cy + r * np.sin(angles)
+        ))
+        pts.append(arc)
 
-    return np.vstack(pts)
+    contour = np.vstack(pts)
+    return contour.astype(np.float32)
  
  
 def _build_strip(contour: np.ndarray, width: float) -> np.ndarray:
@@ -754,7 +757,7 @@ def _build_strip(contour: np.ndarray, width: float) -> np.ndarray:
  
 def _apply_transform(pts: np.ndarray, cx: float, cy: float, scale: float, rotation: float) -> np.ndarray:
     """Applique translation + scale + rotation à un contour local"""
-    rad = math.radians(rotation)
+    rad = math.radians(-rotation)
     cos_r, sin_r = math.cos(rad), math.sin(rad)
     rot = np.array([[cos_r, -sin_r], [sin_r, cos_r]], dtype=np.float32)
     return (pts * scale) @ rot.T + np.array([cx, cy], dtype=np.float32)
@@ -961,3 +964,178 @@ def _capsule_rect_vertices(ax: float, ay: float, bx: float, by: float, r: float)
     nx = -dy / length * r
     ny = dx / length * r
     return [(ax + nx, ay + ny), (ax - nx, ay - ny), (bx - nx, by - ny), (bx + nx, by + ny)]
+
+# ======================================== ROUNDED RECT RENDERER ========================================
+class _RoundedRectRenderer:
+    """
+    Rectangle arrondi pyglet wrapper (anchor-free, centré sur (x, y))
+
+    Args:
+        x(float): position horizontale du centre
+        y(float): position verticale du centre
+        width(float): largeur
+        height(float): hauteur
+        radius(float): rayon des coins
+        rotation(float, optional): angle de rotation en degrés (sens horaire)
+        color(tuple[int, ...], optional): couleur RGBA
+        batch(Batch, optional): batch pyglet
+        group(Group, optional): groupe pyglet
+    """
+    __slots__ = ("_x", "_y", "_w", "_h", "_r", "_rotation", "_color", "_opacity", "_batch", "_group", "_shape")
+
+    def __init__(
+        self,
+        x: float,
+        y: float,
+        width: float,
+        height: float,
+        radius: float,
+        rotation: float = 0.0,
+        color: tuple[int, ...] = (255, 255, 255, 255),
+        batch: pyglet.graphics.Batch = None,
+        group: pyglet.graphics.Group = None,
+    ):
+        self._x = x
+        self._y = y
+        self._w = width
+        self._h = height
+        self._r = radius
+        self._rotation = rotation
+        self._color = color
+        self._opacity = 255
+        self._batch = batch
+        self._group = group
+        self._shape = None
+
+        self._rebuild()
+
+    # ======================================== GETTERS ========================================
+    @property
+    def position(self) -> tuple[float, float]:
+        """Renvoie la position centrale"""
+        return self._x, self._y
+
+    @property
+    def x(self) -> float:
+        """Renvoie la position horizontale"""
+        return self._x
+
+    @property
+    def y(self) -> float:
+        """Renvoie la position verticale"""
+        return self._y
+
+    @property
+    def rotation(self) -> float:
+        """Renvoie l'angle de rotation en degrés"""
+        return self._rotation
+
+    @property
+    def color(self) -> tuple:
+        """Renvoie la couleur"""
+        return self._shape.color
+
+    @property
+    def opacity(self) -> int:
+        """Renvoie l'opacité"""
+        return self._opacity
+
+    @property
+    def batch(self) -> Batch:
+        """Renvoie le batch pyglet"""
+        return self._shape.batch
+
+    @property
+    def group(self) -> Group:
+        """Renvoie le groupe pyglet"""
+        return self._shape.group
+
+    @property
+    def visible(self) -> bool:
+        """Vérifie la visibilité"""
+        return self._shape.visible
+
+    # ======================================== SETTERS ========================================
+    @position.setter
+    def position(self, value: tuple[float, float]) -> None:
+        """Fixe la position"""
+        self._x, self._y = value
+        self._rebuild()
+
+    @x.setter
+    def x(self, value: float) -> None:
+        """Fixe la position horizontale"""
+        self._x = value
+        self._rebuild()
+
+    @y.setter
+    def y(self, value: float) -> None:
+        """Fixe la position verticale"""
+        self._y = value
+        self._rebuild()
+
+    @rotation.setter
+    def rotation(self, value: float) -> None:
+        """Fixe l'angle de rotation"""
+        self._rotation = value
+        self._shape.rotation = value
+
+    @color.setter
+    def color(self, value: tuple) -> None:
+        """Fixe la couleur"""
+        self._color = value
+        self._shape.color = value
+
+    @opacity.setter
+    def opacity(self, value: int) -> None:
+        """Fixe l'opacité"""
+        self._opacity = value
+        self._shape.opacity = value
+
+    @batch.setter
+    def batch(self, value: Batch) -> None:
+        """Fixe le batch pyglet"""
+        self._batch = value
+        self._shape.batch = value
+
+    @group.setter
+    def group(self, value: Group) -> None:
+        """Fixe le groupe pyglet"""
+        self._group = value
+        self._shape.group = value
+
+    @visible.setter
+    def visible(self, value: bool) -> None:
+        """Fixe la visibilité"""
+        self._shape.visible = value
+
+    # ======================================== LIFE CYCLE ========================================
+    def delete(self) -> None:
+        """Libère les ressources pyglet"""
+        if self._shape:
+            self._shape.delete()
+            self._shape = None
+
+    # ======================================== HELPERS ========================================
+    def _rebuild(self) -> None:
+        """Reconstruit le shape pyglet à partir de l'état courant"""
+        if self._shape is not None:
+            self._shape.delete()
+
+        x = self._x - self._w * 0.5
+        y = self._y - self._h * 0.5
+
+        self._shape = pyglet.shapes.RoundedRectangle(
+            x,
+            y,
+            self._w,
+            self._h,
+            self._r,
+            color=self._color,
+            batch=self._batch,
+            group=self._group
+        )
+
+        # rotation pyglet (autour du coin bas gauche)
+        self._shape.rotation = self._rotation
+        self._shape.opacity = self._opacity
