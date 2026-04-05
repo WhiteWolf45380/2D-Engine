@@ -56,7 +56,7 @@ class Border(Widget):
 
         # Affichage
         self._width: int = expect(width, int)
-        self._align: BorderAlign = expect(BorderAlign, str)
+        self._align: BorderAlign = expect(align, str)
         self._color: Color = Color(color)
 
     # ======================================== GETTERS ========================================
