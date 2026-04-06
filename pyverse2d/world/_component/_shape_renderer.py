@@ -3,12 +3,10 @@ from ..._internal import expect, clamped
 from ...abc import Component, Shape
 from ...asset import Color
 from ...math import Vector
+from ...typing import BorderAlign
 
-from typing import Iterator, TypeAlias, Literal
+from typing import Iterator
 from numbers import Real
-
-# ======================================== ALIAS ========================================
-BorderAlign: TypeAlias = Literal["in", "center", "out"]
 
 # ======================================== COMPONENT ========================================
 class ShapeRenderer(Component):

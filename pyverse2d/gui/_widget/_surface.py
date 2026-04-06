@@ -12,7 +12,7 @@ from numbers import Real
 # ======================================== WIDGET ========================================
 class Surface(Widget):
     """
-    Composant UI simple: Surface
+    Composant GUI simple: Surface
 
     Args:
         shape(Shape): forme de la surface

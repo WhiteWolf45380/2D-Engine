@@ -5,7 +5,7 @@ from ._version import __version__
 import pyglet
 
 # ======================================== PRIMITIVES ========================================
-from . import abc, math, shape, asset
+from . import typing, abc, math, shape, asset
 
 # ======================================== STATE ========================================
 from ._rendering import Screen, Window, Pipeline
@@ -109,6 +109,7 @@ __all__ = [
     "inputs",
     "ui",
 
+    "typing",
     "abc",
     "math",
     "shape",

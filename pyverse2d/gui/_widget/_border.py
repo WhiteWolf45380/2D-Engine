@@ -3,20 +3,17 @@ from __future__ import annotations
 
 from ..._internal import expect, positive, not_null
 from ..._rendering import Pipeline, RenderContext, PygletShapeRenderer
+from ...typing import BorderAlign
 from ...asset import Color
 from ...abc import Widget, Shape
 from ...math import Point
 
 from numbers import Real
-from typing import TypeAlias, Literal
-
-# ======================================== ALIAS ========================================
-BorderAlign: TypeAlias = Literal["in", "center", "out"]
 
 # ======================================== WIDGET ========================================
 class Border(Widget):
     """
-    Composant UI simple: Bordure
+    Composant GUI simple: Bordure
 
     Args:
         shape(Shape): forme de la bordure

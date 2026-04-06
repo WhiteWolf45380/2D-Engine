@@ -1,10 +1,12 @@
 # ======================================== IMPORTS ========================================
 from __future__ import annotations
 
-from ._pipeline import Pipeline
+from ..typing import BorderAlign
 from ..abc import Shape, VertexShape
 from ..shape import Capsule, Circle, Ellipse, RoundedRect
 from ..asset import Color
+
+from ._pipeline import Pipeline
 
 import pyglet
 import pyglet.shapes
@@ -12,7 +14,7 @@ import pyglet.gl
 from pyglet.graphics import Batch, Group
 from pyglet.graphics.shader import ShaderProgram
 
-from typing import Callable, TypeAlias, Literal
+from typing import Callable
 import math
 import numpy as np
 
@@ -24,10 +26,6 @@ _CIRCLE_BORDER_SEGMENTS = 64        # précision des cercles
 _ELLIPSE_BORDER_SEGMENTS = 64       # précision des ellipses
 _CAPSULE_BORDER_SEGMENTS = 32       # précision des capsules
 _ROUNDED_RECT_BORDER_SEGMENTS = 16  # Précision des rectangles arrondis
-
-
-# ======================================== ALIAS ========================================
-BorderAlign: TypeAlias = Literal["in", "center", "out"]
 
 # ======================================== PUBLIC ========================================
 class PygletShapeRenderer:

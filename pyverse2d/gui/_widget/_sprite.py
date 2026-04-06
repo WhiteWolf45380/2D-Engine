@@ -10,7 +10,7 @@ from numbers import Real
 
 # ======================================== WIDGET ========================================
 class Sprite(Widget):
-    """Composant UI simple: Image
+    """Composant GUI simple: Image
 
     Args:
         image: asset ``Image`` à rendre
