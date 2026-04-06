@@ -502,6 +502,9 @@ class _BorderRenderer:
     """
     __slots__ = ("_vlist", "_n", "_width", "_align", "_program", "_batch", "_group", "_local_contour", "_visible", "_stored_colors")
 
+    _SHAPE_PROGRAM = pyglet.shapes.get_default_shader()
+    _SHAPE_GROUP = pyglet.graphics.ShaderGroup(_SHAPE_PROGRAM)
+
     def __init__(
         self,
         shape: Shape,
@@ -561,7 +564,7 @@ class _BorderRenderer:
 
         # Paramètres
         self._batch = pipeline.batch
-        self._group =_ShapeGroup(self._program, pipeline.get_group(z=z))
+        self._group = pyglet.graphics.Group(order=z, parent=self._SHAPE_GROUP)
         self._width = width
 
         # Meshes
@@ -807,38 +810,6 @@ def _apply_transform(pts: np.ndarray, cx: float, cy: float, scale: float, rotati
     cos_r, sin_r = math.cos(rad), math.sin(rad)
     rot = np.array([[cos_r, -sin_r], [sin_r, cos_r]], dtype=np.float32)
     return (pts * scale) @ rot.T + np.array([cx, cy], dtype=np.float32)
-
-# ======================================== RENDER GROUP ========================================
-class _ShapeGroup(pyglet.graphics.Group):
-    """Groupe de vertices"""
-    __slots__ = ("program", "_initialized")
-
-    _cache = {}
-
-    def __new__(cls, program, parent=None):
-        key = (id(program), id(parent))
-        instance = cls._cache.get(key)
-
-        if instance is None:
-            instance = super().__new__(cls)
-            cls._cache[key] = instance
-
-        return instance
-
-    def __init__(self, program, parent=None):
-        if getattr(self, "_initialized", False):
-            return
-        super().__init__(parent)
-        self.program = program
-        self._initialized = True
-
-    def set_state(self):
-        pyglet.gl.glEnable(pyglet.gl.GL_BLEND)
-        pyglet.gl.glBlendFunc(pyglet.gl.GL_SRC_ALPHA, pyglet.gl.GL_ONE_MINUS_SRC_ALPHA)
-        self.program.use()
-
-    def unset_state(self):
-        pass
 
 # ======================================== CAPSULE RENDERER ========================================
 class _CapsuleRenderer:
