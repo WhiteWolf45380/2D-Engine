@@ -17,7 +17,7 @@ import math
 import numpy as np
 
 # ======================================== CONSTANTS ========================================
-_UNSET = object()   # élément non défini
+_UNSET = object()                                               # élément non défini
 _CENTER_DEPS = frozenset({"x", "y", "anchor_x", "anchor_y"})    # paramètres influençant le centre
 
 _CIRCLE_BORDER_SEGMENTS = 64        # précision des cercles
@@ -25,6 +25,8 @@ _ELLIPSE_BORDER_SEGMENTS = 64       # précision des ellipses
 _CAPSULE_BORDER_SEGMENTS = 32       # précision des capsules
 _ROUNDED_RECT_BORDER_SEGMENTS = 16  # Précision des rectangles arrondis
 
+
+# ======================================== ALIAS ========================================
 BorderAlign: TypeAlias = Literal["in", "center", "out"]
 
 # ======================================== PUBLIC ========================================
@@ -718,31 +720,30 @@ def _local_contour(shape: Shape) -> np.ndarray:
  
     raise TypeError(f"Shape non supportée : {type(shape)}")
  
- 
 def _capsule_local_contour(shape: Capsule) -> np.ndarray:
-    """Contour local d'une capsule alignée sur l'axe X"""
-    half_len = shape.length / 2.0
+    """Contour d'une capsule"""
+    half_len = shape.spine / 2.0
     r = shape.radius
     half = _CAPSULE_BORDER_SEGMENTS // 2
- 
-    angles_b = np.linspace(-np.pi / 2, np.pi / 2, half + 1)
-    angles_a = np.linspace(np.pi / 2, 3 * np.pi / 2, half + 1)
- 
-    pts_b = np.column_stack((half_len + r * np.cos(angles_b), r * np.sin(angles_b)))
-    pts_a = np.column_stack((-half_len + r * np.cos(angles_a), r * np.sin(angles_a)))
- 
+
+    angles_b = np.linspace(0, np.pi, half + 1)
+    angles_a = np.linspace(np.pi, 2 * np.pi, half + 1)
+
+    pts_b = np.column_stack((r * np.cos(angles_b), half_len + r * np.sin(angles_b)))
+    pts_a = np.column_stack((r * np.cos(angles_a), -half_len + r * np.sin(angles_a)))
+
     return np.vstack((pts_b, pts_a))
 
 def _rounded_rect_local_contour(shape: RoundedRect) -> np.ndarray:
-    """Contour local d'un rectangle arrondi centré à l'origine"""
+    """Contour local d'un rectangle arrondi"""
     r = shape.radius
     hx = shape.inner_width  * 0.5
     hy = shape.inner_height * 0.5
 
     seg = max(_ROUNDED_RECT_BORDER_SEGMENTS, int(r * 0.75))
     corners = [
-        ( hx,  hy, 0.0, np.pi * 0.5),
-        (-hx,  hy, np.pi * 0.5, np.pi),
+        ( hx, hy, 0.0, np.pi * 0.5),
+        (-hx, hy, np.pi * 0.5, np.pi),
         (-hx, -hy, np.pi, np.pi * 1.5),
         ( hx, -hy, np.pi * 1.5, np.pi * 2.0),
     ]
@@ -1001,10 +1002,7 @@ def _capsule_centers(cx: float, cy: float, spine: float, rotation: float) -> tup
     """Retourne les centres (ax, ay, bx, by) des deux demi-sphères"""
     rad = math.radians(-rotation)
     half = spine * 0.5
-    return (
-        cx - math.sin(rad) * half, cy + math.cos(rad) * half,
-        cx + math.sin(rad) * half, cy - math.cos(rad) * half,
-    )
+    return (cx - math.sin(rad) * half, cy + math.cos(rad) * half, cx + math.sin(rad) * half, cy - math.cos(rad) * half,)
  
 def _capsule_rect_vertices(ax: float, ay: float, bx: float, by: float, r: float) -> list[tuple[float, float]]:
     """Retourne les 4 coins du rectangle central de la capsule"""
@@ -1191,16 +1189,6 @@ class _RoundedRectRenderer:
         x = self._x + rx
         y = self._y + ry
 
-        self._shape = pyglet.shapes.RoundedRectangle(
-            x,
-            y,
-            self._w,
-            self._h,
-            self._r,
-            color=self._color,
-            batch=self._batch,
-            group=self._group
-        )
-
+        self._shape = pyglet.shapes.RoundedRectangle(x, y, self._w, self._h, self._r, color=self._color, batch=self._batch, group=self._group)
         self._shape.rotation = self._rotation
         self._shape.opacity = self._opacity
