@@ -4,12 +4,13 @@ from ._world import World
 
 from ._component import (
     Transform,
-    ShapeRenderer,
-    SpriteRenderer,
-    TextRenderer,
+    Follow,
     Collider,
     RigidBody,
     GroundSensor,
+    ShapeRenderer,
+    SpriteRenderer,
+    TextRenderer,
     Animator,
 )
 
@@ -27,12 +28,13 @@ __all__ = [
     "World",
 
     "Transform",
-    "ShapeRenderer",
-    "SpriteRenderer",
-    "TextRenderer",
+    "Follow",
     "Collider",
     "RigidBody",
     "GroundSensor",
+    "ShapeRenderer",
+    "SpriteRenderer",
+    "TextRenderer",
     "Animator",
 
     "PhysicsSystem",

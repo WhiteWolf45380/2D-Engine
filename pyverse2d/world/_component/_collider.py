@@ -9,8 +9,7 @@ from typing import Iterator
 
 # ======================================== COMPONENT ========================================
 class Collider(Component):
-    """
-    Composant gérant la hitbox
+    """Composant gérant la hitbox
 
     Args:
         shape(Shape): forme de la hitbox

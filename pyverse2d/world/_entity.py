@@ -13,12 +13,13 @@ from typing import Type
 # ======================================== CONSTANTS ========================================
 _COMPONENTS: dict[Component, str] = {
     Transform: "_transform",
-    ShapeRenderer: "_shape_renderer",
-    SpriteRenderer: "_sprite_renderer",
-    TextRenderer: "_text_renderer",
+    Follow: "_follow",
     Collider: "_collider",
     RigidBody: "_rigid_body",
     GroundSensor: "_ground_sensor",
+    ShapeRenderer: "_shape_renderer",
+    SpriteRenderer: "_sprite_renderer",
+    TextRenderer: "_text_renderer",
     Animator: "_animator",
 }
 
@@ -206,25 +207,32 @@ class Entity:
         setattr(self, _COMPONENTS[T], component)
         return self
     
-    def remove(self, component_type: Type[Component]) -> Entity:
+    def remove(self, component_type: Type[Component] | str) -> Entity:
         """
         Supprime un composant de l'entité
 
         Args:
             component_type(Type[Component]): type du composant
         """
-        if component_type not in self.get_all_types():
-            raise ValueError(f"Entity has no {component_type} component")
-        setattr(self, _COMPONENTS[component_type], None)
+        if isinstance(component_type, str):
+            if component_type not in _COMPONENTS:
+                raise ValueError(f"Entity has no {component_type} component")
+            setattr(self, component_type, None)
+        else:
+            if component_type not in self.get_all_types():
+                raise ValueError(f"Entity has no {component_type} component")
+            setattr(self, _COMPONENTS[component_type], None)
         return self
     
-    def get(self, component_type: Type[Component]) -> Component:
+    def get(self, component_type: Type[Component] | str) -> Component:
         """
         Renvoie un composant de l'entité
 
         Args:
             component_type(Type[Component]): type du composant
         """
+        if isinstance(component_type, str):
+            return getattr(self, component_type, None)
         return getattr(self, _COMPONENTS[component_type], None)
     
     def get_all(self) -> tuple[Component, ...]:
@@ -235,7 +243,7 @@ class Entity:
         """Renvoie l'ensemble des types de composant possédés"""
         return tuple(T for T in _COMPONENTS if getattr(self, _COMPONENTS[T]) is not None)
     
-    def has(self, component_type: Type[Component]) -> bool:
+    def has(self, component_type: Type[Component] | str) -> bool:
         """
         Vérifie la possession d'un composant
 

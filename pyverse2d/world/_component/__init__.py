@@ -1,21 +1,27 @@
 # ======================================== IMPORTS ========================================
-from ._animator import Animator
+from ._transform import Transform
+from ._follow import Follow
+
 from ._collider import Collider
-from ._ground_sensor import GroundSensor
 from ._rigid_body import RigidBody
+from ._ground_sensor import GroundSensor
+
 from ._shape_renderer import ShapeRenderer
 from ._sprite_renderer import SpriteRenderer
 from ._text_renderer import TextRenderer
-from ._transform import Transform
+from ._animator import Animator
 
 # ======================================== EXPORTS ========================================
 __all__ = [
-    "Animator",
+    "Transform",
+    "Follow",
+    
     "Collider",
-    "GroundSensor",
     "RigidBody",
+    "GroundSensor",
+    
     "ShapeRenderer",
     "SpriteRenderer",
     "TextRenderer",
-    "Transform",
+    "Animator",
 ]
