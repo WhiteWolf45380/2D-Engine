@@ -93,11 +93,11 @@ class RenderSystem(System):
         if eid not in self._shapes:
             self._shapes[eid] = PygletShapeRenderer(
                 shape = sr.shape,
-                x = (tr.x + sr.offset_x * tr.scale * ppm),
-                y = tr.y + sr.offset_y * tr.scale,
+                x = (tr.x + sr.offset_x * tr.scale) * ppm,
+                y = (tr.y + sr.offset_y * tr.scale) * ppm,
                 anchor_x = tr.anchor_x,
                 anchor_y = tr.anchor_y,
-                scale = tr.scale,
+                scale = tr.scale * ppm,
                 rotation = tr.rotation,
                 filling = sr.filling,
                 color = sr.filling_color,
@@ -110,11 +110,11 @@ class RenderSystem(System):
             )
         else:
             self._shapes[eid].update(
-                x = tr.x + sr.offset_x * tr.scale,
-                y = tr.y + sr.offset_y * tr.scale,
+                x = (tr.x + sr.offset_x * tr.scale) * ppm,
+                y = (tr.y + sr.offset_y * tr.scale) * ppm,
                 anchor_x = tr.anchor_x,
                 anchor_y = tr.anchor_y,
-                scale = tr.scale,
+                scale = tr.scale * ppm,
                 rotation = tr.rotation,
                 filling = sr.filling,
                 color = sr.filling_color,
