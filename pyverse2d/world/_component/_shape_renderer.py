@@ -4,8 +4,11 @@ from ...abc import Component, Shape
 from ...asset import Color
 from ...math import Vector
 
-from typing import Iterator
+from typing import Iterator, TypeAlias, Literal
 from numbers import Real
+
+# ======================================== ALIAS ========================================
+BorderAlign: TypeAlias = Literal["in", "center", "out"]
 
 # ======================================== COMPONENT ========================================
 class ShapeRenderer(Component):
@@ -23,7 +26,7 @@ class ShapeRenderer(Component):
         z(int, optional): ordre de rendu
         visible(bool, optional): visibilité
     """
-    __slots__ = ("_shape", "_offset", "_filling", "_filling_color", "_border_width", "_border_color", "_opacity", "_z", "_visible")
+    __slots__ = ("_shape", "_offset", "_filling", "_filling_color", "_border_width", "_border_align", "_border_color", "_opacity", "_z", "_visible")
     requires = ("Transform",)
 
     def __init__(
@@ -33,6 +36,7 @@ class ShapeRenderer(Component):
             filling: bool = True,
             filling_color: Color = (255, 255, 255, 1.0),
             border_width: int = 0,
+            border_align: BorderAlign = "center",
             border_color: Color = (0, 0, 0, 1.0),
             opacity: Real = 1.0,
             z: int = 0,
@@ -43,6 +47,7 @@ class ShapeRenderer(Component):
         self._filling: bool = expect(filling, bool)
         self._filling_color: Color = Color(filling_color)
         self._border_width: int = int(expect(border_width, Real))
+        self._border_align: BorderAlign = expect(border_align, str)
         self._border_color: Color = Color(border_color)
         self._opacity: float = float(clamped(expect(opacity, Real)))
         self._z: int = expect(z, int)
@@ -63,11 +68,11 @@ class ShapeRenderer(Component):
     
     def to_tuple(self) -> tuple[Shape, Vector, bool, Color, int, Color, float, int]:
         """Renvoie le composant sous forme de tuple"""
-        return (self._shape, self._offset, self._filling, self._filling_color, self._border_width, self._border_color, self._opacity, self._z)
+        return (self._shape, self._offset, self._filling, self._filling_color, self._border_width, self._border_align, self._border_color, self._opacity, self._z)
     
     def to_list(self) -> list:
         """Renvoie le composant sous forme de liste"""
-        return [self._shape, self._offset, self._filling, self._filling_color, self._border_width, self._border_color, self._opacity, self._z]
+        return [self._shape, self._offset, self._filling, self._filling_color, self._border_width, self._border_align, self._border_color, self._opacity, self._z]
     
     # ======================================== GETTERS ========================================
     @property
@@ -106,6 +111,11 @@ class ShapeRenderer(Component):
         return self._border_width
     
     @property
+    def border_align(self) -> BorderAlign:
+        """Renvoie l'alignement de la bordure"""
+        return self._border_align
+    
+    @property
     def border_color(self) -> Color:
         """Renvoie la couleur de la bordure"""
         return self._border_color
@@ -140,6 +150,11 @@ class ShapeRenderer(Component):
     def border_width(self, value: int):
         """Fixe l'épaisseur de la bordure"""
         self._border_width = int(expect(value, Real))
+
+    @border_align.setter
+    def border_align(self, value: BorderAlign):
+        """Fixe l'alignement de la bordure"""
+        self._border_align = expect(value, str)
     
     @border_color.setter
     def border_color(self, value: Color):

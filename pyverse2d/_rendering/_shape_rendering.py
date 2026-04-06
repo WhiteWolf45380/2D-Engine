@@ -503,7 +503,7 @@ class _BorderRenderer:
     __slots__ = ("_vlist", "_n", "_width", "_align", "_program", "_batch", "_group", "_local_contour", "_visible", "_stored_colors")
 
     _SHAPE_PROGRAM = pyglet.shapes.get_default_shader()
-    _SHAPE_GROUP = pyglet.graphics.ShaderGroup(_SHAPE_PROGRAM)
+    _SHAPE_GROUP = pyglet.graphics.ShaderGroup(_SHAPE_PROGRAM, order=1)
 
     def __init__(
         self,
@@ -566,6 +566,9 @@ class _BorderRenderer:
         self._batch = pipeline.batch
         self._group = pyglet.graphics.Group(order=z, parent=self._SHAPE_GROUP)
         self._width = width
+        print(self._group)
+        print(self._group.parent)
+        print(self._group.parent.parent)
 
         # Meshes
         strip = self._world_strip(cx, cy, scale, rotation, width, align)
@@ -786,11 +789,11 @@ def _build_strip(contour: np.ndarray, width: float, align: str = "center") -> np
         miter_dist = np.clip(half / dot, -width * 3, width * 3)
         outer = contour + miter * miter_dist
         inner = contour - miter * miter_dist
-    elif align == "out":
+    elif align == "in":
         miter_dist = np.clip(width / dot, -width * 3, width * 3)
         outer = contour + miter * miter_dist
         inner = contour
-    elif align == "in":
+    elif align == "out":
         miter_dist = np.clip(width / dot, -width * 3, width * 3)
         outer = contour
         inner = contour - miter * miter_dist
