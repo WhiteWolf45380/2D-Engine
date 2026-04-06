@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from .._internal import expect
-from .._flag import UpdatePhase
 from ..abc import Component, System
 
 from ._entity import Entity
@@ -39,10 +38,8 @@ class World:
         Args:
             dt(float): delta time en secondes
         """
-        for phase in UpdatePhase:
-            for system in self._all_systems:
-                if system.phase == phase:
-                    system.update(self, dt)
+        for system in self._all_systems:
+            system.update(self, dt)
 
     # ======================================== ENTITIES ========================================
     def add_entity(self, entity: Entity):
@@ -139,8 +136,12 @@ class World:
         for conflict in system.conflicts:
             if any(type(s).__name__ == conflict for s in self._all_systems):
                 raise ValueError(f"{T.__name__} conflicts with {conflict}")
-            
-        self._all_systems.append(expect(system, System))
+        
+        for i in range(len(self._all_systems)):
+            if system.order < self._all_systems[i].order:
+                self._all_systems.insert(i, system)
+                return
+        self._all_systems.append(system)
 
     def remove_system(self, system: System):
         """

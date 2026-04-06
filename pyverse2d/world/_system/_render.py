@@ -1,7 +1,6 @@
 # ======================================== IMPORTS ========================================
 from __future__ import annotations
 
-from ..._flag import UpdatePhase
 from ...abc import System
 from .._world import World, Entity
 from .._component import Transform, SpriteRenderer, ShapeRenderer, TextRenderer
@@ -21,7 +20,7 @@ _ORDER_LABEL = 2
 class RenderSystem(System):
     """Système gérant le rendu des entités"""
     __slots__ = ("_sprites", "_shapes", "_labels")
-    phase = UpdatePhase.LATE
+    order = 100
     exclusive = True
 
     def __init__(self):

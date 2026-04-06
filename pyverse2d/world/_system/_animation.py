@@ -16,6 +16,8 @@ AnimationRequest: TypeAlias = dataclass
 class AnimationSystem(System):
     """Met à jour les animations de toutes les entités"""
     __slots__ = ()
+    order = 90
+    exclusive = True
 
     # ======================================== UPDATE ========================================
     def update(self, world: World, dt: float) -> None:

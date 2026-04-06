@@ -1,7 +1,6 @@
 # ======================================== IMPORTS ========================================
 from __future__ import annotations
 
-from ..._flag import UpdatePhase
 from ...abc import System
 from ...math import Vector
 
@@ -19,7 +18,7 @@ class GravitySystem(System):
         gravity(Real): force gravitationnelle en N/kg
     """
     __slots__ = ("_gravity")
-    phase = UpdatePhase.EARLY
+    order = 1
     exclusive = False
     requires = ("PhysicsSystem",)
 

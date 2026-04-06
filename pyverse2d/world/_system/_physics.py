@@ -1,7 +1,6 @@
 # ======================================== IMPORTS ========================================
 from __future__ import annotations
 
-from ..._flag import UpdatePhase
 from ...abc import System
 from .._world import World
 from .._component import Transform, RigidBody, GroundSensor
@@ -12,7 +11,7 @@ from math import exp
 class PhysicsSystem(System):
     """Système intégrant la physique des corps dynamiques"""
     __slots__ = ("_pixels_per_meter")
-    phase = UpdatePhase.LATE
+    order = 50
     exclusive = True
 
     def __init__(self, pixels_per_meter: float = 100.0):

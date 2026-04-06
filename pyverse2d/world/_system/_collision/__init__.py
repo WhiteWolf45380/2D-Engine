@@ -1,7 +1,6 @@
 # ======================================== IMPORTS ========================================
 from __future__ import annotations
 
-from ...._flag import UpdatePhase
 from ....abc import System
 from ..._world import World
 from ._spatial_hash import SpatialHash
@@ -11,7 +10,7 @@ from ._update import UpdateContext, update_processor
 # ======================================== SYSTEM ========================================
 class CollisionSystem(System):
     """Système de détection et résolution des collisions"""
-    phase = UpdatePhase.UPDATE
+    order = 70
     exclusive = True
     requires = ("PhysicsSystem",)
 
