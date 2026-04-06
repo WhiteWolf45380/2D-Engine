@@ -826,7 +826,7 @@ class _ShapeGroup(pyglet.graphics.Group):
         return instance
 
     def __init__(self, program, parent=None):
-        if self._initialized:
+        if getattr(self, "_initialized", False):
             return
         super().__init__(parent)
         self.program = program
