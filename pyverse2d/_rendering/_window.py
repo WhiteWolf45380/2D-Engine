@@ -20,14 +20,14 @@ class Window:
         width: largeur initiale de la fenêtre
         height: hauteur initiale de la fenêtre
         caption: titre de la fenêtre
-        fullscreen: démarre en plein écran
-        resizable: autorise le redimensionnement
+        fullscreen: plein écran
+        resizable: autorisation du redimensionnement
         vsync: synchronisation verticale
         borderless: fenêtre sans décoration OS
         transparent: fenêtre transparente
-        min_width: largeur minimale (si resizable)
-        min_height: hauteur minimale (si resizable)
-        visible: rend la fenêtre visible immédiatement
+        min_width: largeur minimale
+        min_height: hauteur minimale
+        visible: visibilité de la fenêtre
     """
     __slots__ = (
         "_screen", "_pyglet_window", "_viewport",
