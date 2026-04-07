@@ -33,28 +33,29 @@ class PygletShapeRenderer:
     Renderer pyglet unifié pour une shape géométrique
 
     Args:
-        shape(Shape): shape à rendre
-        x(float, optional): position horizontale
-        y(float, optional): position verticale
-        anchor_x(float, optional): ancre relative locale horizontale
-        anchor_y(float, optional): ancre relative locale  verticale
-        scale(float, optional): échelle
-        rotation(float, optional): rotation en degrés
-        filling(bool, optional): remplissage
-        color(Color, optional): couleur de remplissage
-        border_width(int, optional): épaisseur de la bordure
-        border_align(BorderAlign, optional): alignement de la bordure
-        border_color(Color, optional): couleur de la bordure
-        opacity(float, optional): opacité [0.0; 1.0]
-        z(int, optional): z-order
-        pipeline(Pipeline, optional): pipeline de rendu
+        shape: shape à rendre
+        x: position horizontale
+        y: position verticale
+        anchor_x: ancre relative locale horizontale
+        anchor_y: ancre relative locale  verticale
+        scale: échelle
+        rotation: rotation en degrés
+        filling: remplissage
+        color: couleur de remplissage
+        border_width: épaisseur de la bordure
+        border_align: alignement de la bordure
+        border_color: couleur de la bordure
+        opacity opacité [0.0; 1.0]
+        z: z-order
+        pipeline: pipeline de rendu
+        ppu: rapport de conversion world to screen
     """
     __slots__ = (
         "_shape",
         "_x", "_y", "_anchor_x", "_anchor_y",
         "_scale", "_rotation",
         "_filling", "_color", "_border_width", "_border_align", "_border_color", "_opacity",
-        "_z", "_pipeline", 
+        "_z", "_pipeline", "_ppu", 
         "_cx", "_cy",
         "_fill", "_border"
     )
@@ -75,7 +76,8 @@ class PygletShapeRenderer:
         border_color: Color = None,
         opacity: float = 1.0,
         z: int = 0,
-        pipeline: Pipeline = None
+        pipeline: Pipeline = None,
+        ppu: int = 1,
     ):
         # Paramètres publics
         self._shape: Shape = shape
@@ -93,6 +95,7 @@ class PygletShapeRenderer:
         self._opacity: float = opacity
         self._z: int = z
         self._pipeline: Pipeline = pipeline
+        self._ppu: int = ppu
 
         # Paramètres internes
         self._cx: float = 0.0
@@ -108,10 +111,23 @@ class PygletShapeRenderer:
     def _build(self) -> None:
         """Construit les objets pyglet"""
         if self._filling and self._color is not None:
-            self._fill = _FillRenderer(self._shape, self._cx, self._cy, self._scale, self._rotation, self._color, self._opacity, self._z, self._pipeline)
+            self._fill = _FillRenderer(
+                self.shape,
+                self.cx, self.cy,
+                self.scale, self.rotation,
+                self.color, self.opacity,
+                self.z, self.pipeline, self.ppu
+            )
 
         if self._border_width > 0 and self._border_color is not None:
-            self._border = _BorderRenderer(self._shape, self._cx, self._cy, self._scale, self._rotation, self._border_width, self._border_align, self._border_color, self._opacity, self._z, self._pipeline)
+            self._border = _BorderRenderer(
+                self.shape,
+                self.cx, self.cy,
+                self.scale, self.rotation,
+                self.border_width, self.border_align,
+                self.border_color, self.opacity,
+                self.z, self._pipeline
+            )
 
     def _compute_center(self) -> None:
         """Calcul le centre monde"""
@@ -142,22 +158,22 @@ class PygletShapeRenderer:
     @property
     def position(self) -> tuple[float, float]:
         """Renvoie la position"""
-        return (self._x, self._y)
+        return (self._x * self._ppu, self._y * self._ppu)
     
     @property
     def x(self) -> float:
         """Renvoie la position horizontale"""
-        return self._x
+        return self._x * self._ppu
     
     @property
     def y(self) -> float:
         """Renvoie la position verticale"""
-        return self._y
+        return self._y * self._ppu
     
     @property
     def scale(self) -> float:
         """Renvoie le facteur de redimensionnement"""
-        return self._scale
+        return self._scale * self._ppu
 
     @property
     def rotation(self) -> float:
@@ -177,7 +193,7 @@ class PygletShapeRenderer:
     @property
     def border_width(self) -> int:
         """Renvoie l'épaisseur de la bordure"""
-        return self._border_width
+        return int(self._border_width * self._ppu)
     
     @property
     def border_align(self) -> BorderAlign:
@@ -205,19 +221,24 @@ class PygletShapeRenderer:
         return self._pipeline
     
     @property
+    def ppu(self) -> int:
+        """Rapport de conversion world to screen"""
+        return self._ppu
+    
+    @property
     def center(self) -> tuple[float, float]:
         """Renvoie la position centrale"""
-        return (self._cx, self._cy)
+        return (self._cx * self._ppu, self._cy * self._ppu)
     
     @property
     def cx(self) -> float:
         """Renvoie la position centrale horizontale"""
-        return self._cx
+        return self._cx * self._ppu
     
     @property
     def cy(self) -> float:
         """Renoie la position centrale verticale"""
-        return self._cy
+        return self._cy * self._ppu
     
     @property
     def visible(self) -> bool:
@@ -248,20 +269,22 @@ class PygletShapeRenderer:
         Met à jour le rendu de forme pyglet
 
         Args:
-            x(float, optional): position horizontale
-            y(float, optional): position verticale
-            anchor_x(float, optional): ancre relative locale horizontale
-            anchor_y(float, optional): ancre relative locale verticale
-            scale(float, optional): facteur de redimensionnement
-            rotation(float, optional): rotation en degrés
-            filling(bool, optional): remplissage
-            color(Color, optional): couleur de remplissage
-            border_width(int, optional): épaisseur de bordure
-            border_align(BorderAlign, optional): alignement de la bordure
-            border_color(Color, optional): couleur de bordure
-            opacity(float, optional): opacité
-            z(int, optional): zorder
-            pipeline(Pipeline, optional): pipeline de rendu
+            shape: Forme à rendre
+            x: position horizontale
+            y: position verticale
+            anchor_x: ancre relative locale horizontale
+            anchor_y: ancre relative locale verticale
+            scale: facteur de redimensionnement
+            rotation: rotation en degrés
+            filling: remplissage
+            color: couleur de remplissage
+            border_width: épaisseur de bordure
+            border_align: alignement de la bordure
+            border_color: couleur de bordure
+            opacity: opacité
+            z: zorder
+            pipeline: pipeline de rendu
+            ppu: rapport de conversion world to screen
         """
         # Flags
         recompute_center: bool = False
@@ -288,7 +311,13 @@ class PygletShapeRenderer:
             if self._fill is not None:
                 self._fill.update(self, changes)
             elif self._color is not None:
-                self._fill = _FillRenderer(self._shape, self._cx, self._cy, self._scale, self._rotation, self._color, self._opacity, self._z, self._pipeline)
+                self._fill = _FillRenderer(
+                    self.shape,
+                    self.cx, self.cy,
+                    self.scale, self.rotation,
+                    self.color, self.opacity,
+                    self.z, self.pipeline
+                )
         elif self._fill is not None:
             self._fill.delete()
             self._fill = None
@@ -298,7 +327,14 @@ class PygletShapeRenderer:
             if self._border is not None:
                 self._border.update(self, changes)
             elif self._border_color is not None:
-                self._border = _BorderRenderer(self._shape, self._cx, self._cy, self._scale, self._rotation, self._border_width, self._border_align, self._border_color, self._opacity, self._z, self._pipeline)
+                self._border = _BorderRenderer(
+                    self._shape,
+                    self.cx, self.cy,
+                    self.scale, self.rotation,
+                    self.border_width, self.border_align,
+                    self.border_color, self.opacity, 
+                    self.z, self.pipeline
+                )
         elif self._border is not None:
             self._border.delete()
             self._border = None
@@ -371,6 +407,7 @@ class _FillRenderer:
             opacity(float): opacité
             z(int): z-order
             pipeline(Pipeline): pipeline de rendu
+            ppu: rapport de conversion world to screen
         """
         r, g, b, a = color.rgba8
         a = int(a * opacity)
@@ -475,6 +512,10 @@ class _FillRenderer:
         pipeline = psr.pipeline
         self._gl_shape.batch = pipeline.batch
         self._gl_shape.group = pipeline.get_group(z=psr.z)
+
+    def handle_ppu(self, psr: PygletShapeRenderer) -> None:
+        """Actualisation du rapport de conversion world to screen"""
+        return True
     
     # ======================================== HELPERS ========================================
     def _rebuild(self, psr: PygletShapeRenderer) -> None:
@@ -688,6 +729,10 @@ class _BorderRenderer:
 
     def handle_pipeline(self, psr: PygletShapeRenderer) -> None:
         """Actualisation de la pipeline de rendu"""
+        return "rebuild"
+    
+    def handle_ppu(self, psr: PygletShapeRenderer) -> None:
+        """Actualisation du rapport de conversion world to screen"""
         return "rebuild"
 
     # ======================================== HELPERS ========================================
