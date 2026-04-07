@@ -6,12 +6,16 @@ from ..math import Point, Vector
 from ..math.easing import EasingFunc, is_easing
 from ..abc import Request
 
-from ._world_layer import EntityView
-
-from pyglet.math import Mat4, Vec3
 from numbers import Real
 from dataclasses import dataclass
-from typing import ClassVar, Type
+from typing import ClassVar, Type, Protocol
+
+# ======================================== PROTOCOL ========================================
+class Followable(Protocol):
+    @property
+    def x(self) -> float: ...
+    @property
+    def y(self) -> float: ...
 
 # ======================================== REQUEST ========================================
 @dataclass(slots=True)
@@ -26,7 +30,7 @@ class TransitionRequest(Request):
 @dataclass(frozen=True, slots=True)
 class FollowRequest(Request):
     """Requête de transition"""
-    entity_view: EntityView
+    target: Followable
     offset: Vector
     smoothing: float
     max_speed: float
@@ -44,7 +48,7 @@ class Camera:
     """
     __slots__ = (
         "_position", "_view_width", "_view_height",
-        "_zoom", "_rotation"
+        "_zoom", "_rotation",
         "_transition", "_follow",
     )
 
@@ -209,26 +213,24 @@ class Camera:
 
     def follow(
             self,
-            entity_view: EntityView,
+            target: Followable,
             offset: Vector = (0.0, 0.0),
             smoothing: Real = 0.0,
             max_speed: Real = None,
         ) -> None:
-        """
-        Suit le Transform d'une entité
+        """Suit un Followable
 
         Args:
             entity: entité à suivre
             smoothing: facteur de retard relatif [0, 1[
-            max_speed: vitesse maximale de déplacement en px/s
+            max_speed: vitesse maximale de déplacement en u/s
         """
-        expect(entity_view, EntityView)
         if self.in_transition():
             self.stop_transition()
-        vector = Vector(vector)
+        offset = Vector(offset)
         not_in(clamped(float(expect(smoothing, Real))), 1)
         if max_speed is not None: positive(not_null(float(expect(max_speed, Real))))
-        self._follow = self.FollowRequest(entity_view, offset, smoothing, max_speed)
+        self._follow = self.FollowRequest(target, offset, smoothing, max_speed)
 
     def unfollow(self) -> None:
         """Détache la camera de l'entité suivie"""
@@ -261,14 +263,10 @@ class Camera:
 
     def _update_follow(self, dt: float) -> None:
         """Actualise le suivi"""
-        entity_view = self._follow.entity_view
-        entity = entity_view.entity
+        target = self._follow.target
         offset = self._follow.offset
-
-        if not entity.is_active():
-            return self.unfollow()
-
-        target_x, target_y = entity_view.x + offset.x, entity_view.y + offset.y
+        target_x, target_y = target.x + offset.x, target.y + offset.y
+    
         t = 1 - self._follow.smoothing ** dt
         x, y = _step_position(self._position.x, self._position.y, target_x, target_y, t)
         if self._follow.max_speed is not None:

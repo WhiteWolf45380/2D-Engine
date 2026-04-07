@@ -31,14 +31,6 @@ class WorldLayer(Layer):
     def world(self, value: World | None):
         self._world = expect(value, (World, None))
 
-    # ======================================== COLLECTIONS ========================================
-    def entity_view(self, entity: Entity) -> EntityView:
-        """Renvoie la vue d'une entité en dimension ``Screen``
-        
-        Cette vue permet notamment à la ``Camera`` de suivre une entité dans son monde.
-        """
-        return EntityView(entity, self._world.pixels_per_meter)
-
     # ======================================== HOOKS ========================================
     def on_start(self):
         """Activation du layer"""
@@ -58,25 +50,3 @@ class WorldLayer(Layer):
         """Affichage du layer"""
         if self._world is not None and self._world.has_system(RenderSystem):
             self._world.get_system(RenderSystem).draw(self._world, pipeline)
-
-# ======================================== ENTITY VIEW ========================================
-class EntityView:
-    """Wrapper de vue d'une entité"""
-    def __init__(self, entity: Entity, ppm: float):
-        self._entity = entity
-        self._ppm = ppm
-
-    @property
-    def entity(self) -> Entity:
-        """Entité"""
-        return self._entity
-
-    @property
-    def x(self) -> float:
-        """Coordonnée horizontale"""
-        return self._entity.transform.x * self._ppm
-
-    @property
-    def y(self) -> float:
-        """Coordonnée verticale"""
-        return self._entity.transform.y * self._ppm

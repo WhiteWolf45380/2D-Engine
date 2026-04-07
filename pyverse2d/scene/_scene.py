@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from .._internal import expect
 from .._rendering._pipeline import Pipeline
-from .._flag import StackMode, SceneState, CameraMode
+from .._flag import StackMode, SceneState
 from ..math import Point
 from ..abc import Layer
 
@@ -15,19 +15,25 @@ import bisect
 
 # ======================================== SCENE ========================================
 class Scene:
-    """
-    Orchestre un ensemble de layers ordonnés par z_order
+    """Orchestre un ensemble de layers ordonnés par z_order
 
     Args:
-        camera(Camera): caméra de la scene
-        viewport(Viewport): viewport de la scene
-        stack_mode(StackMode): mode d'empilement par rapport aux autres scenes
+        viewport: viewport de la scene
+        camera: Camera principale de la scène
+        stack_mode: mode d'empilement par rapport aux autres scenes
     """
-    def __init__(self, camera: Camera = None, viewport: Viewport = None, stack_mode: StackMode = StackMode.OVERLAY):
+    __slots__ = (
+        "_layers", "_z_orders",
+        "_viewport", "_camera",
+        "_stack_mode", "_state",
+        "_update_callbacks", "_draw_callbacks",
+    )
+
+    def __init__(self, viewport: Viewport = None, camera: Camera = None, stack_mode: StackMode = StackMode.OVERLAY):
         self._layers: list[Layer] = []
         self._z_orders: list[int] = []
-        self._camera: Camera = expect(camera, Camera) if camera else Camera(Point(0, 0))
         self._viewport: Viewport = expect(viewport, Viewport) if viewport else Viewport()
+        self._camera: Camera = expect(camera, Camera) if camera else Camera((0, 0))
         self._stack_mode: StackMode = expect(stack_mode, StackMode)
         self._state: SceneState = SceneState.SLEEPING
         self._update_callbacks: list[Callable[[float], None]] = []
@@ -35,70 +41,54 @@ class Scene:
 
     # ======================================== GETTERS ========================================
     @property
-    def camera(self) -> Camera:
-        """Renvoie la caméra de la scene"""
-        return self._camera
+    def viewport(self) -> Viewport:
+        """Viewport de rendu"""
+        return self._viewport
+    
+    @viewport.setter
+    def viewport(self, value: Viewport) -> None:
+        self._viewport = expect(value, Viewport)
 
     @property
-    def viewport(self) -> Viewport:
-        """Renvoie le viewport de la scene"""
-        return self._viewport
+    def camera(self) -> Camera:
+        """Caméra principale"""
+        return self._camera
+    
+    @camera.setter
+    def camera(self, value: Camera) -> None:
+        self._camera = expect(value, Camera)
 
     @property
     def stack_mode(self) -> StackMode:
-        """Renvoie le mode d'empilement"""
+        """Mode d'empilement
+
+        Le mode doit être un Enum ``StackMode``.
+        """
         return self._stack_mode
+    
+    @stack_mode.setter
+    def stack_mode(self, value: StackMode) -> None:
+        self._stack_mode = expect(value, StackMode)
 
     @property
     def state(self) -> SceneState:
-        """Renvoie l'état de la scène"""
+        """Etat de la scène
+        
+        L'état doit être un Enum ``SceneState``.
+        """
         return self._state
-
-    # ======================================== SETTERS ========================================
-    def set_camera(self, camera: Camera):
-        """
-        Fixe la caméra de la scene
-
-        Args:
-            camera(Camera): caméra à utiliser
-        """
-        self._camera = expect(camera, Camera)
-
-    def set_viewport(self, viewport: Viewport):
-        """
-        Fixe le viewport de la scene
-
-        Args:
-            viewport(Viewport): viewport à utiliser
-        """
-        self._viewport = expect(viewport, Viewport)
-
-    def set_stack_mode(self, stack_mode: StackMode):
-        """
-        Fixe le mode d'empilement
-
-        Args:
-            stackmode(StackMode): mode d'empilement de la scène
-        """
-        self._stack_mode = expect(stack_mode, StackMode)
-
-    def set_state(self, state: SceneState):
-        """
-        Fixe l'état de la scène
-
-        Args:
-            state(SceneState): état de la scène
-        """
-        self._state = expect(state, SceneState)
+    
+    @state.setter
+    def state(self, value: SceneState) -> None:
+        self._state = expect(value, SceneState)
 
     # ======================================== LAYERS ========================================
     def add_layer(self, layer: Layer, z: int = 0) -> Scene:
-        """
-        Ajoute un layer à la scene
+        """Ajoute un layer à la scene
 
         Args:
-            layer(Layer): layer à ajouter
-            z(int): ordre de rendu
+            layer: layer à ajouter
+            z: ordre de rendu
         """
         expect(layer, Layer)
         i = bisect.bisect_right(self._z_orders, z)
@@ -107,39 +97,46 @@ class Scene:
         return self
 
     def remove_layer(self, layer: Layer) -> Scene:
-        """
-        Supprime un layer de la scene
+        """Supprime un layer de la scene
 
         Args:
-            layer(Layer): layer à supprimer
+            layer: layer à supprimer
         """
         i = self._layers.index(expect(layer, Layer))
         self._layers.pop(i)
         self._z_orders.pop(i)
         return self
+    
+    def suspend(self):
+        """Suspend tous les layers"""
+        for layer in self._layers:
+            layer.on_stop()
+
+    def preload(self):
+        """Force le build de tous les layers qui l'implémentent"""
+        for layer in self._layers:
+            if hasattr(layer, "preload"):
+                layer.preload()
 
     # ======================================== CALLBACKS ========================================
     def on_update(self, fn: Callable[[float], None]) -> Callable[[float], None]:
-        """
-        Enregistre un callback appelé à chaque update
+        """Enregistre un callback appelé à chaque update
 
         Args:
-            fn(Callable[[float], None]): fonction prenant dt en paramètre
+            fn: fonction prenant dt en paramètre
         """
         self._update_callbacks.append(fn)
         return fn
 
     def on_draw(self, fn: Callable[[Pipeline], None]) -> Callable[[Pipeline], None]:
-        """
-        Enregistre un callback appelé à chaque draw, après les layers
+        """Enregistre un callback appelé à chaque draw, après les layers
 
         Args:
-            fn(Callable[[Pipeline], None]): fonction prenant pipeline en paramètre
+            fn: fonction prenant pipeline en paramètre
         """
         self._draw_callbacks.append(fn)
         return fn
 
-    # ======================================== CYCLE DE VIE ========================================
     def on_start(self):
         """Démarre tous les layers"""
         for layer in self._layers:
@@ -150,26 +147,9 @@ class Scene:
         for layer in self._layers:
             layer.on_stop()
 
-    def suspend(self):
-        """Suspend tous les layers"""
-        for layer in self._layers:
-            layer.on_stop()
-
-    def preload(self):
-        """Force le build de tous les layers qui l'implémentent, avant la boucle principale"""
-        for layer in self._layers:
-            if hasattr(layer, "preload"):
-                layer.preload()
-
-    # ======================================== LOOP ========================================
+    # ======================================== LIFE CYCLE ========================================
     def update(self, dt: float):
-        """
-        Met à jour tous les layers puis appelle les callbacks utilisateur
-
-        Args:
-            dt(float): delta time
-        """
-        self.camera.update(dt)
+        """Actualisation"""
         for layer in reversed(self._layers):
             if not layer.is_active():
                 continue
@@ -178,31 +158,15 @@ class Scene:
             fn(dt)
 
     def draw(self, pipeline: Pipeline):
-        """
-        Dessine tous les layers dans l'ordre de z_order, puis appelle les callbacks utilisateur
-
-        Args:
-            pipeline(Pipeline): pipeline à utiliser pour le rendu
-        """
+        """Affichage"""
         pipeline.begin(self)
-        camera_view = self.camera.view_matrix()
-        camera_zoom = self.camera.zoom_matrix()
         for layer in self._layers:
             if not layer.is_visible():
                 continue
-            pipeline.layer(layer)
-
-            if layer.camera_mode is CameraMode.WORLD:
-                pipeline.set_view(camera_view)
-            elif layer.camera_mode is CameraMode.ZOOM:
-                pipeline.set_view(camera_zoom)
-            else:
-                pipeline.set_view(None)
-
+            pipeline.switch_layer(layer)
             layer.draw(pipeline)
             pipeline.flush()
 
         for fn in self._draw_callbacks:
             fn(pipeline)
-
         pipeline.end()
