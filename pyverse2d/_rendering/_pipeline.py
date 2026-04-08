@@ -131,10 +131,10 @@ class Pipeline:
 
         # FrameBuffer
         win_vx, win_vy, win_vw, win_vh = self._window.viewport
-        sx = win_vw / screen.width
-        sy = win_vh / screen.height
+        sx = self._window.framebuffer_scale_x
+        sy = self._window.framebuffer_scale_y
 
-        # Viewport sur le FrameBuffer
+        # FrameBuffer Viewport
         px = int(win_vx + lx * sx)
         py = int(win_vy + ly * sy)
         pw = int(lw * sx)

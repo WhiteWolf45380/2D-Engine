@@ -8,8 +8,9 @@ from ._screen import LogicalScreen
 import pyglet
 from pyglet.window import Window as PygletWindow
 from numbers import Real
+from typing import Iterator
 
-# ======================================== OBJET ========================================
+# ======================================== WINDOW ========================================
 class Window:
     """Fenêtre OS
 
@@ -86,7 +87,7 @@ class Window:
             self._pyglet_window.set_minimum_size(min_width or 1, min_height or 1,)
 
         # Projection
-        self._viewport: tuple[int, int, int, int] = None
+        self._viewport: _WindowViewport = _WindowViewport(0, 0, width, height)
         self._framebuffer_scale_x: float = 1.0
         self._framebuffer_scale_y: float = 1.0
         self._apply_letterboxing(width, height)
@@ -127,8 +128,8 @@ class Window:
         return self._pyglet_window.height
 
     @property
-    def viewport(self) -> tuple[int, int, int, int]:
-        """(x, y, w, h) du viewport actif dans la fenêtre OS"""
+    def viewport(self) -> _WindowViewport:
+        """Viewport actif dans la fenêtre OS"""
         return self._viewport
     
     @property
@@ -193,8 +194,7 @@ class Window:
             x : coordonnée horizontale logique
             y: coordonnée verticale logique
         """
-        vx, vy, _, _ = self._viewport
-        return vx + x * self._framebuffer_scale_x, vy + y * self.framebuffer_scale_y
+        return self._viewport.x + x * self._framebuffer_scale_x, self._viewport.y + y * self.framebuffer_scale_y
 
     def window_to_screen(self, x: Real, y: Real) -> tuple[float, float]:
         """Convertit des coordonnées de la fenêtre OS vers l'espace logique
@@ -203,8 +203,7 @@ class Window:
             x: coordonnée horizontale dans la fenêtre OS
             y: coordonnée verticale dans la fenêtre OS
         """
-        vx, vy, _, _ = self._viewport
-        return (x - vx) * (1 / self._framebuffer_scale_x), (y - vy) * (1 / self.framebuffer_scale_y)
+        return (x - self._viewport.x) * (1 / self._framebuffer_scale_x), (y - self._viewport.y) * (1 / self.framebuffer_scale_y)
     
     # ======================================== INTERNALS ========================================
     def _apply_letterboxing(self, win_w: int, win_h: int):
@@ -228,8 +227,45 @@ class Window:
             y = (win_h - h) // 2
 
         # Viewport actif
-        self._viewport = (x, y, w, h)
+        self._viewport.compute(x, y, w, h)
 
         # Mise en cache des ratios
         self._framebuffer_scale_x = w / self._screen.width
         self._framebuffer_scale_y = h / self._screen.height
+
+# ======================================== VIEWPORT ========================================
+class _WindowViewport:
+    """Viewport actif de la fenêtre OS
+    
+    Args:
+        x: coordonnée horizontale
+        y: coordonnée verticale
+        width: largeur
+        height: hauteur
+    """
+    __slots__ = ("_x", "_y", "_width", "_height")
+
+    def __init__(self, x: int, y: int, width: int, height: int):
+        self.x: int = x
+        self.y: int = y
+        self.width: int = width
+        self.height: int = height
+    
+    def __iter__(self) -> Iterator[int]:
+        """Itère sur les composants"""
+        return iter(self.to_tuple())
+    
+    def __getitem__(self, key: int | slice) -> int | tuple[int]:
+        """Récupération d'une élément"""
+        return self.to_tuple()[key]
+    
+    def to_tuple(self) -> tuple[int, ...]:
+        """Conversion en tuple"""
+        return (self.x, self.y, self.width, self.height)
+    
+    def compute(self, x: int, y: int, width: int, height: int) -> None:
+        """Actualise le viewport"""
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
