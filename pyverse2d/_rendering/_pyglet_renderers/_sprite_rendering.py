@@ -343,12 +343,6 @@ class PygletSpriteRenderer:
         if self._pipeline:
             self._sprite.group = self._pipeline.get_group(z=self._z)
 
-    def _handle_pipeline(self) -> None:
-        """Actualisation de la pipeline de rendu"""
-        if self._pipeline:
-            self._sprite.batch = self._pipeline.batch
-            self._sprite.group = self._pipeline.get_group(z=self._z)
-
     # ======================================== HELPERS ========================================
     def _rebuild(self) -> None:
         """Reconstruit le sprite avec les paramètres courants"""

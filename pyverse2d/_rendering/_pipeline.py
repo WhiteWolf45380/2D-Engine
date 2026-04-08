@@ -107,8 +107,8 @@ class Pipeline:
     
     @property
     def ppu(self) -> tuple[float, float]:
-        """Ratio pixels par unité (world to screen)"""
-        return (self._context.ppu_x, self._context.ppu_y)
+        """Ratio pixels par unité moyen"""
+        return (self._context.ppu_x + self._context.ppu_y) / 2
     
     @property
     def ppu_x(self) -> float:

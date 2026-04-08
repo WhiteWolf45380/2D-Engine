@@ -429,12 +429,6 @@ class PygletLabelRenderer:
         if self._pipeline:
             self._label.group = self._pipeline.get_group(z=self._z)
 
-    def _handle_pipeline(self) -> None:
-        """Actualisation de la pipeline"""
-        if self.pipeline:
-            self._label.batch = self._pipeline.batch
-            self._label.group = self._pipeline.get_group(z=self._z)
-
     # ======================================== HELPERS ========================================
     def _refresh_position(self) -> None:
         """Recalcule x/y pyglet à partir de l'ancre et des dimensions réelles"""
