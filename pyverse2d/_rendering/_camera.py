@@ -21,6 +21,7 @@ class Followable(Protocol):
 @dataclass(slots=True)
 class TransitionRequest(Request):
     """Requête de transition"""
+    _id: str = "transition"
     start: Point
     end: Point
     duration: float
@@ -30,10 +31,20 @@ class TransitionRequest(Request):
 @dataclass(frozen=True, slots=True)
 class FollowRequest(Request):
     """Requête de transition"""
+    _id: str = "follow"
     target: Followable
     offset: Vector
     smoothing: float
     max_speed: float
+
+@dataclass(frozen=True, slots=True)
+class AttachRequest(Request):
+    """Requête d'attachement"""
+    _id: str = "attach"
+    camera: Camera
+    offset: Vector
+    parallax_x: float
+    parallax_y: float
 
 # ======================================== CAMERA ========================================
 class Camera(Space):
@@ -54,6 +65,7 @@ class Camera(Space):
 
     TransitionRequest: ClassVar[Type[TransitionRequest]] = TransitionRequest
     FollowRequest: ClassVar[Type[FollowRequest]] = FollowRequest
+    AttachRequest: ClassVar[Type[AttachRequest]] = AttachRequest
 
     def __init__(
             self,
@@ -73,8 +85,7 @@ class Camera(Space):
         self._rotation: float = float(expect(rotation, Real))
 
         # Etat
-        self._transition: TransitionRequest = None
-        self._follow: FollowRequest = None
+        self._state: Request = None
 
     # ======================================== PROPERTIES ========================================
     @property
@@ -165,13 +176,23 @@ class Camera(Space):
         self._rotation = float(expect(value, Real))
 
     # ======================================== PREDICATES ========================================
-    def is_following(self) -> bool:
-        """Vérifie que le caméra soit en mode suivi"""
-        return self._follow is not None
-    
     def in_transition(self) -> bool:
         """Vérifie que la caméra soit en transition"""
-        return self._transition is not None
+        if self._state is None:
+            return
+        return self._state._id == "transition"
+
+    def is_following(self) -> bool:
+        """Vérifie que le caméra soit en mode suivi"""
+        if self._state is None:
+            return
+        return self._state._id == "follow"
+    
+    def is_attached(self) -> bool:
+        """Vérifie que la caméra soit attachée"""
+        if self._state is None:
+            return
+        return self._state._id == "attach"
     
     # ======================================== POSITION ========================================
     def move(self, vector: Vector) -> None:
@@ -196,20 +217,12 @@ class Camera(Space):
             duration: durée de transition
             easing: fonction de progression
         """
-        if self.is_following():
-            self.unfollow()
         start = self._position.copy()
         end = Point(position)
         duration = positive(float(expect(duration, Real)))
         elapsed = 0.0
         if easing is not None and not is_easing(easing): raise ValueError("easing must be an EasingFunc from pyverse2d.math.easing")
-        self._transition = self.TransitionRequest(start, end, duration, elapsed, easing)
-
-    def stop_transition(self) -> None:
-        """Met fin à la transition"""
-        if self._transition is None:
-            return
-        self._transition = None
+        self._state = TransitionRequest(start, end, duration, elapsed, easing)
 
     def follow(
             self,
@@ -225,36 +238,57 @@ class Camera(Space):
             smoothing: facteur de retard relatif [0, 1[
             max_speed: vitesse maximale de déplacement en u/s
         """
-        if self.in_transition():
-            self.stop_transition()
         offset = Vector(offset)
         not_in(clamped(float(expect(smoothing, Real))), 1)
         if max_speed is not None: positive(not_null(float(expect(max_speed, Real))))
-        self._follow = self.FollowRequest(target, offset, smoothing, max_speed)
+        self._state = FollowRequest(target, offset, smoothing, max_speed)
 
-    def unfollow(self) -> None:
-        """Détache la camera de l'entité suivie"""
-        if self._follow is None:
-            return
-        self._follow = None
+    def attach_to(
+            self,
+            camera: Camera,
+            offset: Vector = (0.0, 0.0),
+            parallax_x: Real = 1.0,
+            parallax_y: Real = 1.0,
+        ):
+        """Attache la caméra à une autre caméra
+
+        Args:
+            camera: caméra à suivre
+            offset: décalage
+            parallax_x: effet parallax horizontal
+            parallax_y: effet parallax vertical
+        """
+        camera = expect(camera, Camera)
+        offset = Vector(offset)
+        parallax_x = float(expect(parallax_x, Real))
+        parallax_y = float(expect(parallax_y, Real))
+        self._state = AttachRequest(camera, offset, parallax_x, parallax_y)
+
+    def idle(self) -> None:
+        """Désactive l'état courant"""
+        self._state = None
 
     # ======================================== LIFE CYCLE ========================================
     def update(self, dt: float) -> None:
         """Actualisation"""
+        if self._state is None:
+            return
         if self.in_transition():
             self._update_transition(dt)
         elif self.is_following():
             self._update_follow(dt)
+        elif self.is_attached():
+            self._update_attach(dt)
 
     def _update_transition(self, dt: float) -> None:
         """Actualise la transition"""
-        tr = self._transition
+        tr: TransitionRequest = self._state
         tr.elapsed += dt
     
         if tr.elapsed >= tr.duration:
             self._go(tr.end.x, tr.end.y)
             return self.stop_transition()
-    
+
         t = tr.elapsed / tr.duration
         if tr.easing is not None:
             t = tr.easing(t)
@@ -263,13 +297,14 @@ class Camera(Space):
 
     def _update_follow(self, dt: float) -> None:
         """Actualise le suivi"""
-        target = self._follow.target
-        offset = self._follow.offset
+        follow: FollowRequest = self._state
+        target = follow.target
+        offset = follow.offset
         target_x, target_y = target.x + offset.x, target.y + offset.y
     
-        t = 1 - self._follow.smoothing ** dt
+        t = 1 - follow.smoothing ** dt
         x, y = _step_position(self._position.x, self._position.y, target_x, target_y, t)
-        if self._follow.max_speed is not None:
+        if follow.max_speed is not None:
             dx = x - self._position.x
             dy = y - self._position.y
             max_dist = self._follow.max_speed * dt
@@ -278,6 +313,18 @@ class Camera(Space):
                 scale = max_dist / dist
                 x = self._position.x + dx * scale
                 y = self._position.y + dy * scale
+    
+        self._go(x, y)
+
+    def _update_attach(self, dt: float) -> None:
+        """Actualise l'attache"""
+        attach: AttachRequest = self._state
+        camera = attach.camera
+        offset = attach.offset
+
+        x = (camera.x) * attach.parallax_x + offset.x
+        y = (camera.y) * attach.parallax_y + offset.y
+
         self._go(x, y)
 
     # ======================================== RESOLVE ========================================
