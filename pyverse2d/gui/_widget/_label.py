@@ -2,11 +2,13 @@
 from __future__ import annotations
 
 from ..._internal import expect, positive, not_null
-from ..._rendering import Pipeline, RenderContext, PygletLabelRenderer
+from ..._rendering import Pipeline, PygletLabelRenderer
 from ...asset import Text, Color
 from ...abc import Widget
 from ...math import Point
 from ...shape import Rect
+
+from .._context import RenderContext
 
 from numbers import Real
 from typing import Literal

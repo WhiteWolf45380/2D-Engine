@@ -1,10 +1,12 @@
 # ======================================== IMPORTS ========================================
 from ..._internal import expect, positive, not_null
-from ..._rendering import Pipeline, RenderContext, PygletSpriteRenderer
+from ..._rendering import Pipeline, PygletSpriteRenderer
 from ...abc import Widget
 from ...asset import Image, Color
 from ...math import Point
 from ...shape import Rect
+
+from .._context import RenderContext
 
 from numbers import Real
 
