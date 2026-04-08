@@ -21,30 +21,30 @@ class Followable(Protocol):
 @dataclass(slots=True)
 class TransitionRequest(Request):
     """Requête de transition"""
-    _id: str = "transition"
     start: Point
     end: Point
     duration: float
     elapsed: float
     easing: EasingFunc | None
+    _id: str = "transition"
 
 @dataclass(frozen=True, slots=True)
 class FollowRequest(Request):
     """Requête de transition"""
-    _id: str = "follow"
     target: Followable
     offset: Vector
     smoothing: float
     max_speed: float
+    _id: str = "follow"
 
 @dataclass(frozen=True, slots=True)
 class AttachRequest(Request):
     """Requête d'attachement"""
-    _id: str = "attach"
     camera: Camera
     offset: Vector
     parallax_x: float
     parallax_y: float
+    _id: str = "attach"
 
 # ======================================== CAMERA ========================================
 class Camera(Space):
