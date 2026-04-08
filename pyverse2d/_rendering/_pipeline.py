@@ -102,6 +102,11 @@ class Pipeline:
     def camera_resolve(self) -> tuple[float, float, float, float, float, float]:
         """Résolution de la caméra (frustum)"""
         return self._context.camera_resolve
+    
+    @property
+    def ppu(self) -> float:
+        """Ratio pixels par unité (world to screen)"""
+        return self._ppu
 
     @property
     def batch(self) -> Batch:
@@ -178,14 +183,18 @@ class Pipeline:
         # Frustum
         _, _, lw, lh = self._context.viewport_resolve
         self._context.camera_resolve = self.camera.resolve(lw, lh)
+        cx, cy, vw, vh, zoom, rotation = self._context.camera_resolve
+
+        # Ratios pixels per unit
+        self._context.ppu_x,  self._context.ppu_y = self.compute_ppu(lw, lh, vw, vh, zoom)
 
         # Matrice de projection
-        projection = self.compute_projection()
+        projection = self.compute_projection(vw, vh, zoom)
         self._window.native.projection = projection
         self._context.projection_matrix = projection
 
         # Matrice de vue
-        view = self.compute_view()
+        view = self.compute_view(cx, cy, rotation)
         self._window.native.view = view
         self._context.view_matrix = view
 
@@ -199,9 +208,14 @@ class Pipeline:
         self._context.clear()
 
     # ======================================== MATRICES ========================================
-    def compute_projection(self) -> Mat4:
+    def compute_ppu(self, lw: float, lh: float, vw: float, vh: float, zoom: float) -> tuple[float, float]:
+        """Calcul des ratios pixels per unit"""
+        ppu_x = (lw / vw) * zoom
+        ppu_y = (lh / vh) * zoom
+        return (ppu_x, ppu_y)
+
+    def compute_projection(self, vw: float, vh: float, zoom: float) -> Mat4:
         """Calcul la matrice de projection"""
-        _, _, vw, vh, zoom, _ = self._context.camera_resolve
         half_w = (vw / zoom) / 2
         half_h = (vh / zoom) / 2
         return Mat4.orthogonal_projection(
@@ -213,9 +227,8 @@ class Pipeline:
             z_far=8192.0,
         )
     
-    def compute_view(self) -> Mat4:
+    def compute_view(self, cx: float, cy: float, rotation: float) -> Mat4:
         """Calcul la matrice de vue"""
-        cx, cy, _, _, _, rotation = self._context.camera_resolve
         view = Mat4()
         view = view.translate((-cx, -cy, 0))
         if rotation != 0.0:
@@ -293,6 +306,8 @@ class _PipelineContext:
     gl_viewport: tuple[int, int, int, int] = None
     projection_matrix: Mat4 = None
     view_matrix: Mat4 = None
+    ppu_x: float = None
+    ppu_y: float = None
 
     def clear(self) -> None:
         """Nettoie le contexte"""
@@ -301,3 +316,5 @@ class _PipelineContext:
         self.gl_viewport = None
         self.projection_matrix = None
         self.view_matrix = None
+        self.ppu_x = None
+        self.ppu_y = None
