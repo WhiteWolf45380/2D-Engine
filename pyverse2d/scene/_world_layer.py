@@ -9,12 +9,11 @@ from ..abc import Layer
 
 # ======================================== LAYER ========================================
 class WorldLayer(Layer):
-    """
-    Layer contenant un World
+    """Layer contenant un World
 
     Args:
-        world(World, optional): monde assigné
-        camera_mode(CameraMode, optional): camera behavior
+        world: monde assigné
+        camera: caméra locale
     """
     def __init__(self, world: World = None, camera: Camera = None):
         super().__init__(camera)
@@ -40,12 +39,12 @@ class WorldLayer(Layer):
         ...
 
     # ======================================== LIFE CYCLE ========================================
-    def update(self, dt: float):
+    def _update(self, dt: float):
         """Actualisation du layer"""
         if self._world is not None:
             self._world.update(dt)
 
-    def draw(self, pipeline: Pipeline):
+    def _draw(self, pipeline: Pipeline):
         """Affichage du layer"""
         if self._world is not None and self._world.has_system(RenderSystem):
             self._world.get_system(RenderSystem).draw(self._world, pipeline)

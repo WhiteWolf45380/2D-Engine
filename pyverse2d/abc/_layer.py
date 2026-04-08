@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .._rendering import Renderer
+    from .._rendering import Pipeline
     from ..scene import Camera
 
 # ======================================== ABSTRACT CLASS ========================================
@@ -82,7 +82,17 @@ class Layer(ABC):
 
     # ======================================== LIFE CYCLE ========================================
     @abstractmethod
-    def update(self, dt: float): ...
+    def _update(self, dt: float) -> None: ...
+
+    def update(self, dt: float):
+        """Actualisation"""
+        if self._camera is not None:
+            self._camera.update(dt)
+        self._update(dt)
 
     @abstractmethod
-    def draw(self, renderer: Renderer): ...
+    def _draw(self, pipeline: Pipeline) -> None: ...
+
+    def draw(self, pipeline: Pipeline) -> None:
+        """Affichage global"""
+        self._draw(pipeline)

@@ -146,6 +146,7 @@ class Scene:
 
     def update(self, dt: float):
         """Actualisation"""
+        self._camera.update(dt)
         for layer in reversed(self._layers):
             if not layer.is_active():
                 continue

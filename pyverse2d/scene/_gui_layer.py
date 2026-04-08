@@ -12,12 +12,11 @@ from numbers import Real
 
 # ======================================== LAYER ========================================
 class GuiLayer(Layer):
-    """
-    Layer contenant des composants Gui
+    """Layer contenant des composants Gui
 
     Args:
-        widgets(Widget, optional): composants gui
-        camera_mode(CameraMode, optional): camera behavior
+        opacity: opacité du layer
+        camera: caméra locale
     """
     __slots__ = ("_wrappers", "_opacity")
 
@@ -26,33 +25,24 @@ class GuiLayer(Layer):
         self._wrappers: list[WidgetWrapper] = []
         self._opacity: float = clamped(float(expect(opacity, Real)))
     
-    # ======================================== GETTERS ========================================
+    # ======================================== PROPERTIES ========================================
     @property
     def widgets(self) -> tuple[Widget]:
-        """Renvoie l'ensemble des composants assignés"""
+        """Ensemble des composants"""
         return tuple(wrapper.widget for wrapper in self._wrappers)
-    
-    def __getitem__(self, key: str) -> Widget:
-        """Renvoie un composant par son nom"""
-        for wrapper in self._wrappers:
-            if wrapper.name == key:
-                return wrapper.widget
             
     @property
     def opacity(self) -> float:
-        """Renvoie l'opacité du layer"""
+        """Opacité du layer"""
         return self._opacity
     
-    # ======================================== SETTERS ========================================
     @opacity.setter
     def opacity(self, value: Real):
-        """Fixe l'opacité du layer"""
         self._opacity = clamped(float(expect(value, Real)))
 
-    # ======================================== PUBLIC METHODS ========================================
+    # ======================================== COLLECTIONS ========================================
     def add(self, widget: Widget, name: str = None, z: int = 0) -> None:
-        """
-        Ajoute un composant
+        """Ajoute un composant
 
         Args:
             widget(Widget): composant à ajouter
@@ -66,8 +56,7 @@ class GuiLayer(Layer):
         insort(self._wrappers, wrapper)
     
     def remove(self, widget: Widget) -> None:
-        """
-        Retire un composant
+        """Retire un composant
 
         Args:
             widget(Widget): composant à ajouter
@@ -77,8 +66,7 @@ class GuiLayer(Layer):
             self._wrappers.remove(widget)
 
     def remove_by_name(self, name: str) -> None:
-        """
-        Retire un composant par son identifiant
+        """Retire un composant par son identifiant
 
         Args:
             name(str): nom du composant à dissocier
@@ -92,8 +80,7 @@ class GuiLayer(Layer):
             self._wrappers.remove(widget)
 
     def reorder(self, widget: Widget, z: int) -> None:
-        """
-        Modifie le Zorder d'un composant
+        """Modifie le Zorder d'un composant
 
         Args:
             widget(Widget): composant
@@ -104,12 +91,18 @@ class GuiLayer(Layer):
             wrapper.z = z
             self._wrappers.remove(widget)
             insort(self._wrappers, wrapper)
+    
+    def __getitem__(self, key: str) -> Widget:
+        """Renvoie un composant par son nom"""
+        for wrapper in self._wrappers:
+            if wrapper.name == key:
+                return wrapper.widget
 
     def __len__(self) -> int:
         """Renvoie le nombre de composants"""
         return len(self._wrappers)
 
-    # ======================================== CYCLE DE VIE ========================================
+    # ======================================== HOOKS ========================================
     def on_start(self) -> None:
         """Activation du layer"""
         ...
@@ -118,19 +111,19 @@ class GuiLayer(Layer):
         """Désactivation du layer"""
         ...
 
-    # ======================================== LOOP ========================================
-    def update(self, dt: float) -> None:
+    # ======================================== LIFE CYCLE ========================================
+    def _update(self, dt: float) -> None:
         """Actualisation du layer"""
         for wrapper in reversed(self._wrappers):
             wrapper.widget.update(dt)
 
-    def draw(self, pipeline: Pipeline) -> None:
+    def _draw(self, pipeline: Pipeline) -> None:
         """Affichage du layer"""
         context = self._generate_context()
         for wrapper in self._wrappers:
             wrapper.widget.draw(pipeline, context)
 
-    # ======================================== HELPERS ========================================
+    # ======================================== INTERNALS ========================================
     def _get_wrapper(self, widget: Widget) -> WidgetWrapper:
         """Récupère le wrapper d'un composant"""
         for wrapper in self._wrappers:

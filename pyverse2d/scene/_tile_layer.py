@@ -13,9 +13,10 @@ class TileLayer(Layer):
     """Layer affichant un TileMap
 
     Args:
-        tile_map(TileMap): couche de tuiles à afficher
-        chunk_size(int, optional): nombre de tuiles par côté d'un chunk
-        clip(bool, optional): limitation parallax
+        tile_map: couche de tuiles à afficher
+        chunk_size: nombre de tuiles par côté d'un chunk
+        clip: limitation parallax
+        camera: caméra locale
     """
     __slots__ = (
         "_tile_map", "_chunk_size",
@@ -81,22 +82,21 @@ class TileLayer(Layer):
         ...
 
     def on_stop(self) -> None:
-        """Désactivation du layer — libère les ressources GL"""
+        """Désactivation du layer"""
         self._renderer.delete()
 
     # ======================================== LIFE CYCLE ========================================
     def preload(self) -> None:
-        """Force le build immédiat du renderer — à appeler avant la boucle principale"""
+        """Force le build immédiat du renderer"""
         if not self._renderer.built:
             self._renderer.build()
 
-    def update(self, dt: float) -> None:
-        """Actualisation du layer — tuiles statiques, rien à faire"""
+    def _update(self, dt: float) -> None:
+        """Actualisation"""
         ...
 
-    def draw(self, pipeline: Pipeline) -> None:
-        """
-        Affichage du layer — ne rend que les chunks visibles
+    def _draw(self, pipeline: Pipeline) -> None:
+        """Affichage
 
         Args:
             pipeline(Pipeline): pipeline active
