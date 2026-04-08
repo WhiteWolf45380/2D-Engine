@@ -38,7 +38,7 @@ class Pipeline:
     """
     __slots__ = (
         "_window", "_scene", "_layer",
-        "_data", "_context",
+        "_data", "_projection_cache", "_default_view", "_context",
         "_batch", "_group", "_z_groups",
     )
 
@@ -50,6 +50,8 @@ class Pipeline:
 
         # Cache
         self._data: dict[Scene, SceneRenderData] = {}
+        self._projection_cache: dict[tuple[float, float, float], Mat4] = {}
+        self._default_view: Mat4 = Mat4()
         self._context: _PipelineContext = _PipelineContext()
 
         # Gpu configuration
@@ -104,9 +106,19 @@ class Pipeline:
         return self._context.camera_resolve
     
     @property
-    def ppu(self) -> float:
+    def ppu(self) -> tuple[float, float]:
         """Ratio pixels par unité (world to screen)"""
-        return self._ppu
+        return (self._context.ppu_x, self._context.ppu_y)
+    
+    @property
+    def ppu_x(self) -> float:
+        """Ratio pixels par unité horizontal"""
+        return self._context.ppu_x
+    
+    @property
+    def ppu_y(self) -> float:
+        """Ratio pixels par unité vertical"""
+        return self._context.ppu_y
 
     @property
     def batch(self) -> Batch:
@@ -216,26 +228,42 @@ class Pipeline:
 
     def compute_projection(self, vw: float, vh: float, zoom: float) -> Mat4:
         """Calcul la matrice de projection"""
-        half_w = (vw / zoom) / 2
-        half_h = (vh / zoom) / 2
-        return Mat4.orthogonal_projection(
-            left=-half_w,
-            right=half_w,
-            bottom=-half_h,
-            top=half_h,
-            z_near=-8192.0,
-            z_far=8192.0,
-        )
+        projection_key = (vw, vh, zoom)
+        if projection_key not in self._projection_cache:
+            half_w = (vw / zoom) / 2
+            half_h = (vh / zoom) / 2
+            self._projection_cache[projection_key] = Mat4.orthogonal_projection(
+                left=-half_w,
+                right=half_w,
+                bottom=-half_h,
+                top=half_h,
+                z_near=-8192.0,
+                z_far=8192.0,
+            )
+        return self._projection_cache[projection_key]
     
     def compute_view(self, cx: float, cy: float, rotation: float) -> Mat4:
         """Calcul la matrice de vue"""
-        view = Mat4()
+        view = self._default_view
         view = view.translate((-cx, -cy, 0))
         if rotation != 0.0:
             view = view.rotate(radians(rotation), (0, 0, 1))
         return view
 
     # ======================================== UTILITAIRES ========================================
+    def scale_to_screen(self, width: float = None, height: float = None) -> float | tuple[float, float]:
+        """Convertit une taille monde en taille espace logique
+        
+        Args:
+            width: largeur monde
+            height: hauteur monde
+        """
+        if width is None:
+            return height * self._context.ppu_y
+        if height is None:
+            return width * self._context.ppu_x
+        return (width * self._context.ppu_x, height * self._context.ppu_y)
+
     def world_to_framebuffer(self, x: float, y: float) -> tuple[int, int]:
         """Convertit une coordonnée monde en pixels framebuffer
 
@@ -249,20 +277,17 @@ class Pipeline:
         half_w = (vw / zoom) / 2
         half_h = (vh / zoom) / 2
 
-        # World → NDC
+        # World to NDC
         ndc_x = (x - cx) / half_w
         ndc_y = (y - cy) / half_h
 
-        # NDC → viewport logique
+        # NDC to viewport logique
         px_logic = (ndc_x + 1) / 2 * lw
         py_logic = (ndc_y + 1) / 2 * lh
 
-        # Viewport logique → framebuffer
-        sx = self._window.framebuffer_scale_x
-        sy = self._window.framebuffer_scale_y
-
-        px_fb = int(self._window.viewport.x + (lx + px_logic) * sx)
-        py_fb = int(self._window.viewport.y + (ly + py_logic) * sy)
+        # Viewport logique to framebuffer
+        px_fb = int(self._window.viewport.x + (lx + px_logic) * self._window.framebuffer_scale_x)
+        py_fb = int(self._window.viewport.y + (ly + py_logic) * self._window.framebuffer_scale_y)
 
         return px_fb, py_fb
 

@@ -399,34 +399,56 @@ class _FillRenderer:
             z(int): z-order
             pipeline(Pipeline): pipeline de rendu
         """
+        # Couleur
         r, g, b, a = color.rgba8
         a = int(a * opacity)
 
+        # Dimensionnement
+        ppu_x, ppu_y = pipeline.ppu
+
         if isinstance(shape, VertexShape):
-            pts = [tuple(v) for v in shape.world_vertices(cx, cy, scale, rotation)]
+            world_vertices = shape.world_vertices(cx, cy, scale, rotation)
+            world_vertices[:, 0] *= ppu_x
+            world_vertices[:, 1] *= ppu_y
+            pts = [tuple(v) for v in world_vertices]
             self._gl_shape = pyglet.shapes.Polygon(*pts, color=(r, g, b, a), batch=pipeline.batch, group=pipeline.get_group(z=z))
 
         elif isinstance(shape, Circle):
             cx_, cy_, r_ = shape.world_transform(cx, cy, scale, 0)
+            cx_ *= ppu_x
+            cy_ *= ppu_y
+            r_ *= (ppu_y + ppu_x) / 2
             self._gl_shape = pyglet.shapes.Circle(cx_, cy_, r_, color=(r, g, b, a), batch=pipeline.batch, group=pipeline.get_group(z=z))
 
         elif isinstance(shape, Ellipse):
             cx_, cy_, rx, ry, _ = shape.world_transform(cx, cy, scale, 0)
+            cx_ *= ppu_x
+            cy_ *= ppu_y
+            rx *= ppu_x
+            ry *= ppu_y
             self._gl_shape = pyglet.shapes.Ellipse(cx_, cy_, rx, ry, color=(r, g, b, a), batch=pipeline.batch, group=pipeline.get_group(z=z))
             self._gl_shape.rotation = rotation
 
         elif isinstance(shape, Capsule):
             ax, ay, bx, by, r_ = shape.world_transform(cx, cy, scale, 0)
+            ax *= ppu_x
+            ay *= ppu_y
+            bx *= ppu_x
+            by *= ppu_y
+            r_ *= ppu_x
             spine = math.dist((ax, ay), (bx, by))
-            self._gl_shape = _CapsuleRenderer(cx, cy, r_, spine, rotation=rotation, color=(r, g, b, a), batch=pipeline.batch, group=pipeline.get_group(z=z))
+            screen_cx = (ax + bx) / 2
+            screen_cy = (ay + by) / 2
+            self._gl_shape = _CapsuleRenderer(screen_cx, screen_cy, r_, spine, rotation=rotation, color=(r, g, b, a), batch=pipeline.batch, group=pipeline.get_group(z=z))
 
         elif isinstance(shape, RoundedRect):
             _, _, _, _, r_, _, corners = shape.world_transform(cx, cy, scale, 0)
             tl, tr, br, bl = corners
-            mid_x = (tl[0] + br[0]) * 0.5
-            mid_y = (tl[1] + br[1]) * 0.5
-            w = shape.width  * scale
-            h = shape.height * scale
+            mid_x = (tl[0] + br[0]) * 0.5 * ppu_x
+            mid_y = (tl[1] + br[1]) * 0.5 * ppu_y
+            w = shape.width  * scale * ppu_x
+            h = shape.height * scale * ppu_y
+            r_ *= (ppu_x + ppu_y) / 2
             self._gl_shape = _RoundedRectRenderer(mid_x, mid_y, w, h, r_, rotation=rotation, color=(r, g, b, a), batch=pipeline.batch, group=pipeline.get_group(z=z))
     
     # ======================================== GETTERS ========================================
@@ -463,15 +485,15 @@ class _FillRenderer:
         if isinstance(psr.shape, VertexShape):
             return True
         else:
-            self._gl_shape.position = psr.center
+            self._gl_shape.position = psr.pipeline.scale_to_screen(*psr.center)
 
     def handle_scale(self, psr: PygletShapeRenderer) -> None:
         """Actualisation du facteur de redimensionnement"""
         if isinstance(psr.shape, Circle):
-            self._gl_shape.radius = psr.shape.radius * psr.scale
+            self._gl_shape.radius = psr.shape.radius * psr.scale * (psr.pipeline.ppu_x + psr.pipeline.ppu_y) / 2
         elif isinstance(psr.shape, Ellipse):
-            self._gl_shape.a = psr.shape.rx * psr.scale
-            self._gl_shape.b = psr.shape.ry * psr.scale
+            self._gl_shape.a = psr.shape.rx * psr.scale * psr.pipeline.ppu_x
+            self._gl_shape.b = psr.shape.ry * psr.scale * psr.pipeline.ppu_y
         else:
             return True
 
@@ -585,6 +607,7 @@ class _BorderRenderer:
             z(int): z-order
             pipeline(Pipeline): pipeline de rendu
         """
+        # Nettoyage
         if self._vlist is not None:
             self._vlist.delete()
 
@@ -592,9 +615,6 @@ class _BorderRenderer:
         self._batch = pipeline.batch
         self._group = pyglet.graphics.Group(order=z, parent=self._SHAPE_GROUP)
         self._width = width
-        print(self._group)
-        print(self._group.parent)
-        print(self._group.parent.parent)
 
         # Meshes
         strip = self._world_strip(cx, cy, scale, rotation, width, align)
