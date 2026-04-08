@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from .._internal import expect
+from ..abc import Space
 
 from ._screen import LogicalScreen
 
@@ -11,7 +12,7 @@ from numbers import Real
 from typing import Iterator
 
 # ======================================== WINDOW ========================================
-class Window:
+class Window(Space):
     """Fenêtre OS
 
     Args:

@@ -1,8 +1,8 @@
 # ======================================== IMPORTS ========================================
 from __future__ import annotations
 
-from ._pipeline import Pipeline
-from ..asset import Color, Image
+from .._pipeline import Pipeline
+from ...asset import Color, Image
 
 import pyglet
 import pyglet.sprite

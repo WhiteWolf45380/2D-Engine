@@ -2,11 +2,12 @@
 from __future__ import annotations
 
 from .._internal import expect
+from ..abc import Space
 
 from numbers import Real
 
 # ======================================== OBJET ========================================
-class LogicalScreen:
+class LogicalScreen(Space):
     """Espace de rendu de référence à résolution fixe
 
     Args:

@@ -1,16 +1,12 @@
 # ======================================== IMPORTS ========================================
 from .._internal import expect
-from .._flag import StackMode, SceneState, CameraMode
-from .._rendering._pipeline import Pipeline
+from .._flag import StackMode, SceneState
+from .._rendering import Pipeline
 
-from ._camera import Camera
-from ._viewport import Viewport
 from ._world_layer import WorldLayer
 from ._tile_layer import TileLayer
 from ._gui_layer import GuiLayer
 from ._scene import Scene
-
-from pyverse2d import mouse
 
 # ======================================== STATE ========================================
 _stack: list[Scene] = []
@@ -73,9 +69,7 @@ def update(dt: float):
     """Actualisation des scènes"""
     for scene in reversed(_stack):
         if scene.state in _update_states:
-            mouse.set_viewport_origin(scene.viewport.origin)
             scene.update(dt)
-    mouse.set_viewport_origin((0, 0))
 
 def draw(pipeline: Pipeline):
     """Affichage des scènes"""
@@ -91,12 +85,8 @@ def _stop_all():
 
 # ======================================== EXPORTS ========================================
 __all__ = [
-    "CameraMode",
     "StackMode",
     "SceneState",
-
-    "Camera",
-    "Viewport",
 
     "WorldLayer",
     "TileLayer",

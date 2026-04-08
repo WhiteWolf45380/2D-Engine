@@ -1,12 +1,12 @@
 # ======================================== IMPORTS ========================================
 from __future__ import annotations
 
-from ..typing import BorderAlign
-from ..abc import Shape, VertexShape
-from ..shape import Capsule, Circle, Ellipse, RoundedRect
-from ..asset import Color
+from ...typing import BorderAlign
+from ...abc import Shape, VertexShape
+from ...shape import Capsule, Circle, Ellipse, RoundedRect
+from ...asset import Color
 
-from ._pipeline import Pipeline
+from .._pipeline import Pipeline
 
 import pyglet
 import pyglet.shapes

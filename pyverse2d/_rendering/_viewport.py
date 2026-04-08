@@ -2,12 +2,13 @@
 from __future__ import annotations
 
 from .._internal import expect, positive
+from ..abc import Space
 from ..math import Point, Vector
 
 from numbers import Real
 
 # ======================================== VIEWPORT ========================================
-class Viewport:
+class Viewport(Space):
     """Zone de l'espace logique
 
     Args:

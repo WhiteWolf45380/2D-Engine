@@ -8,6 +8,8 @@ from ._asset import Asset
 
 from ._request import Request
 
+from ._space import Space
+
 from ._manager import Manager
 
 from ._ecs import Component, System
@@ -29,6 +31,8 @@ __all__ = [
     "Asset",
 
     "Request",
+
+    "Space",
 
     "Manager",
 

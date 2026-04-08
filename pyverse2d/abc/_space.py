@@ -1,8 +1,8 @@
 # ======================================== IMPORTS ========================================
 from __future__ import annotations
 
-from abc import ABC
+from abc import ABC, abstractmethod
 
 # ======================================== ABSTRACT CLASS ========================================
-class Request(ABC):
-    """Requête contenant un jeu d'informations"""
+class Space(ABC):
+    """Classe abstraite pour les espaces"""
