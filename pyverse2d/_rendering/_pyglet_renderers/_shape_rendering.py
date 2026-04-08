@@ -490,8 +490,8 @@ class _FillRenderer:
 
     def handle_opacity(self, psr: PygletShapeRenderer) -> None:
         """Actualisation de l'opacité"""
-        a = int(psr.color.a * psr.opacity)
-        self._gl_shape.opacity = a
+        a = 
+        self._gl_shape.opacity = int(255 * psr.color.a * psr.opacity)
     
     def handle_z(self, psr: PygletShapeRenderer) -> None:
         """Actualisation du z-order"""

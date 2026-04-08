@@ -385,7 +385,7 @@ class PygletLabelRenderer:
     def _handle_opacity(self) -> None:
         """Actualisation de l'opacité"""
         a = self._color.a if self._color is not None else 255
-        self._label.opacity = a * self._opacity
+        self._label.opacity = int(a * self._opacity)
 
     def _handle_width(self) -> None:
         """Actualisation de la largeur"""
@@ -401,7 +401,7 @@ class PygletLabelRenderer:
         """Actualisation du saut de ligne"""
         return "rebuild"
     
-    def handle_wrap_lines(self) -> None:
+    def _handle_wrap_lines(self) -> None:
         """Actualisation de la conservation"""
         return "rebuild"
 

@@ -64,7 +64,7 @@ class Camera(Space):
     __slots__ = (
         "_position", "_view_width", "_view_height",
         "_zoom", "_rotation",
-        "_transition", "_follow",
+       "_state",
     )
 
     TransitionRequest: ClassVar[Type[TransitionRequest]] = TransitionRequest
@@ -363,7 +363,7 @@ class Camera(Space):
         if follow.max_speed is not None:
             dx = x - self._position.x
             dy = y - self._position.y
-            max_dist = self._follow.max_speed * dt
+            max_dist = follow.max_speed * dt
             dist = (dx ** 2 + dy ** 2) ** 0.5
             if dist > max_dist:
                 zoom = max_dist / dist

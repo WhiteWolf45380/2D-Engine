@@ -336,9 +336,7 @@ class PygletSpriteRenderer:
 
     def _handle_opacity(self) -> None:
         """Actualisation de l'opacité"""
-        r, g, b, a = self._color.rgba8 if self._color is not None else (255, 255, 255, 255)
-        a = int(a * self._opacity)
-        self._sprite.opacity = (r, g, b, a)
+        self._sprite.opacity = int(255 * self._color.a * self._opacity)
 
     def _handle_z(self) -> None:
         """Actualisation du z-order"""
