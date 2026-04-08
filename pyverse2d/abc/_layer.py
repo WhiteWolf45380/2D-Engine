@@ -20,7 +20,7 @@ class Layer(ABC):
     __slots__ = ("_camera", "_active", "_visible")
 
     def __init__(self, camera: Camera = None):
-        from ..scene import Camera
+        from .._rendering import Camera
         self._camera: Camera = expect(camera, (Camera, None))
         self._active: bool = True
         self._visible: bool = True
@@ -36,7 +36,7 @@ class Layer(ABC):
     
     @camera.setter
     def camera(self, value: Camera) -> None:
-        from ..scene import Camera
+        from .._rendering import Camera
         self._camera = expect(value, (Camera, None))
     
     # ======================================== ACTIVITY ========================================
