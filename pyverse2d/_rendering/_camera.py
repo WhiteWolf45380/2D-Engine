@@ -339,7 +339,7 @@ class Camera(Space):
         tr.elapsed += dt
         if tr.elapsed >= tr.duration:
             self._go(tr.end.x, tr.end.y)
-            return self.stop_transition()
+            return self.idle()
 
         # Déplacement
         t = tr.elapsed / tr.duration
