@@ -44,6 +44,10 @@ class AttachRequest(Request):
     offset: Vector
     parallax_x: float
     parallax_y: float
+    same_zoom: bool
+    zoom_factor: float
+    same_rotation: bool
+    rotation_offset: float
     _id: str = "attach"
 
 # ======================================== CAMERA ========================================
@@ -86,6 +90,40 @@ class Camera(Space):
 
         # Etat
         self._state: Request = None
+
+    # ======================================== FACTORY ========================================
+    @classmethod
+    def derived_from(
+        cls,
+        camera: Camera,
+        offset: Vector = (0.0, 0.0),
+        parallax_x: Real = 1.0,
+        parallax_y: Real = 1.0,
+        keep_zoom: bool = False,
+        zoom_factor: Real = 1.0,
+        keep_rotation: bool = False,
+        rotation_offset: Real = 0.0,
+    ) -> Camera:
+        """Initialise une ``Camera`` dérivée d'une autre
+
+        Args:
+            camera: camera principale
+            offset: décalage
+            parallax_x: facteur parallax horizontal
+            parallax_y: facteur parallax vertical
+        """
+        cam = Camera(camera.position, camera.view_width, camera.view_height, camera.zoom * zoom_factor, camera.rotation + rotation_offset)
+        cam.attach_to(
+            camera,
+            offset = offset,
+            parallax_x = parallax_x,
+            parallax_y = parallax_y,
+            same_zoom = keep_zoom,
+            zoom_factor = zoom_factor,
+            same_rotation = keep_rotation,
+            rotation_offset = rotation_offset,
+        )
+        return cam
 
     # ======================================== PROPERTIES ========================================
     @property
@@ -249,20 +287,32 @@ class Camera(Space):
             offset: Vector = (0.0, 0.0),
             parallax_x: Real = 1.0,
             parallax_y: Real = 1.0,
+            same_zoom: bool = False,
+            zoom_factor: Real = 1.0,
+            same_rotation: bool = False,
+            rotation_offset: Real = 0.0,
         ):
         """Attache la caméra à une autre caméra
 
         Args:
             camera: caméra à suivre
             offset: décalage
-            parallax_x: effet parallax horizontal
-            parallax_y: effet parallax vertical
+            parallax_x: facteur parallax horizontal
+            parallax_y: facteur parallax vertical
+            same_zoom: suivi du zoom de la caméra cible
+            zoom_factor: facteur de zoom cumulatif
+            same_rotation: suivi de la rotation de la caméra cible
+            rotation_offset: décalage de la rotation
         """
         camera = expect(camera, Camera)
         offset = Vector(offset)
         parallax_x = float(expect(parallax_x, Real))
         parallax_y = float(expect(parallax_y, Real))
-        self._state = AttachRequest(camera, offset, parallax_x, parallax_y)
+        same_zoom = expect(same_zoom, bool)
+        zoom_factor = over(float(expect(zoom_factor, Real)), 0, include=False)
+        same_rotation = expect(same_rotation, bool)
+        rotation_offset = float(expect(rotation_offset, Real))
+        self._state = AttachRequest(camera, offset, parallax_x, parallax_y, same_zoom, zoom_factor, same_rotation, rotation_offset)
 
     def idle(self) -> None:
         """Désactive l'état courant"""
@@ -282,50 +332,64 @@ class Camera(Space):
 
     def _update_transition(self, dt: float) -> None:
         """Actualise la transition"""
+        # Connexion
         tr: TransitionRequest = self._state
+
+        # Actualisation
         tr.elapsed += dt
-    
         if tr.elapsed >= tr.duration:
             self._go(tr.end.x, tr.end.y)
             return self.stop_transition()
 
+        # Déplacement
         t = tr.elapsed / tr.duration
         if tr.easing is not None:
             t = tr.easing(t)
-    
         self._go(*_step_position(tr.start.x, tr.start.y, tr.end.x, tr.end.y, t))
 
     def _update_follow(self, dt: float) -> None:
         """Actualise le suivi"""
+        # Connexion
         follow: FollowRequest = self._state
         target = follow.target
         offset = follow.offset
+
+        # Position
         target_x, target_y = target.x + offset.x, target.y + offset.y
-    
         t = 1 - follow.smoothing ** dt
         x, y = _step_position(self._position.x, self._position.y, target_x, target_y, t)
+        
+        # Limitation de vitesse
         if follow.max_speed is not None:
             dx = x - self._position.x
             dy = y - self._position.y
             max_dist = self._follow.max_speed * dt
             dist = (dx ** 2 + dy ** 2) ** 0.5
             if dist > max_dist:
-                scale = max_dist / dist
-                x = self._position.x + dx * scale
-                y = self._position.y + dy * scale
-    
+                zoom = max_dist / dist
+                x = self._position.x + dx * zoom
+                y = self._position.y + dy * zoom
+
+        # Application
         self._go(x, y)
 
     def _update_attach(self, dt: float) -> None:
         """Actualise l'attache"""
+        # Connexion
         attach: AttachRequest = self._state
         camera = attach.camera
         offset = attach.offset
 
+        # Position
         x = (camera.x) * attach.parallax_x + offset.x
         y = (camera.y) * attach.parallax_y + offset.y
-
         self._go(x, y)
+
+        # Transformation
+        if attach.same_zoom:
+            self._zoom = camera.zoom * attach.zoom_factor
+        if attach.same_rotation:
+            self._rotation = camera.rotation + attach.rotation_offset
 
     # ======================================== RESOLVE ========================================
     def resolve(self, viewport_width: int, viewport_height: int) -> tuple[float, float, float, float, float, float]:
