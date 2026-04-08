@@ -54,7 +54,7 @@ class PygletShapeRenderer:
         "_x", "_y", "_anchor_x", "_anchor_y",
         "_scale", "_rotation",
         "_filling", "_color", "_border_width", "_border_align", "_border_color", "_opacity",
-        "_z", "_pipeline"
+        "_z", "_pipeline",
         "_cx", "_cy",
         "_fill", "_border"
     )

@@ -46,7 +46,7 @@ class PygletSpriteRenderer:
         "_x", "_y", "_anchor_x", "_anchor_y",
         "_scale_x", "_scale_y", "_flip_x", "_flip_y", "_rotation",
         "_color", "_opacity",
-        "_z", "_pipeline"
+        "_z", "_pipeline",
         "_sprite",
     )
     _cache: dict[str, pyglet.image.AbstractImage] = {}

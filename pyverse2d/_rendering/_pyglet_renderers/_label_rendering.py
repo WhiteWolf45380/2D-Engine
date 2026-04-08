@@ -45,7 +45,7 @@ class PygletLabelRenderer:
         "_color", "_opacity",
         "_width", "_height", "_multiline", "_wrap_lines", "_align",
         "_margin", "_line_spacing",
-        "_z", "_pipeline"
+        "_z", "_pipeline",
         "_label",
     )
 
