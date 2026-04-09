@@ -102,7 +102,7 @@ class TileLayer(Layer):
             pipeline(Pipeline): pipeline active
         """
         if not self._renderer.built:
-            self._renderer.build()
+            self._renderer.build(pipeline.ppu_x, pipeline.ppu_y)
         if not self._renderer.has_chunks:
             return
 
