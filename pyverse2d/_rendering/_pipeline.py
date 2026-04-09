@@ -71,8 +71,12 @@ class Pipeline:
         self._data: dict[Scene, SceneRenderData] = {}
         self._projection_cache: dict[tuple[float, float, float], Mat4] = {}
         self._view_cache: dict[tuple[float, float, float], Mat4] = {}
+
+        # Pipeline de vue
         self._view_buffer: dict[tuple[float, float, float], Mat4] = {}
         self._default_view: Mat4 = Mat4()
+
+        # Contexte
         self._context: _PipelineContext = _PipelineContext()
 
         # Gpu configuration
@@ -123,7 +127,7 @@ class Pipeline:
     
     @property
     def camera_resolve(self) -> tuple[float, float, float, float, float, float]:
-        """Résolution de la caméra (frustum)"""
+        """Résolution de la caméra"""
         return self._context.camera_resolve
     
     @property
@@ -182,7 +186,7 @@ class Pipeline:
         # Espace logique
         screen = self._window.screen
         self._context.viewport_resolve = scene.viewport.resolve(screen.width, screen.height)
-        lx, ly, lw, lh = self._context.viewport_resolve
+        lx, ly, lw, lh, _, _ = self._context.viewport_resolve
 
         # FrameBuffer
         window_viewport = self._window.viewport
@@ -213,8 +217,10 @@ class Pipeline:
         self._group = layer_groups[layer].group
         self._z_groups = layer_groups[layer].z_groups
 
+        # Espace viewport
+        _, _, lw, lh, (ox , oy), (dx, dy) = self._context.viewport_resolve
+
         # Frustum
-        _, _, lw, lh = self._context.viewport_resolve
         self._context.camera_resolve = self.camera.resolve(lw, lh)
         cx, cy, vw, vh, zoom, rotation = self._context.camera_resolve
 
@@ -227,7 +233,7 @@ class Pipeline:
         self._context.projection_matrix = projection
 
         # Matrice de vue
-        view = self.compute_view(cx, cy, rotation)
+        view = self.compute_view(cx, cy, rotation, ox, oy, dx, dy)
         self._window.native.view = view
         self._group.view = view
 
@@ -242,15 +248,29 @@ class Pipeline:
         self._view_cache, self._view_buffer = self._view_buffer, self._view_cache
         self._view_buffer.clear()
 
-    # ======================================== MATRICES ========================================
+    # ======================================== COMPUTING ========================================
     def compute_ppu(self, lw: float, lh: float, vw: float, vh: float, zoom: float) -> tuple[float, float]:
-        """Calcul des ratios pixels per unit"""
+        """Calcul des ratios pixels per unit
+        
+        Args:
+            lw: largeur du viewport (logical space)
+            lh: hauteur du viewport (logical space)
+            vw: largeur de la vision (view space)
+            vh: hauteur de la vision (view space)
+            zoom: facteur de zoom
+        """
         ppu_x = (lw / vw) * zoom
         ppu_y = (lh / vh) * zoom
         return (ppu_x, ppu_y)
 
     def compute_projection(self, vw: float, vh: float, zoom: float) -> Mat4:
-        """Calcul la matrice de projection"""
+        """Calcul la matrice de projection
+
+        Args:
+            vw: largeur de la vision (view space)
+            vh: hauteur de la vision (view space)
+            zoom: facteur de zoom
+        """
         projection_key = (vw, vh, zoom)
         if projection_key not in self._projection_cache:
             half_w = (vw / zoom) / 2
@@ -265,9 +285,19 @@ class Pipeline:
             )
         return self._projection_cache[projection_key]
     
-    def compute_view(self, cx: float, cy: float, rotation: float) -> Mat4:
-        """Calcul la matrice de vue"""
-        view_key = (cx, cy, rotation)
+    def compute_view(self, cx: float, cy: float, rotation: float, ox: float, oy: float, dx: float, dy: float) -> Mat4:
+        """Calcul la matrice de vue
+        
+        Args
+            cx: centre horizontal de la vision (world space)
+            cy: centre vertical de la vision (world space)
+            rotation: angle de rotation en degrés (CCW)
+            ox: origine horizontale du viewport (absolute viewport space)
+            oy: origine verticale du viewport (absolute viewport space)
+            scale_x: facteur de redimensionnement horizontal
+            scale_y: facteur de redimensionnement vertical
+        """
+        view_key = (cx, cy, rotation, ox, oy, dx, dy)
         if view_key in self._view_buffer:
             return self._view_buffer[view_key]
         if view_key in self._view_cache:
@@ -275,10 +305,37 @@ class Pipeline:
             self._view_buffer[view_key] = view
             return view
         view = self._default_view
+        view = self.compute_camera(view, cx, cy, rotation)
+        view = self.compute_viewport(view, ox, oy, dx, dy)
+        self._view_buffer[view_key] = view
+        return view
+    
+    def compute_camera(self, view: Mat4, cx: float, cy: float, rotation: float) -> Mat4:
+        """Transforme une matrice selon l'espace camera
+        
+        Args:
+            matrix: matrice de vue
+            cx: centre horizontal de la camera (world space)
+            cy: centre vertical de la camera (world space)
+            rotation: angle de rotation en degrés (CCW)
+        """
         view = view.translate((-cx, -cy, 0))
         if rotation != 0.0:
             view = view.rotate(radians(rotation), (0, 0, 1))
-        self._view_buffer[view_key] = view
+        return view
+    
+    def compute_viewport(self, view: Mat4, ox: float, oy: float, dx: float, dy: float) -> Mat4:
+        """Transforme une matrice selon l'espace viewport
+
+        Args:
+            ox: origine horizontale du viewport (absolute viewport space)
+            oy: origine verticale du viewport (absolute viewport space)
+            dx: direction horizontale du viewport (logical space)
+            dy: direction verticale du viewport (logical space)
+        """
+        view = view.translate(-ox / self.ppu_x, -oy / self.ppu_y)
+        if dx != 1.0 or dy != 1.0:
+            view = view.scale((dx, dy, 1.0))
         return view
 
     # ======================================== UTILITAIRES ========================================
@@ -357,7 +414,7 @@ class Pipeline:
 # ======================================== CONTEXTE ========================================
 @dataclass(slots=True)
 class _PipelineContext:
-    viewport_resolve: tuple[float, float, float, float] = None
+    viewport_resolve: tuple[float, float, float, float, tuple[float, float], tuple[float, float]] = None
     camera_resolve: tuple[float, float, float, float, float, float] = None
     gl_viewport: tuple[int, int, int, int] = None
     projection_matrix: Mat4 = None

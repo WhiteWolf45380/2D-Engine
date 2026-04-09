@@ -129,7 +129,7 @@ class Viewport(Space):
 
     # ======================================== RESOLVING ========================================
     def resolve(self, screen_width: int, screen_height: int) -> tuple[float, float, float, float]:
-        """Renvoie ``(x, y, witdh, height)`` résolus dans l'espace logique
+        """Renvoie ``(x, y, witdh, height, origin, )`` résolus dans l'espace logique
 
         Args:
             screen_width: largeur de l'espace logique
@@ -138,12 +138,9 @@ class Viewport(Space):
         w = self._width  if self._width  != 0.0 else screen_width
         h = self._height if self._height != 0.0 else screen_height
 
-        # Origine en pixels dans le viewport
         ox = self._origin.x * w
         oy = self._origin.y * h
 
-        # Coin bas-gauche dans l'espace logique
-        x = self._position.x - ox * self._direction.x
-        y = self._position.y - oy * self._direction.y
+        dx, dy = self._direction
 
-        return (x, y, w, h)
+        return (self._position.x, self._position.y, w, h, (ox, oy), (dx, dy))
