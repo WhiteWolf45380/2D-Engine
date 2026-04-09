@@ -82,6 +82,9 @@ class Layer(ABC):
 
     # ======================================== LIFE CYCLE ========================================
     @abstractmethod
+    def _preload(self, pipeline: Pipeline): ...
+
+    @abstractmethod
     def _update(self, dt: float) -> None: ...
 
     def update(self, dt: float):

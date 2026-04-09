@@ -65,7 +65,19 @@ def set_window(window: Window):
         _pipeline.window.clear()
         scene.draw(_pipeline)
 
-# ======================================== ACTIVATION ========================================
+# ======================================== COLLECTIONS ========================================
+def preload(loadable: scene.Scene = None) -> None:
+    """Précharge le rendu
+
+    Args:
+        loadable: scène spécifique à précharger
+    """
+    if _pipeline is None:
+        raise RuntimeError("Not window set. Please try set_window() before loading") 
+    if loadable is None:
+        scene._preload(_pipeline)
+    loadable._preload(_pipeline)
+
 def run(on_update: Callable[[float], None] = None, on_draw: Callable[[], None] = None):
     """Démarre le moteur
 

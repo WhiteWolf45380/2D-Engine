@@ -86,10 +86,9 @@ class TileLayer(Layer):
         self._renderer.delete()
 
     # ======================================== LIFE CYCLE ========================================
-    def preload(self) -> None:
-        """Force le build immédiat du renderer"""
-        if not self._renderer.built:
-            self._renderer.build()
+    def _preload(self) -> None:
+        """Préchargement"""
+        pass
 
     def _update(self, dt: float) -> None:
         """Actualisation"""

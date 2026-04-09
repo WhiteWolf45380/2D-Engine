@@ -138,11 +138,12 @@ class Scene:
             layer.on_stop()
 
     # ======================================== LIFE CYCLE ========================================
-    def preload(self):
-        """Force le build de tous les layers qui l'implémentent"""
+    def _preload(self, pipeline: Pipeline):
+        """Préchargement"""
         for layer in self._layers:
-            if hasattr(layer, "preload"):
-                layer.preload()
+            layer._preload()
+        self.update(0.0)
+        self.draw(pipeline)
 
     def update(self, dt: float):
         """Actualisation"""

@@ -64,7 +64,12 @@ def pop():
             new_top.on_start()
         return top
 
-# ======================================== LOOP ========================================
+# ======================================== LIFE CYCLE ========================================
+def _preload(pipeline: Pipeline) -> None:
+    """Préchargement"""
+    for scene in _stack:
+        scene._preload(pipeline)
+
 def update(dt: float):
     """Actualisation des scènes"""
     for scene in reversed(_stack):

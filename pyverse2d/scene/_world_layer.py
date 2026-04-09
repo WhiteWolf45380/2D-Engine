@@ -39,6 +39,10 @@ class WorldLayer(Layer):
         ...
 
     # ======================================== LIFE CYCLE ========================================
+    def _preload(self) -> None:
+        """Préchargement"""
+        pass
+
     def _update(self, dt: float):
         """Actualisation du layer"""
         if self._world is not None:

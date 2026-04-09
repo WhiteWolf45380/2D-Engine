@@ -112,6 +112,10 @@ class GuiLayer(Layer):
         ...
 
     # ======================================== LIFE CYCLE ========================================
+    def _preload(self) -> None:
+        """Préchargement"""
+        pass
+
     def _update(self, dt: float) -> None:
         """Actualisation du layer"""
         for wrapper in reversed(self._wrappers):
