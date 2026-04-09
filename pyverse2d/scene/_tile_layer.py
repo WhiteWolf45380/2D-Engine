@@ -101,7 +101,7 @@ class TileLayer(Layer):
             pipeline(Pipeline): pipeline active
         """
         if not self._renderer.built:
-            self._renderer.build(pipeline.ppu_x, pipeline.ppu_y)
+            self._renderer.build()
         if not self._renderer.has_chunks:
             return
 
@@ -115,8 +115,8 @@ class TileLayer(Layer):
         vh_world = half_h * 2
 
         tm = self._tile_map
-        tw = tm.tile_width * pipeline.ppu_x
-        th = tm.tile_height * pipeline.ppu_y
+        tw = tm.tile_width
+        th = tm.tile_height
         ox, oy = tm.origin
         chunk_w = self._chunk_size * tw
         chunk_h = self._chunk_size * th

@@ -173,7 +173,7 @@ class TileRenderer:
         return bool(self._chunk_offsets)
 
     # ======================================== BUILD ========================================
-    def build(self, ppu_x: float, ppu_y: float) -> None:
+    def build(self) -> None:
         """Construit la texture array et le VAO global"""
         self.delete()
 
@@ -199,7 +199,7 @@ class TileRenderer:
 
         for cr in range(chunk_rows):
             for cc in range(chunk_cols):
-                verts = self._build_chunk_verts(cc, cr, tw, th, ppu_x, ppu_y)
+                verts = self._build_chunk_verts(cc, cr, tw, th)
                 if verts is not None:
                     count = len(verts)
                     self._chunk_offsets[(cc, cr)] = (cursor, count)
@@ -235,7 +235,7 @@ class TileRenderer:
 
         self._built = True
 
-    def _build_chunk_verts(self, cc: int, cr: int, tw: float, th: float, ppu_x: float, ppu_y: float) -> np.ndarray | None:
+    def _build_chunk_verts(self, cc: int, cr: int, tw: float, th: float) -> np.ndarray | None:
         """Génère les sommets (x, y, u, v, layer) pour tous les quads d'un chunk
 
         Pré-alloue le buffer numpy au maximum théorique puis tronque.
@@ -259,8 +259,6 @@ class TileRenderer:
                 if layer < 0:
                     continue
                 wx, wy = tm.tile_to_world(col, row)
-                wx *= ppu_x
-                wy *= ppu_y
                 bl, br, tr_, tl = _flip_uvs(tm.flags_at(col, row))
                 l = float(layer)
                 buf[idx    ] = [wx,      wy,      bl[0],  bl[1],  l]
