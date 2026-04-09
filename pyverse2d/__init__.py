@@ -66,7 +66,7 @@ def set_window(window: Window):
         scene.draw(_pipeline)
 
 # ======================================== ACTIVATION ========================================
-def run(on_update: Callable[[float], None] = None, on_draw: Callable[[Pipeline], None] = None):
+def run(on_update: Callable[[float], None] = None, on_draw: Callable[[], None] = None):
     """Démarre le moteur
 
     Args:
@@ -97,7 +97,7 @@ def run(on_update: Callable[[float], None] = None, on_draw: Callable[[Pipeline],
 
     # Draw handler
     if on_draw is not None:
-        _pipeline.window.native.push_handlers(on_draw=lambda: on_draw(_pipeline))
+        _pipeline.window.native.push_handlers(on_draw=on_draw)
 
     # Lancement
     time.schedule(_update)
