@@ -42,10 +42,6 @@ class CameraGroup(Group):
         """Applique les matrices du groupe"""
         self._window.projection = self.projection
         self._window.view = self.view
-    
-    def unset_state(self):
-        """Retire les matrices du groupe"""
-        pass
 
 # ======================================== PIPELINE ========================================
 class Pipeline:

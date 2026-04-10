@@ -7,7 +7,7 @@ from .._pipeline import Pipeline
 
 import pyglet
 import pyglet.gl
-from pyglet.graphics import ShaderGroup
+from pyglet.graphics import ShaderGroup, Group
 from pyglet.graphics.shader import Shader, ShaderProgram
 
 import math
@@ -19,7 +19,6 @@ if TYPE_CHECKING:
 
 # ======================================== CONSTANTS ========================================
 _UNSET = object()
-_TRANSFORM_DEPS = frozenset({"x", "y", "anchor_x", "anchor_y", "scale", "rotation"})
 
 # ======================================== SHADERS ========================================
 _VERT_SRC = """
@@ -64,6 +63,21 @@ void main() {
 }
 """
 
+# ======================================== GROUP ========================================
+class TransformGroup(ShaderGroup):
+
+    def __init__(self, psr: PygletShapeRenderer, program: ShaderProgram, order: int = 0, parent: Group = None):
+        super().__init__(program, order=order, parent=parent)
+        self.psr: PygletShapeRenderer = psr
+
+    def set_state(self):
+        """Applique les uniforms"""
+        p = self.program
+        psr = self.psr
+        p["u_scale"] = psr.scale
+        p["u_rotation"] = math.radians(psr.rotation)
+        p["u_translation"] = (psr.x, psr.y)
+        p["u_anchor"] = _anchor_local(psr)
 
 # ======================================== PUBLIC ========================================
 class PygletShapeRenderer:
@@ -102,7 +116,7 @@ class PygletShapeRenderer:
 
     # Cache partagé des shader groups
     _PROGRAM: ShaderProgram = None
-    _GROUPS: dict[tuple[int, int], ShaderGroup] = {}
+    _GROUPS: dict[tuple[int, int], TransformGroup] = {}
 
     @classmethod
     def get_program(cls) -> ShaderProgram:
@@ -115,11 +129,11 @@ class PygletShapeRenderer:
         return cls._PROGRAM
 
     @classmethod
-    def get_group(cls, pipeline: Pipeline, z: int = 0, order: int = 0) -> ShaderGroup:
+    def get_group(cls, pipeline: Pipeline, z: int = 0, order: int = 0) -> TransformGroup:
         """Renvoie le groupe correspondant avec mise en cache"""
         key = (z, order)
         if key not in cls._GROUPS:
-            cls._GROUPS[key] = ShaderGroup(cls.get_program(), order=order, parent=pipeline.get_group(z=z))
+            cls._GROUPS[key] = TransformGroup(cls, cls.get_program(), order=order, parent=pipeline.get_group(z=z))
         return cls._GROUPS[key]
 
     def __init__(
@@ -315,8 +329,6 @@ class _FillRenderer:
             colors = ('Bn', (r, g, b, a) * self._n),
         )
 
-        _set_transform(psr)
-
     # ======================================== PROPERTIES ========================================
     @property
     def visible(self) -> bool:
@@ -342,10 +354,6 @@ class _FillRenderer:
         if "z" in changes:
             self._build(psr)
             return
-
-        # Changement de position
-        if changes & _TRANSFORM_DEPS:
-            _set_transform(psr)
 
         # Changement de style
         if "color" in changes or "opacity" in changes:
@@ -393,8 +401,6 @@ class _BorderRenderer:
             colors = ('Bn', (r, g, b, a) * self._n),
         )
 
-        _set_transform(psr)
-
     def _refresh_strip(self, psr: PygletShapeRenderer) -> None:
         """Rebuild du strip local si border_width ou border_align changent"""
         strip = _local_strip(psr)
@@ -430,10 +436,6 @@ class _BorderRenderer:
         if changes & {"border_width", "border_align"}:
             self._refresh_strip(psr)
 
-        # Changement de position
-        if changes & _TRANSFORM_DEPS:
-            _set_transform(psr)
-
         # Changement de style
         if "border_color" in changes or "opacity" in changes:
             r, g, b, a = psr.border_color.rgba8
@@ -448,15 +450,6 @@ class _BorderRenderer:
 
 
 # ======================================== HELPERS ========================================
-def _set_transform(psr: PygletShapeRenderer) -> None:
-    """Upload du transform complet via uniforms"""
-    program = psr.get_program()
-    program["u_scale"] = psr.scale
-    program["u_rotation"] = math.radians(psr.rotation)
-    program["u_translation"] = (psr.x, psr.y)
-    program["u_anchor"] = _anchor_local(psr)
-
-
 def _anchor_local(psr: PygletShapeRenderer) -> tuple[float, float]:
     """Calcule l'anchor en coordonnées locales absolues"""
     xmin, ymin, xmax, ymax = psr.shape.get_bounding_box()
