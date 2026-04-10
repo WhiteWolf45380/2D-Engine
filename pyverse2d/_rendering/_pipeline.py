@@ -231,11 +231,13 @@ class Pipeline:
         projection = self.compute_projection(vw, vh, zoom)
         self._group.projection = projection
         self._context.projection_matrix = projection
+        self._window.native.projection = projection
 
         # Matrice de vue
         view = self.compute_view(cx, cy, rotation, ox, oy, dx, dy)
-        self._window.native.view = view
         self._group.view = view
+        self._context.view_matrix = view
+        self._window.native.view = view
 
     def flush(self) -> None:
         """Envoie tout le batch au GPU"""
@@ -339,6 +341,13 @@ class Pipeline:
         return view
 
     # ======================================== UTILITAIRES ========================================
+    def visible_world_rect(self) -> tuple[float, float, float, float]:
+        """Renvoie (x, y, width, height) du frustum visible en coordonnées monde"""
+        cx, cy, vw, vh, zoom, _ = self._context.camera_resolve
+        half_w = (vw / zoom) / 2
+        half_h = (vh / zoom) / 2
+        return (cx - half_w, cy - half_h, half_w * 2, half_h * 2)
+
     def scale_to_screen(self, width: float = None, height: float = None) -> float | tuple[float, float]:
         """Convertit une taille monde en taille espace logique
         
@@ -371,7 +380,7 @@ class Pipeline:
 
         # NDC to viewport logique
         px_logic = ((ndc_x + 1) * lw / 2 - ox) / dx
-        py_logic = ((ndc_y + 1) * lh / 2 - ox) / dy
+        py_logic = ((ndc_y + 1) * lh / 2 - oy) / dy
 
         # Viewport logique to framebuffer
         px_fb = int(self._window.viewport.x + (lx + px_logic) * self._window.framebuffer_scale_x)
@@ -391,12 +400,10 @@ class Pipeline:
         """
         _, _, _, _, _, (dx, dy) = self._context.viewport_resolve
         _, _, vw, vh, zoom, _ = self._context.camera_resolve
-        half_w = (vw / zoom) / 2
-        half_h = (vh / zoom) / 2
 
         x0, y0 = self.world_to_framebuffer(wx, wy)
-        w = int(ww / half_w / dx * self._context.gl_viewport[2] / 2)
-        h = int(wh / half_h / dy * self._context.gl_viewport[3] / 2)
+        w = int(ww / (vw / zoom) * self._context.gl_viewport[2] / dx)
+        h = int(wh / (vh / zoom) * self._context.gl_viewport[3] / dy)
 
         was_enabled = (gl.GLboolean * 1)()
         prev_box = (c_int * 4)()

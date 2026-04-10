@@ -95,32 +95,21 @@ class TileLayer(Layer):
         ...
 
     def _draw(self, pipeline: Pipeline) -> None:
-        """Affichage
-
-        Args:
-            pipeline(Pipeline): pipeline active
-        """
+        """Affuchage"""
         if not self._renderer.built:
             self._renderer.build()
         if not self._renderer.has_chunks:
             return
 
-        cx, cy, vw, vh, zoom, _ = pipeline.camera_resolve
-        half_w = (vw / zoom) / 2
-        half_h = (vh / zoom) / 2
+        # Frustum visible (world space)
+        vx, vy, vw_world, vh_world = pipeline.visible_world_rect()
 
-        vx = cx - half_w
-        vy = cy - half_h
-        vw_world = half_w * 2
-        vh_world = half_h * 2
-
+        # Region visible (tilemap)
         tm = self._tile_map
-        tw = tm.tile_width
-        th = tm.tile_height
+        tw, th = tm.tile_width, tm.tile_height
         ox, oy = tm.origin
         chunk_w = self._chunk_size * tw
         chunk_h = self._chunk_size * th
-
         chunk_cols = (tm.cols + self._chunk_size - 1) // self._chunk_size
         chunk_rows = (tm.rows + self._chunk_size - 1) // self._chunk_size
 
@@ -129,13 +118,8 @@ class TileLayer(Layer):
         cr_min = max(0, int((vy - oy) // chunk_h))
         cr_max = min(chunk_rows, int((vy + vh_world - oy) // chunk_h) + 1)
 
-        # Génération du contexte de rendu
-        if self._clip:
-            ctx = pipeline.scissor(ox + 1, oy + 1, tm.cols * tw - 2, tm.rows * th - 2)
-        else:
-            ctx = nullcontext()
-        
-        # Affichage des tiles
+        # Rendu avec contexte
+        ctx = pipeline.scissor(ox + 1, oy + 1, tm.cols * tw - 2, tm.rows * th - 2) if self._clip else nullcontext()
         with ctx:
             self._renderer.begin()
             self._renderer.draw_visible(cc_min, cc_max, cr_min, cr_max)
