@@ -8,8 +8,8 @@ from .._registry import _handlers
 
 from ._vertex import sat, circle_vs_pts, ellipse_vs_pts, capsule_vs_pts
 
-from . import _circle, _ellipse, _capsule     # noqa: F401 (enregistrement des handlers via @register)
-from ._prim_transform import _circle_params, _ellipse_params, _capsule_params
+from . import _circle, _ellipse, _capsule, _rounded_rect     # noqa: F401 (enregistrement des handlers via @register)
+from ._prim_transform import circle_params, ellipse_params, capsule_params
 
 # ======================================== CONSTANTS ========================================
 _PRIMITIVE_TYPES = (Circle, Ellipse, Capsule)
@@ -53,15 +53,15 @@ def dispatch(sa, ax, ay, scale_a, rot_a, sb, bx, by, scale_b, rot_b) -> Contact 
 def _primitive_vs_pts(sp, px, py, scale_p, rot_p, pts):
     """Dispatch une primitive contre un contour polygonal"""
     if isinstance(sp, Circle):
-        cx, cy, r = _circle_params(sp, px, py, scale_p)
+        cx, cy, r = circle_params(sp, px, py, scale_p)
         return circle_vs_pts(cx, cy, r, pts)
 
     if isinstance(sp, Ellipse):
-        cx, cy, rx, ry, r = _ellipse_params(sp, px, py, scale_p, rot_p)
+        cx, cy, rx, ry, r = ellipse_params(sp, px, py, scale_p, rot_p)
         return ellipse_vs_pts(cx, cy, rx, ry, r, pts)
 
     if isinstance(sp, Capsule):
-        ax_, ay_, bx_, by_, r = _capsule_params(sp, px, py, scale_p, rot_p)
+        ax_, ay_, bx_, by_, r = capsule_params(sp, px, py, scale_p, rot_p)
         return capsule_vs_pts(ax_, ay_, bx_, by_, r, pts)
 
     return None
