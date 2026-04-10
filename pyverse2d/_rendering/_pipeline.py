@@ -359,7 +359,7 @@ class Pipeline:
             x: coordonnée horizontale monde
             y: coordonnée verticale monde
         """
-        lx, ly, lw, lh = self._context.viewport_resolve
+        lx, ly, lw, lh, (ox, oy), (dx, dy) = self._context.viewport_resolve
         cx, cy, vw, vh, zoom, _ = self._context.camera_resolve
 
         half_w = (vw / zoom) / 2
@@ -370,8 +370,8 @@ class Pipeline:
         ndc_y = (y - cy) / half_h
 
         # NDC to viewport logique
-        px_logic = (ndc_x + 1) / 2 * lw
-        py_logic = (ndc_y + 1) / 2 * lh
+        px_logic = ((ndc_x + 1) * lw / 2 - ox) / dx
+        py_logic = ((ndc_y + 1) * lh / 2 - ox) / dy
 
         # Viewport logique to framebuffer
         px_fb = int(self._window.viewport.x + (lx + px_logic) * self._window.framebuffer_scale_x)
@@ -389,13 +389,14 @@ class Pipeline:
             ww: largeur monde
             wh: hauteur monde
         """
+        _, _, _, _, _, (dx, dy) = self._context.viewport_resolve
         _, _, vw, vh, zoom, _ = self._context.camera_resolve
         half_w = (vw / zoom) / 2
         half_h = (vh / zoom) / 2
 
         x0, y0 = self.world_to_framebuffer(wx, wy)
-        w = int(ww / half_w * self._context.gl_viewport[2] / 2)
-        h = int(wh / half_h * self._context.gl_viewport[3] / 2)
+        w = int(ww / half_w / dx * self._context.gl_viewport[2] / 2)
+        h = int(wh / half_h / dy * self._context.gl_viewport[3] / 2)
 
         was_enabled = (gl.GLboolean * 1)()
         prev_box = (c_int * 4)()
