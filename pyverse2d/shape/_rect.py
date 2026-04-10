@@ -129,6 +129,10 @@ class Rect(Shape):
             point: point à tester
         """
         return abs(float(point[0])) <= 0.5 * self._width and abs(float(point[1])) <= 0.5 * self._height
+    
+    def is_convex(self) -> bool:
+        """Vérifie la convexité"""
+        return True
 
     # ======================================== PUBLIC METHODS ========================================
     def copy(self) -> Rect:

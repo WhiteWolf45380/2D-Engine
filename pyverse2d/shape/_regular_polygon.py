@@ -116,6 +116,10 @@ class RegularPolygon(Shape):
                 inside = not inside
             j = i
         return inside
+    
+    def is_convex(self) -> bool:
+        """Vérifie la convexité"""
+        return True
 
     # ======================================== PUBLIC METHODS ========================================
     def copy(self) -> RegularPolygon:

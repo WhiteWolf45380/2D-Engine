@@ -96,6 +96,10 @@ class Circle(Shape):
             point: point à tester
         """
         return float(point[0]) ** 2 + float(point[1]) ** 2 <= self._radius ** 2
+    
+    def is_convex(self) -> bool:
+        """Vérifie la convexité"""
+        return True
 
     # ======================================== COLLECTIONS ========================================
     def copy(self) -> Circle:

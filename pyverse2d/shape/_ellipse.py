@@ -108,6 +108,10 @@ class Ellipse(Shape):
         """
         px, py = float(point[0]), float(point[1])
         return (px / self._rx) ** 2 + (py / self._ry) ** 2 <= 1.0
+    
+    def is_convex(self) -> bool:
+        """Vérifie la convexité"""
+        return True
 
     # ======================================== COLLECTIONS ========================================
     def copy(self) -> Ellipse:

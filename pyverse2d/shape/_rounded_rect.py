@@ -162,6 +162,10 @@ class RoundedRect(Shape):
         if px <= hw - r or py <= hh - r:
             return True
         return (px - (hw - r)) ** 2 + (py - (hh - r)) ** 2 <= r ** 2
+    
+    def is_convex(self) -> bool:
+        """Vérifie la convexité"""
+        return True
 
     # ======================================== PUBLIC METHODS ========================================
     def copy(self) -> RoundedRect:

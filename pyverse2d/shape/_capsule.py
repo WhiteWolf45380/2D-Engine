@@ -106,8 +106,7 @@ class Capsule(Shape):
 
         # Arc supérieur
         top_angles = np.linspace(math.pi, 0.0, half, endpoint=False, dtype=np.float32)
-        top_arc = np.stack([np.cos(top_angles) * r,
-                            np.sin(top_angles) * r + half_spine], axis=1)
+        top_arc = np.stack([np.cos(top_angles) * r, np.sin(top_angles) * r + half_spine], axis=1)
 
         # Arc inférieur
         bot_angles = np.linspace(0.0, -math.pi, half, endpoint=False, dtype=np.float32)
@@ -133,6 +132,10 @@ class Capsule(Shape):
         half_spine = self.spine * 0.5
         closest_y = max(-half_spine, min(half_spine, py))
         return px ** 2 + (py - closest_y) ** 2 <= self._radius ** 2
+    
+    def is_convex(self) -> bool:
+        """Vérifie la convexité"""
+        return True
 
     # ======================================== PUBLIC METHODS ========================================
     def copy(self) -> Capsule:

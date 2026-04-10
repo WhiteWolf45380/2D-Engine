@@ -4,9 +4,37 @@ from __future__ import annotations
 import numpy as np
 from numpy.typing import NDArray
 
-# ======================================== RENDER TOOL ========================================
-def triangulate(vertices: NDArray[np.float32]) -> NDArray[np.int32]:
+# ======================================== RENDER TOOLS ========================================
+def triangulate_triangle_fan(vertices: NDArray[np.float32]) -> NDArray[np.int32]:
     """Renvoie les indices des triangles d'un mesh
+
+    Ne fonctionne qu'avec les formes convexes.
+
+    Args:
+        vertices: array ordonnée CCW (N, 2)
+    """
+    v = np.asarray(vertices, dtype=np.float32)
+
+    n = len(v)
+    if n < 3:
+        return np.empty((0,), dtype=np.int32)
+
+    # triangle fan : (0, i, i+1)
+    idx = np.empty((n - 2) * 3, dtype=np.int32)
+
+    k = 0
+    for i in range(1, n - 1):
+        idx[k] = 0
+        idx[k + 1] = i
+        idx[k + 2] = i + 1
+        k += 3
+
+    return idx
+
+def triangulate_ear_clipping(vertices: NDArray[np.float32]) -> NDArray[np.int32]:
+    """Renvoie les indices des triangles d'un mesh
+
+    Ne fonctionne qu'avec les formes non autosécantes.
 
     Args:
         vertices: array ordonnée CCW (N, 2)

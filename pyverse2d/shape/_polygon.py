@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from .._internal import expect
+from .._rendering import is_convex, order_ccw, center_vertices
 from ..abc import Shape
 from ..math import Point
 
@@ -16,16 +17,16 @@ class Polygon(Shape):
     Args:
         points: sommets du polygone (minimum 3, sans doublons)
     """
-    __slots__ = ("_source_vertices",)
+    __slots__ = ("_source_vertices", "_convex")
 
     def __init__(self, *points: Point):
         if len(points) < 3:
             raise ValueError("Polygon must have at least 3 points")
         if len(set(points)) != len(points):
             raise ValueError("Polygon must not have duplicate points")
-        self._source_vertices: NDArray[np.float32] = np.array(
-            [(float(p[0]), float(p[1])) for p in points], dtype=np.float32
-        )
+        self._source_vertices: NDArray[np.float32] = np.array([(float(p[0]), float(p[1])) for p in points], dtype=np.float32)
+        self._source_vertices = center_vertices(order_ccw(self._source_vertices))
+        self._convex: bool = is_convex(self._source_vertices)
         super().__init__()
 
     # ======================================== CONVERSIONS ========================================
@@ -94,6 +95,10 @@ class Polygon(Shape):
                 inside = not inside
             j = i
         return inside
+    
+    def is_convex(self) -> bool:
+        """Vérifie la convexité"""
+        return self._convex
 
     # ======================================== PUBLIC METHODS ========================================
     def copy(self) -> Polygon:

@@ -6,7 +6,7 @@ import math
 import numpy as np
 from numpy.typing import NDArray
 
-from .._rendering import Mesh, triangulate
+from .._rendering import Mesh, triangulate_ear_clipping, triangulate_triangle_fan
 from ..math import Point
 
 # ======================================== ABSTRACT CLASS ========================================
@@ -14,14 +14,18 @@ class Shape(ABC):
     """Classe abstraite de base pour toutes les formes géométriques"""
     __slots__ = (
         "_cache_key", "_cache_rotscale", "_cache_world",
-        "_vertices", "_mesh",
+        "_vertices", "_indexes", "_mesh",
     )
 
     def __init__(self) -> None:
+        # Caches
         self._cache_key: tuple | None = None
         self._cache_rotscale: NDArray[np.float32] | None = None
         self._cache_world: NDArray[np.float32] | None = None
+
+        # Representations
         self._vertices: NDArray[np.float32] | None = None
+        self._indexes: NDArray[np.float32] | None = None
         self._mesh: Mesh | None = None
 
     # ======================================== CONTRACT ========================================
@@ -47,7 +51,13 @@ class Shape(ABC):
     def get_bounding_box(self) -> tuple[float, float, float, float]: ...
 
     @abstractmethod
+    def compute_vertices(self) -> NDArray[np.float32]: ...
+
+    @abstractmethod
     def contains(self, point: Point) -> bool: ...
+
+    @abstractmethod
+    def is_convex(self) -> bool: ...
 
     @abstractmethod
     def copy(self) -> Self: ...
@@ -59,13 +69,19 @@ class Shape(ABC):
     def get_vertices(self) -> NDArray[np.float32]:
         """Renvoie les vertices locaux de la forme"""
         if self._vertices is None:
-            self._vertices = order_ccw(center_vertices(self.compute_vertices()))
+            self._vertices = self.compute_vertices()
         return self._vertices
+    
+    def get_indexes(self) -> NDArray[np.int32]:
+        """Renvoie les indices des triangles de la forme"""
+        if self._indexes is None:
+            self._indexes = triangulate_triangle_fan(self.get_vertices()) if self.is_convex() else triangulate_ear_clipping(self.get_vertices())
+        return self._indexes
 
     def get_mesh(self) -> Mesh:
-        """Renvoie le mesh local de la forme"""
+        """Renvoie le mesh de la forme"""
         if self._mesh is None:
-            self._mesh = Mesh(self._vertices, triangulate(self._vertices))
+            self._mesh = Mesh(self.get_vertices(), self.get_indexes())
         return self._mesh
 
     # ======================================== WORLD TRANSFORM ========================================
@@ -194,37 +210,3 @@ class Shape(ABC):
     ) -> NDArray[np.float32]:
         """Translation nette"""
         return np.array([x, y], dtype=np.float32) - self._anchor_offset(anchor_x, anchor_y)
-
-# ======================================== HELPERS ========================================
-def center_vertices(vertices: NDArray[np.float32]) -> NDArray[np.float32]:
-    """Recentre des vertices autour de (0,0)
-
-    Args:
-        vertices: ``(N, 2)`` points du polygone
-    """
-    v = np.asarray(vertices, dtype=np.float32)
-    if len(v) == 0:
-        return v
-
-    center = v.mean(axis=0)
-    return v - center
-
-def order_ccw(vertices: NDArray[np.float32]) -> NDArray[np.float32]:
-    """Ordonne des vertices en sens anti-horaire (CCW)
-
-    Args:
-        vertices: ``(N, 2)`` points du polygone
-    """
-
-    v = np.asarray(vertices, dtype=np.float32)
-    if len(v) < 3:
-        return v
-
-    # centre du polygone
-    center = v.mean(axis=0)
-
-    # angle polaire autour du centre
-    angles = np.arctan2(v[:, 1] - center[1], v[:, 0] - center[0])
-
-    order = np.argsort(angles)
-    return v[order]

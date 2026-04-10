@@ -6,8 +6,12 @@ from ._camera import Camera
 from ._pipeline import Pipeline
 
 from ._core import (
+    center_vertices,
+    order_ccw,
+    is_convex,
+    triangulate_triangle_fan,
+    triangulate_ear_clipping,
     Mesh,
-    triangulate,
 )
 
 from ._pyglet_renderers import (
@@ -24,6 +28,11 @@ __all__ = [
     "Camera",
     "Pipeline",
 
+    "center_vertices",
+    "order_ccw",
+    "is_convex",
+    "triangulate_triangle_fan",
+    "triangulate_ear_clipping",
     "Mesh",
 
     "PygletShapeRenderer",
