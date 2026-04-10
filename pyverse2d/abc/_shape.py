@@ -102,8 +102,7 @@ class Shape(ABC):
             return self._cache_world
 
         if self._cache_key is None or self._cache_key[:2] != (scale, rotation):
-            if self._vertices is None:
-                self._vertices = self.get_vertices()
+            vertices = self.get_vertices()
             rad = math.radians(rotation)
             cos_r, sin_r = math.cos(rad), math.sin(rad)
             R = np.array(
@@ -111,7 +110,7 @@ class Shape(ABC):
                  [sin_r,  cos_r]],
                 dtype=np.float32,
             )
-            self._cache_rotscale = self._vertices * scale @ R
+            self._cache_rotscale = vertices * scale @ R
 
         self._cache_world = self._cache_rotscale + self._world_translation(x, y, anchor_x, anchor_y)
         self._cache_key = key

@@ -8,8 +8,9 @@ from .._pipeline import Pipeline
 import pyglet
 import pyglet.gl
 from pyglet.graphics import ShaderGroup
-from pyglet.graphics.shader import ShaderProgram
+from pyglet.graphics.shader import Shader, ShaderProgram
 
+import math
 import numpy as np
 from typing import TYPE_CHECKING
 
@@ -18,16 +19,59 @@ if TYPE_CHECKING:
 
 # ======================================== CONSTANTS ========================================
 _UNSET = object()
-
-# Tous les paramètres qui influencent la géométrie monde
 _TRANSFORM_DEPS = frozenset({"x", "y", "anchor_x", "anchor_y", "scale", "rotation"})
+
+# ======================================== SHADERS ========================================
+_VERT_SRC = """
+#version 150 core
+
+in vec2 position;
+in vec4 colors;
+
+out vec4 vertex_colors;
+
+uniform float u_scale;
+uniform float u_rotation;
+uniform vec2 u_translation;
+uniform vec2 u_anchor;
+
+uniform WindowBlock {
+    mat4 projection;
+    mat4 view;
+} window;
+
+void main() {
+    float c = cos(u_rotation);
+    float s = sin(u_rotation);
+
+    vec2 p = position * u_scale;
+    p = vec2(p.x * c - p.y * s, p.x * s + p.y * c);
+    p += u_translation - u_anchor;
+
+    gl_Position = window.projection * window.view * vec4(p, 0.0, 1.0);
+    vertex_colors = colors;
+}
+"""
+
+_FRAG_SRC = """
+#version 150 core
+
+in vec4 vertex_colors;
+out vec4 final_color;
+
+void main() {
+    final_color = vertex_colors;
+}
+"""
+
 
 # ======================================== PUBLIC ========================================
 class PygletShapeRenderer:
     """
     Renderer pyglet unifié pour une shape géométrique.
-    Le remplissage utilise le Mesh de la shape (world_vertices + get_indexes),
+    Le remplissage utilise le Mesh de la shape (get_vertices + get_indexes),
     la bordure utilise un triangle strip calculé sur le contour local.
+    Le transform est appliqué GPU-side via uniforms — zéro numpy par frame.
 
     Args:
         shape: shape à rendre
@@ -58,13 +102,16 @@ class PygletShapeRenderer:
 
     # Cache partagé des shader groups
     _PROGRAM: ShaderProgram = None
-    _GROUPS: dict[tuple[int, int], pyglet.graphics.ShaderGroup] = {}
+    _GROUPS: dict[tuple[int, int], ShaderGroup] = {}
 
     @classmethod
     def get_program(cls) -> ShaderProgram:
         """Renvoie le shader programme des formes"""
         if cls._PROGRAM is None:
-            cls._PROGRAM = pyglet.shapes.get_default_shader()
+            cls._PROGRAM = ShaderProgram(
+                Shader(_VERT_SRC, "vertex"),
+                Shader(_FRAG_SRC, "fragment"),
+            )
         return cls._PROGRAM
 
     @classmethod
@@ -72,7 +119,7 @@ class PygletShapeRenderer:
         """Renvoie le groupe correspondant avec mise en cache"""
         key = (z, order)
         if key not in cls._GROUPS:
-            cls._GROUPS[key] = pyglet.graphics.ShaderGroup(cls.get_program(), order=order, parent=pipeline.get_group(z=z))
+            cls._GROUPS[key] = ShaderGroup(cls.get_program(), order=order, parent=pipeline.get_group(z=z))
         return cls._GROUPS[key]
 
     def __init__(
@@ -93,7 +140,6 @@ class PygletShapeRenderer:
         z: int = 0,
         pipeline: Pipeline = None,
     ):
-        # Paramètres publiques
         self._shape = shape
         self._x = x
         self._y = y
@@ -110,7 +156,6 @@ class PygletShapeRenderer:
         self._z = z
         self._pipeline = pipeline
 
-        # Composants internes
         self._fill: _FillRenderer = None
         self._border: _BorderRenderer = None
         self._build()
@@ -123,7 +168,7 @@ class PygletShapeRenderer:
         if self._border_width > 0 and self._border_color is not None:
             self._border = _BorderRenderer(self)
 
-    # ======================================== PROPERTIES ========================================
+    # ======================================== GETTERS ========================================
     @property
     def shape(self) -> Shape: return self._shape
     @property
@@ -156,7 +201,8 @@ class PygletShapeRenderer:
     def z(self) -> int: return self._z
     @property
     def pipeline(self) -> Pipeline: return self._pipeline
-
+    
+    # ======================================== VISIBILITY ========================================
     @property
     def visible(self) -> bool:
         """Visibilité"""
@@ -168,6 +214,10 @@ class PygletShapeRenderer:
     def visible(self, value: bool) -> None:
         if self._fill: self._fill.visible = value
         if self._border: self._border.visible = value
+
+    def is_visible(self) -> bool:
+        """Vérifie la visibilité effective"""
+        return self.visible and ((self._filling and self._color is not None) or (self._border_width > 0 and self._border_color is not None))
 
     # ======================================== LIFE CYCLE ========================================
     def update(self, **kwargs) -> None:
@@ -188,7 +238,6 @@ class PygletShapeRenderer:
             border_color: couleur de bordure
             opacity: opacité
             z: z-order
-            pipeline: pipeline de rendu
         """
         changes: set[str] = set()
         for key, value in kwargs.items():
@@ -246,36 +295,31 @@ class _FillRenderer:
     # ======================================== BUILD ========================================
     def _build(self, psr: PygletShapeRenderer) -> None:
         """Construit le ``vertex_list_indexed`` depuis le Mesh de la shape"""
-        # Nettoyage
         if self._vlist is not None:
             self._vlist.delete()
 
-        # Sommets
-        vertices = psr.shape.world_vertices(psr.x, psr.y, psr.scale, psr.rotation, psr.anchor_x, psr.anchor_y)
-
-        # Indices
+        vertices = psr.shape.get_vertices()
         indexes = psr.shape.get_indexes()
         self._n = len(vertices)
 
-        # Couleur
         r, g, b, a = psr.color.rgba8
         a = int(a * psr.opacity)
 
-        # Construction de la liste de sommets
         self._vlist = psr.get_program().vertex_list_indexed(
-            count=self._n,
-            mode=pyglet.gl.GL_TRIANGLES,
-            indices=indexes.flatten().tolist(),
-            batch=psr.pipeline.batch,
-            group=psr.get_group(pipeline=psr.pipeline, z=psr.z, order=0),
+            count = self._n,
+            mode = pyglet.gl.GL_TRIANGLES,
+            indices = indexes.flatten().tolist(),
+            batch = psr.pipeline.batch,
+            group = psr.get_group(pipeline=psr.pipeline, z=psr.z, order=0),
             position = ('f', vertices.flatten().tolist()),
             colors = ('Bn', (r, g, b, a) * self._n),
         )
 
+        _set_transform(psr)
+
     # ======================================== PROPERTIES ========================================
     @property
     def visible(self) -> bool:
-        """Renvoie la visibilité"""
         return self._visible
 
     @visible.setter
@@ -294,17 +338,16 @@ class _FillRenderer:
     # ======================================== LIFE CYCLE ========================================
     def update(self, psr: PygletShapeRenderer, changes: set[str]) -> None:
         """Actualisation"""
-        # Rebuild complet le z-order changent
+        # Changement de z-order
         if "z" in changes:
             self._build(psr)
             return
 
-        # Upload partiel des positions si le transform a bougé
+        # Changement de position
         if changes & _TRANSFORM_DEPS:
-            vertices = psr.shape.world_vertices(psr.x, psr.y, psr.scale, psr.rotation, psr.anchor_x, psr.anchor_y)
-            self._vlist.position[:] = vertices.flatten().tolist()
+            _set_transform(psr)
 
-        # Mise à jour de la couleur/opacité
+        # Changement de style
         if "color" in changes or "opacity" in changes:
             r, g, b, a = psr.color.rgba8
             a = int(a * psr.opacity)
@@ -332,37 +375,35 @@ class _BorderRenderer:
     # ======================================== BUILD ========================================
     def _build(self, psr: PygletShapeRenderer) -> None:
         """Construit le ``vertex_list`` du triangle strip"""
-        # Nettoyage
         if self._vlist is not None:
             self._vlist.delete()
 
-        # Construction de la bande
-        strip = _world_strip(psr)
+        strip = _local_strip(psr)
         self._n = len(strip)
 
-        # Couleur
         r, g, b, a = psr.border_color.rgba8
         a = int(a * psr.opacity)
 
-        # Construction de la liste des sommets
         self._vlist = psr.get_program().vertex_list(
-            count=self._n,
-            mode=pyglet.gl.GL_TRIANGLE_STRIP,
-            batch=psr.pipeline.batch,
-            group=psr.get_group(pipeline=psr.pipeline, z=psr.z, order=1),
+            count = self._n,
+            mode = pyglet.gl.GL_TRIANGLE_STRIP,
+            batch = psr.pipeline.batch,
+            group = psr.get_group(pipeline=psr.pipeline, z=psr.z, order=1),
             position = ('f', strip.flatten().tolist()),
             colors = ('Bn', (r, g, b, a) * self._n),
         )
 
-    def _refresh_vertices(self, psr: PygletShapeRenderer) -> None:
-        """Upload partiel des positions"""
-        strip = _world_strip(psr)
+        _set_transform(psr)
+
+    def _refresh_strip(self, psr: PygletShapeRenderer) -> None:
+        """Rebuild du strip local si border_width ou border_align changent"""
+        strip = _local_strip(psr)
+        self._n = len(strip)
         self._vlist.position[:] = strip.flatten().tolist()
 
     # ======================================== PROPERTIES ========================================
     @property
     def visible(self) -> bool:
-        """Visibilité"""
         return self._visible
 
     @visible.setter
@@ -380,16 +421,20 @@ class _BorderRenderer:
     # ======================================== LIFE CYCLE ========================================
     def update(self, psr: PygletShapeRenderer, changes: set[str]) -> None:
         """Actualisation"""
-        # Changement de groupe
+        # Changement de z-order
         if "z" in changes:
             self._build(psr)
             return
 
-        # Upload partiel des positions si la géométrie monde a changé
-        if changes & (_TRANSFORM_DEPS | {"border_width", "border_align"}):
-            self._refresh_vertices(psr)
+        # Changement de bordure
+        if changes & {"border_width", "border_align"}:
+            self._refresh_strip(psr)
 
-        # Mise à jour de la couleur/opacité
+        # Changement de position
+        if changes & _TRANSFORM_DEPS:
+            _set_transform(psr)
+
+        # Changement de style
         if "border_color" in changes or "opacity" in changes:
             r, g, b, a = psr.border_color.rgba8
             a = int(a * psr.opacity)
@@ -401,14 +446,33 @@ class _BorderRenderer:
             self._vlist.delete()
             self._vlist = None
 
-# ======================================== BORDER HELPERS ========================================
-def _world_strip(psr: PygletShapeRenderer) -> np.ndarray:
-    """Renvoie la bande en world units"""
-    world = psr.shape.world_vertices(psr.x, psr.y, psr.scale, psr.rotation, psr.anchor_x, psr.anchor_y)
-    return _build_strip(world, psr.border_width, psr.border_align)
+
+# ======================================== HELPERS ========================================
+def _set_transform(psr: PygletShapeRenderer) -> None:
+    """Upload du transform complet via uniforms"""
+    program = psr.get_program()
+    program["u_scale"] = psr.scale
+    program["u_rotation"] = math.radians(psr.rotation)
+    program["u_translation"] = (psr.x, psr.y)
+    program["u_anchor"] = _anchor_local(psr)
+
+
+def _anchor_local(psr: PygletShapeRenderer) -> tuple[float, float]:
+    """Calcule l'anchor en coordonnées locales absolues"""
+    xmin, ymin, xmax, ymax = psr.shape.get_bounding_box()
+    return (
+        xmin + psr.anchor_x * (xmax - xmin),
+        ymin + psr.anchor_y * (ymax - ymin),
+    )
+
+
+def _local_strip(psr: PygletShapeRenderer) -> np.ndarray:
+    """Génère le triangle strip en espace local"""
+    return _build_strip(psr.shape.get_vertices(), psr.border_width, psr.border_align)
+
 
 def _build_strip(contour: np.ndarray, width: float, align: str = "center") -> np.ndarray:
-    """Génère un triangle strip (N+1)*2 points autour d'un contour fermé"""
+    """Génère un triangle strip ``(N+1)*2`` points autour d'un contour fermé"""
     n = len(contour)
     prev_pts = contour[(np.arange(n) - 1) % n]
     next_pts = contour[(np.arange(n) + 1) % n]
