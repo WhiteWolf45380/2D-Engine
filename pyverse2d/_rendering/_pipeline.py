@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import pyglet.gl as gl
 from pyglet.graphics import Batch, Group
+from pyglet.graphics import ShaderGroup
 from pyglet.math import Mat4
 from pyglet.window import Window as PygletWindow
 
