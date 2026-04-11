@@ -3,9 +3,9 @@ from __future__ import annotations
 
 from ..._internal import expect, clamped
 from ..._flag import Super
-from ..._rendering import Pipeline
 from ...math import Point
-from ...abc import Shape
+
+from .._shape import Shape
 
 from ._behavior import Behavior
 
@@ -15,6 +15,7 @@ from numbers import Real
 from typing import Callable, Type, TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from ..._rendering import Pipeline
     from ...scene import GuiLayer
     from ...gui import (
         RenderContext,
