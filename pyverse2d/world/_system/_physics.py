@@ -43,15 +43,8 @@ class PhysicsSystem(System):
             if entity.has(GroundSensor):
                 gs: GroundSensor = entity.get(GroundSensor)
                 if gs._grounded and gs._ground_damping > 0.0:
-                    factor = exp(-gs._ground_damping * dt)
-                    rb.velocity = rb.velocity.__class__(rb.velocity.x * factor, rb.velocity.y)
-
-            # Step-down : colle l'entité au sol sur les pentes descendantes
-            if entity.has(GroundSensor):
-                gs: GroundSensor = entity.get(GroundSensor)
-                if gs.is_grounded() and gs._coyote_elapsed == 0.0:
-                    tr.y -= abs(rb.velocity.x) * dt * 0.12
-                    
+                    rb.velocity.x *= exp(-gs._ground_damping * dt)
+       
             # Intégration de la position
             tr.x += rb.velocity.x * dt
             tr.y += rb.velocity.y * dt
