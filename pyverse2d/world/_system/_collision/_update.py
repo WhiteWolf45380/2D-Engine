@@ -159,7 +159,7 @@ def _wake_lost_supports(ctx: UpdateContext):
 @update_processor.step
 def _solve(ctx: UpdateContext):
     """Résolution itérative des contacts"""
-    iterations = ctx.iterations
+    iterations = ctx.C.iterations
     if ctx.max_depth > ctx.C._EXTRA_ITER_THRESHOLD:
         iterations += ctx.C._EXTRA_ITER
     for _ in range(iterations):
