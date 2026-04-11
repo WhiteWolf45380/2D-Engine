@@ -252,7 +252,7 @@ class Entity:
             component_type(Type[C]): type du composant
         """
         if component_type is str:
-            attr_name = f"_{component_type}"
+            attr_name = f"_{component_type.lower()}"
         else:
             attr_name = _COMPONENTS.get(component_type)
             if attr_name is None:
