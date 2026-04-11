@@ -10,7 +10,6 @@ import pyglet.gl
 from pyglet.graphics import ShaderGroup
 from pyglet.graphics.shader import ShaderProgram
 
-import math
 import numpy as np
 from typing import TYPE_CHECKING
 
@@ -19,6 +18,7 @@ if TYPE_CHECKING:
 
 # ======================================== CONSTANTS ========================================
 _UNSET = object()
+_TRANSFORM_DEPS = frozenset({"x", "y", "anchor_x", "anchor_y", "scale", "rotation"})
 
 # ======================================== PUBLIC ========================================
 class PygletShapeRenderer:
@@ -246,7 +246,7 @@ class _FillRenderer:
         if self._vlist is not None:
             self._vlist.delete()
 
-        vertices = psr.shape.get_vertices()
+        vertices = psr.shape.world_vertices(psr.x, psr.y, psr.scale, psr.rotation, psr.anchor_x, psr.anchor_y)
         indexes = psr.shape.get_indexes()
         self._n = len(vertices)
 
@@ -288,6 +288,11 @@ class _FillRenderer:
         if "z" in changes:
             self._build(psr)
             return
+        
+        # Changement de position
+        if changes & _TRANSFORM_DEPS:
+            vertices = psr.shape.world_vertices(psr.x, psr.y, psr.scale, psr.rotation, psr.anchor_x, psr.anchor_y)
+            self._vlist.position[:] = vertices.flatten().tolist()
 
         # Changement de style
         if "color" in changes or "opacity" in changes:
@@ -320,7 +325,7 @@ class _BorderRenderer:
         if self._vlist is not None:
             self._vlist.delete()
 
-        strip = _local_strip(psr)
+        strip = _world_strip(psr)
         self._n = len(strip)
 
         r, g, b, a = psr.border_color.rgba8
@@ -336,8 +341,8 @@ class _BorderRenderer:
         )
 
     def _refresh_strip(self, psr: PygletShapeRenderer) -> None:
-        """Rebuild du strip local si border_width ou border_align changent"""
-        strip = _local_strip(psr)
+        """Rebuild du strip monde si border_width ou border_align changent"""
+        strip = _world_strip(psr)
         self._n = len(strip)
         self._vlist.position[:] = strip.flatten().tolist()
 
@@ -367,8 +372,8 @@ class _BorderRenderer:
             return
 
         # Changement de bordure
-        if changes & {"border_width", "border_align"}:
-            self._refresh_strip(psr)
+        if changes & (_TRANSFORM_DEPS | {"border_width", "border_align"}):
+            self._refresh_vertices(psr)
 
         # Changement de style
         if "border_color" in changes or "opacity" in changes:
@@ -384,19 +389,10 @@ class _BorderRenderer:
 
 
 # ======================================== HELPERS ========================================
-def _anchor_local(psr: PygletShapeRenderer) -> tuple[float, float]:
-    """Calcule l'anchor en coordonnées locales absolues"""
-    xmin, ymin, xmax, ymax = psr.shape.get_bounding_box()
-    return (
-        xmin + psr.anchor_x * (xmax - xmin),
-        ymin + psr.anchor_y * (ymax - ymin),
-    )
-
-
-def _local_strip(psr: PygletShapeRenderer) -> np.ndarray:
-    """Génère le triangle strip en espace local"""
-    return _build_strip(psr.shape.get_vertices(), psr.border_width, psr.border_align)
-
+def _world_strip(psr: PygletShapeRenderer) -> np.ndarray:
+    """Génère le triangle strip en espace monde"""
+    world = psr.shape.world_vertices(psr.x, psr.y, psr.scale, psr.rotation, psr.anchor_x, psr.anchor_y)
+    return _build_strip(world, psr.border_width, psr.border_align)
 
 def _build_strip(contour: np.ndarray, width: float, align: str = "center") -> np.ndarray:
     """Génère un triangle strip ``(N+1)*2`` points autour d'un contour fermé"""
