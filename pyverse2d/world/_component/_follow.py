@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 class Follow(Component):
     """``Component`` gérant le suivi
 
-    Ce composant est manipulé par le ``PhysicsSystem``.
+    Ce composant est manipulé par ``SteeringSystem``.
 
     Args:
         entity: ``Entité`` à suivre

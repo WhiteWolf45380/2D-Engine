@@ -10,8 +10,9 @@ from numbers import Real
 
 # ======================================== COMPONENT ========================================
 class ShapeRenderer(Component):
-    """
-    Composant gérant le rendu d'une forme
+    """Composant gérant le rendu d'une forme
+
+    Ce composant est manipulé par ``RenderSystem``.
 
     Args:
         shape(Shape, optional): forme du rendu

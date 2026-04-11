@@ -11,8 +11,9 @@ from typing import Iterator
 
 # ======================================== COMPONENT ========================================
 class GroundSensor(Component):
-    """
-    Composant détectant si l'entité est au sol
+    """Composant gérant le rapport entre l'entité et le sol
+
+    Ce composant est manipulé par ``CollisionSystem`` et ``PhysicsSystem``.
 
     Args:
         threshold(Real, optional): composante Y minimale de la normale pour considérer sol (0 à 1)

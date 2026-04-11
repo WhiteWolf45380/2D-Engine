@@ -10,8 +10,9 @@ from numbers import Real
 
 # ======================================== COMPONENT ========================================
 class Transform(Component):
-    """
-    Composant gérant le positionnement
+    """Composant gérant le positionnement
+
+    Ce composant est manipulé par ``PhysicsSystem``, ``CollisionSystem`` et ``SteeringSystem``.
 
     Args:
         position(Point): position

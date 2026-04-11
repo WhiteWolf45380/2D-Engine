@@ -11,6 +11,8 @@ from typing import Iterator
 class Collider(Component):
     """Composant gérant la hitbox
 
+    Ce composant est manipulé par ``CollisionSystem``.
+
     Args:
         shape(Shape): forme de la hitbox
         offset(Point, optional): décalage par rapport au Transform

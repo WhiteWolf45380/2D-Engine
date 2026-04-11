@@ -15,8 +15,9 @@ _SLEEP_DELAY = 0.5          # secondes consécutives sous le seuil avant mise en
 
 # ======================================== COMPONENT ========================================
 class RigidBody(Component):
-    """
-    Composant gérant un corps dynamique
+    """Composant gérant un corps dynamique
+
+    Ce composant est manipulé par ``PhysicsSystem``, ``CollisionSystem`` et ``SteeringSystem``.
 
     Args:
         mass(Real, optional): masse du corps en kg (0 ou inf pour un corps statique)

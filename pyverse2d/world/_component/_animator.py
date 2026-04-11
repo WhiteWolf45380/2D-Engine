@@ -11,8 +11,7 @@ from typing import Callable, ClassVar, Iterator
 # ======================================== REQUEST ========================================
 @dataclass(frozen=True)
 class AnimationRequest(Request):
-    """
-    Requête d'animation
+    """Requête d'animation
 
     Args:
         animation(Animation): animation à activer
@@ -35,8 +34,9 @@ class AnimationRequest(Request):
 
 # ======================================== COMPONENT ========================================
 class Animator(Component):
-    """
-    Composant gérant l'animation d'une entité
+    """Composant gérant l'animation d'une entité
+
+    Ce composant est manipulé par ``AnimationSystem``.
 
     Args:
         idle(Animation, None): animation par défaut

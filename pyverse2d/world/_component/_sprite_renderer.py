@@ -9,8 +9,9 @@ from numbers import Real
 
 # ======================================== COMPONENT ========================================
 class SpriteRenderer(Component):
-    """
-    Composant gérant le rendu d'une image
+    """Composant gérant le rendu d'une image
+
+    Ce composant est manipulé par ``RenderSystem``.
 
     Args:
         image(Image): image de rendu

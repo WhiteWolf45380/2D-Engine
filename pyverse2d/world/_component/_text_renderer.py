@@ -11,8 +11,9 @@ from numbers import Real
 
 # ======================================== COMPONENT ========================================
 class TextRenderer(Component):
-    """
-    Composant gérant le rendu d'un texte
+    """Composant gérant le rendu d'un texte
+
+    Ce composant est manipulé par ``RenderSystem``.
 
     Args:
         text(Text): descripteur de texte
