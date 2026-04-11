@@ -49,8 +49,8 @@ def _query_entities(ctx: UpdateContext):
 def _reset_sensors(ctx: UpdateContext):
     """Reset du GroundSensor avant détection"""
     for entity in ctx.entities:
-        if entity.has(GroundSensor):
-            gs = entity.get(GroundSensor)
+        gs = entity.ground_sensor
+        if gs is not None:
             gs._coyote_elapsed += ctx.dt
             if gs._coyote_elapsed >= gs._coyote_time:
                 gs._grounded = False
@@ -72,26 +72,26 @@ def _broadphase(ctx: UpdateContext):
 def _reset_colliders(ctx: UpdateContext):
     """Reset des listes de contacts des colliders"""
     for entity in ctx.entities:
-        entity.get(Collider)._colliding.clear()
+        entity.collider._contacts.clear()
 
 @update_processor.step
 def _narrowphase(ctx: UpdateContext):
     """Narrowphase : détection, lissage des normales, warm start"""
     for a, b in ctx.pairs:
-        col_a: Collider = a.get(Collider)
-        col_b: Collider = b.get(Collider)
+        col_a: Collider = a.collider
+        col_b: Collider = b.collider
         if not col_a.is_active() or not col_b.is_active():
             continue
         if not col_a.collides_with(col_b):
             continue
-        contact = _detect(col_a, a.get(Transform), col_b, b.get(Transform))
+        contact = _detect(col_a, a.transform, col_b, b.transform)
         if contact is None:
             continue
         
-        # Ajout du contact
-        col_a._colliding.append(b)
-        col_b._colliding.append(a)
+        # Collision fantôme
         if col_a.is_trigger() or col_b.is_trigger():
+            col_a._contacts[b] = Vector._make(0, 0)
+            col_b._contacts[a] = Vector._make(0, 0)
             continue
 
         # Gestion du cache de contacts persistants
@@ -116,8 +116,11 @@ def _narrowphase(ctx: UpdateContext):
             elif dot < 0:
                 cached.jn = 0.0
                 cached.jt = 0.0
-        cached.normal = (nx, ny)
-        contact = Contact(Vector._make(nx, ny), contact.depth)
+        normal = Vector._make(nx, ny)
+        cached.normal = normal
+        contact = Contact(normal, contact.depth)
+        col_a._contacts[b] = normal
+        col_b._contacts[a] = -normal
 
         # Actualisation du GroundSensor selon la normale du contact
         _update_ground_sensor(a, b, nx, ny)
@@ -153,7 +156,7 @@ def _wake_lost_supports(ctx: UpdateContext):
         if not rb.is_sleeping():
             continue
         col = entity.collider
-        if not col._colliding:
+        if len(col._contacts) == 0:
             col._coyote_elapsed += ctx.dt
             if col._coyote_elapsed > col._COYOTE_TIME:
                 rb.wake()
@@ -187,16 +190,16 @@ def _update_ground_sensor(a, b, nx: float, ny: float):
     ny_norm = ny / n_len
     
     # Touche le sol
-    if ny_norm > 0 and a.has(GroundSensor):
-        gs = a.get(GroundSensor)
+    gs = a.ground_sensor
+    if ny_norm > 0 and gs is not None:
         if ny_norm >= gs._threshold:
             gs._grounded = True
             gs._coyote_elapsed = 0.0
             gs._ground_normal = Vector._make(nx / n_len, ny_norm)
     
     # Ne touche pas le sol
-    if ny_norm < 0 and b.has(GroundSensor):
-        gs = b.get(GroundSensor)
+    gs = b.ground_sensor
+    if ny_norm < 0 and gs is not None:
         if -ny_norm >= gs._threshold:
             gs._grounded = True
             gs._coyote_elapsed = 0.0
@@ -212,14 +215,14 @@ def _try_step(a: Shape, b: Shape, nx: float, ny: float, depth: float) -> bool:
     for mover, obstacle in ((a, b), (b, a)):
         if not mover.has(GroundSensor):
             continue
-        gs = mover.get(GroundSensor)
+        gs = mover.ground_sensor
         if gs.max_step_height <= 0 or not gs.is_grounded():
             continue
 
-        col_m = mover.get(Collider)
-        col_o = obstacle.get(Collider)
-        tr_m  = mover.get(Transform)
-        tr_o  = obstacle.get(Transform)
+        col_m = mover.collider
+        col_o = obstacle.collider
+        tr_m  = mover.transform
+        tr_o  = obstacle.transform
 
         cx_m, cy_m = world_center(col_m.shape, tr_m, col_m.offset)
         cx_o, cy_o = world_center(col_o.shape, tr_o, col_o.offset)

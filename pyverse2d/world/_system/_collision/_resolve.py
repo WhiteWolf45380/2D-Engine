@@ -65,8 +65,8 @@ class ResolveContext:
         """Construit le contexte"""
         has_rb_a = a.has(RigidBody)
         has_rb_b = b.has(RigidBody)
-        rb_a = a.get(RigidBody) if has_rb_a else None
-        rb_b = b.get(RigidBody) if has_rb_b else None
+        rb_a = a.rigid_body if has_rb_a else None
+        rb_b = b.rigid_body if has_rb_b else None
         static_a = (not has_rb_a) or rb_a.is_static()
         static_b = (not has_rb_b) or rb_b.is_static()
         if static_a and static_b:
@@ -92,7 +92,7 @@ class ResolveContext:
             rb_a=rb_a, rb_b=rb_b,
             static_a=static_a, static_b=static_b,
             inv_a=inv_a, inv_b=inv_b, inv_sum=inv_sum,
-            tr_a=a.get(Transform), tr_b=b.get(Transform),
+            tr_a=a.transform, tr_b=b.transform,
             nx=nx, ny=ny, tx=-ny, ty=nx, depth=depth,
             rel_vx=rel_vx, rel_vy=rel_vy, vel_along=vel_along,
         )
@@ -163,21 +163,35 @@ def _normal_impulse(ctx: ResolveContext):
         restitution = ctx.rb_b.restitution
     else:
         restitution = ctx.rb_a.restitution
+
+    # Annule la restitution si A est supporté dans la direction de l'impulsion
+    if not ctx.static_a:
+        col_a = ctx.a.collider
+        for normal in col_a._contacts.values():
+            if normal[0] * ctx.nx + normal[1] * ctx.ny > 0.7:
+                restitution = 0.0
+                break
+
+    # Annule la restitution si B est supporté dans la direction opposée
+    if not ctx.static_b and restitution > 0.0:
+        col_b = ctx.b.collider
+        for normal in col_b._contacts.values():
+            if normal[0] * ctx.nx + normal[1] * ctx.ny < -0.7:
+                restitution = 0.0
+                break
+
     if ctx.vel_along < -ctx.C.RESTITUTION_THRESHOLD:
-        # Impact significatif : restitution scalée selon la vitesse
         t = min((-ctx.vel_along - ctx.C.RESTITUTION_THRESHOLD) / (ctx.C.RESTITUTION_MAX_VEL - ctx.C.RESTITUTION_THRESHOLD), 1.0)
         j_delta_n = -(1.0 + restitution * t) * ctx.vel_along / ctx.inv_sum
     elif ctx.vel_along < 0:
-        # Approche lente : correction de pénétration sans restitution
         bias = ctx.C.BAUMGARTE * max(ctx.depth - ctx.C.SLOP, 0.0)
         j_delta_n = -(ctx.vel_along + bias) / ctx.inv_sum
     else:
-        # Objet qui s'éloigne : pas d'impulsion
         j_delta_n = 0.0
-    # Restitution négligeable : tronque la suite géométrique pour éviter le jitter
+
     if abs(j_delta_n) < 1e-3:
         j_delta_n = 0.0
-    # Clamping : pas de traction
+
     old_jn = ctx.cached.jn
     ctx.cached.jn = max(0.0, old_jn + j_delta_n)
     ctx.j_delta_n = ctx.cached.jn - old_jn

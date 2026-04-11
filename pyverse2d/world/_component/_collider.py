@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from ..._internal import expect
 from ...abc import Component, Shape
-from ...math import Point
+from ...math import Point, Vector
 
 from typing import Iterator
 
@@ -21,7 +21,7 @@ class Collider(Component):
         trigger(bool, optional): collision fantôme
         active(bool, optional): collision active
     """
-    __slots__ = ("_shape", "_offset", "_category", "_mask", "_trigger", "_active", "_colliding", "_coyote_elapsed")
+    __slots__ = ("_shape", "_offset", "_category", "_mask", "_trigger", "_active", "_contacts", "_coyote_elapsed")
     requires = ("Transform",)
     _COYOTE_TIME = 0.1  # temps avant perte du contact
 
@@ -40,7 +40,7 @@ class Collider(Component):
         self._mask: int = expect(mask, int)
         self._trigger: bool = expect(trigger, bool)
         self._active: bool = expect(active, bool)
-        self._colliding: list[Collider] = []
+        self._contacts: dict[Collider, Vector] = {}
         self._coyote_elapsed: float = 0.0
     
     # ======================================== CONVERSIONS ========================================
@@ -81,6 +81,10 @@ class Collider(Component):
         """Renvoie le masque binaire de collision"""
         return self._mask
     
+    def get_contacts(self) -> dict[Collider, Vector]:
+        """Renvoie le dictionnaire des contactes et de la normale de collision"""
+        return self._contacts
+    
     # ======================================== PREDICATES ========================================
     def is_trigger(self) -> bool:
         """Vérifie si la collision est fantôme"""
@@ -96,7 +100,7 @@ class Collider(Component):
     
     def collides(self, other: Collider) -> bool:
         """Vérifie la collision avec un autre collider"""
-        return other in self._colliding
+        return other in self._contacts
 
     # ======================================== PUBLIC METHODS ========================================
     def activate(self):
@@ -106,3 +110,9 @@ class Collider(Component):
     def deactivate(self):
         """Désactive la collision"""
         self._active = False
+
+    def collision_normal(self, other: Collider) -> Vector | None:
+        """Renvoie la normale de collision avec un autre ``Collider``"""
+        if other is self._contacts:
+            return self._contacts[other]
+        return None
