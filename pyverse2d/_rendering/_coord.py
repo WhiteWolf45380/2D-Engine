@@ -88,7 +88,7 @@ def nvc_to_viewport(nvc_x: float, nvc_y: float, lw: float, lh: float, ox: float,
         dx: direction horizontale du viewport
         dy: direction verticale du viewport
     """
-    return ox + (nvc_x * lw - ox) * dx, oy + (nvc_y * lh - oy) * dy
+    return ox + nvc_x * lw * dx, oy + nvc_y * lh * dy
 
 @register(CoordSpace.VIEWPORT, CoordSpace.LOGICAL)
 def viewport_to_logical(vw_x: float, vw_y: float, lx: float, ly: float) -> tuple[float, float]:
@@ -177,7 +177,7 @@ def viewport_to_nvc(vw_x: float, vw_y: float, lw: float, lh: float, ox: float, o
         dx: direction horizontale du viewport
         dy: direction verticale du viewport
     """
-    return (ox + (vw_x - ox) / dx) / lw, (oy + (vw_y - oy) / dy) / lh
+    return (vw_x - ox) / (dx * lw), (vw_y - oy) / (dy * lh)
 
 @register(CoordSpace.NVC, CoordSpace.NDC)
 def nvc_to_ndc(nvc_x: float, nvc_y: float) -> tuple[float, float]:
