@@ -9,6 +9,7 @@ from ._manager import Manager
 from ._ecs import Component, System
 from ._gui import Behavior, Widget
 from ._layer import Layer
+from ._mouse_cursor import MouseCursor
 
 # ======================================== EXPORTS ========================================
 __all__ = [
@@ -24,4 +25,5 @@ __all__ = [
     "Behavior",
     "Widget",
     "Layer",
+    "MouseCursor",
 ]

@@ -1,13 +1,19 @@
 # ======================================== IMPORTS ========================================
 from __future__ import annotations
 
-from ..abc import Manager
+from .._internal import expect, clamped
+from ..abc import Manager, MouseCursor
 from ..math import Point
+from ..asset import Image
 
 from ._context import ContextManager
 
+import pyglet
 import pyglet.window.mouse as _mouse
-from typing import TypeAlias
+from pyglet.window import Window as PygletWindow
+
+from typing import TypeAlias, ClassVar, Type
+from numbers import Real
 
 # ======================================== STR ========================================
 _NAMES: dict[MouseManager.Button] = {
@@ -31,11 +37,38 @@ class MouseManager(Manager):
 
     # Alias
     Button: TypeAlias = int
+    MouseCursor: TypeAlias = MouseCursor
+    SystemCursor: TypeAlias = str | None
 
     # Boutons
     B_LEFT = _mouse.LEFT
     B_MIDDLE = _mouse.MIDDLE
     B_RIGHT = _mouse.RIGHT
+
+    # Curseurs de souris
+    SystemMouseCursor: ClassVar[Type[SystemCursor]] = SystemMouseCursor
+    ImageMouseCursor: ClassVar[Type[ImageMouseCursor]] = ImageMouseCursor
+
+    # Flags des curseurs système
+    CURSOR_DEFAULT = PygletWindow.CURSOR_DEFAULT
+    CURSOR_CROSSHAIR = PygletWindow.CURSOR_CROSSHAIR
+    CURSOR_HAND = PygletWindow.CURSOR_HAND
+    CURSOR_HELP = PygletWindow.CURSOR_HELP
+    CURSOR_NO = PygletWindow.CURSOR_NO
+    CURSOR_SIZE = PygletWindow.CURSOR_SIZE
+    CURSOR_SIZE_UP = PygletWindow.CURSOR_SIZE_UP
+    CURSOR_SIZE_UP_RIGHT = PygletWindow.CURSOR_SIZE_UP_RIGHT
+    CURSOR_SIZE_RIGHT = PygletWindow.CURSOR_SIZE_RIGHT
+    CURSOR_SIZE_DOWN_RIGHT = PygletWindow.CURSOR_SIZE_DOWN_RIGHT
+    CURSOR_SIZE_DOWN = PygletWindow.CURSOR_SIZE_DOWN
+    CURSOR_SIZE_DOWN_LEFT = PygletWindow.CURSOR_SIZE_DOWN_LEFT
+    CURSOR_SIZE_LEFT = PygletWindow.CURSOR_SIZE_LEFT
+    CURSOR_SIZE_UP_LEFT = PygletWindow.CURSOR_SIZE_UP_LEFT
+    CURSOR_SIZE_UP_DOWN = PygletWindow.CURSOR_SIZE_UP_DOWN
+    CURSOR_SIZE_LEFT_RIGHT = PygletWindow.CURSOR_SIZE_LEFT_RIGHT
+    CURSOR_TEXT = PygletWindow.CURSOR_TEXT
+    CURSOR_WAIT = PygletWindow.CURSOR_WAIT
+    CURSOR_WAIT_ARROW = PygletWindow.CURSOR_WAIT_ARROW
 
     def __init__(self, context_manager: ContextManager):
         # Initialisation du gestionnaire
@@ -154,6 +187,24 @@ class MouseManager(Manager):
     def scroll_y(self) -> float:
         """Défilement vertical de la molette cette frame"""
         return self._scroll_dy
+    
+    # ======================================== SETTERS ========================================
+    def set_exclusive(self, value: bool) -> None:
+        """Active ou désactive le mode exclusif de la souris"""
+        self._window.native.set_exclusive_mouse(value)
+
+    def set_appearance(self, cursor: MouseCursor) -> None:
+        """Définit l'apparence du curseur"""
+        assert isinstance(cursor, MouseCursor), f"Cursor must be a MouseCursor instance, not a {type(cursor)}"
+        self._window.native.set_mouse_cursor(cursor.to_pyglet(self._window.native))
+
+    def set_viewport_origin(self, point: Point) -> None:
+        """Définit l'origine du viewport courant
+
+        Args:
+            point: origine du viewport
+        """
+        self._viewport_origin = Point(point)
 
     # ======================================== PREDICATES ========================================
     def is_out(self) -> bool:
@@ -175,15 +226,6 @@ class MouseManager(Manager):
     def is_currently_pressed(self, button: Button) -> bool:
         """Vérifie si un bouton est pressé cette frame ou maintenu"""
         return self._pressed.get(button, False) or button in self._step
-
-    # ======================================== COLLECTIONS ========================================
-    def set_viewport_origin(self, point: Point) -> None:
-        """Définit l'origine du viewport courant
-
-        Args:
-            point: origine du viewport
-        """
-        self._viewport_origin = Point(point)
 
     # ======================================== LIFE CYCLE ========================================
     def update(self, dt: float) -> None:
@@ -255,3 +297,50 @@ class MouseManager(Manager):
         """Vérifie que la souris soit en dehors du viewport de la fenêtre"""
         hw, hh = self._window.screen.half_width, self._window.screen.half_height
         self._mouse_out = not (-hw <= self._mouse_x <= hw and -hh <= self._mouse_y <= hh)
+
+# ======================================== CURSORS ========================================
+class SystemMouseCursor(MouseCursor):
+    """Curseur de souris système
+
+    Args:
+        cursor: constante ``SystemCursor``
+    """
+    __slots__ = ("_cursor",)
+
+    def __init__(self, cursor: str = PygletWindow.CURSOR_DEFAULT):
+        self._cursor: str = cursor
+
+    def to_pyglet(self, window: PygletWindow) -> pyglet.window.MouseCursor:
+        """Renvoie le curseur pyglet"""
+        return window.get_system_mouse_cursor(self._cursor)
+
+
+class ImageMouseCursor(MouseCursor):
+    """Curseur de souris basé sur une image
+
+    Args:
+        image: image du curseur
+        anchor_x: point chaud horizontal [0, 1]
+        anchor_y: point chaud vertical [0, 1]
+        acceleration: rendu natif OS (sinon OpenGL)
+    """
+    __slots__ = ("_image", "_anchor_x", "_anchor_y", "_acceleration")
+
+    def __init__(
+        self,
+        image: Image,
+        anchor_x: Real = 0.0,
+        anchor_y: Real = 0.0,
+        acceleration: bool = False,
+    ):
+        self._image: Image = expect(image, Image)
+        self._anchor_x: float = float(clamped(expect(anchor_x, Real)))
+        self._anchor_y: float = float(clamped(expect(anchor_y, Real)))
+        self._acceleration: bool = expect(acceleration, bool)
+
+    def to_pyglet(self, window: PygletWindow) -> pyglet.window.ImageMouseCursor:
+        """Renvoie le curseur pyglet"""
+        raw = pyglet.image.load(self._image.path)
+        hot_x = int(self._anchor_x * raw.width)
+        hot_y = int((1.0 - self._anchor_y) * raw.height)
+        return pyglet.window.ImageMouseCursor(raw, hot_x, hot_y, self._acceleration)
