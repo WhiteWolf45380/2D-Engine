@@ -90,8 +90,8 @@ def _narrowphase(ctx: UpdateContext):
         
         # Collision fantôme
         if col_a.is_trigger() or col_b.is_trigger():
-            col_a._contacts[b] = Vector._make(0, 0)
-            col_b._contacts[a] = Vector._make(0, 0)
+            col_a._contacts[col_b] = Vector._make(0, 0)
+            col_b._contacts[col_a] = Vector._make(0, 0)
             continue
 
         # Gestion du cache de contacts persistants
@@ -119,8 +119,8 @@ def _narrowphase(ctx: UpdateContext):
         normal = Vector._make(nx, ny)
         cached.normal = normal
         contact = Contact(normal, contact.depth)
-        col_a._contacts[b] = normal
-        col_b._contacts[a] = -normal
+        col_a._contacts[col_b] = normal
+        col_b._contacts[col_a] = -normal
 
         # Actualisation du GroundSensor selon la normale du contact
         _update_ground_sensor(a, b, nx, ny)
