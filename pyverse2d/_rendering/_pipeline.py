@@ -334,11 +334,14 @@ class Pipeline:
             dx: direction horizontale du viewport (logical space)
             dy: direction verticale du viewport (logical space)
         """
-        view = view.translate((ox / self.ppu_x, oy / self.ppu_y, 0))
         if dx != 1.0 or dy != 1.0:
+            view = view.translate((-ox / self.ppu_x, -oy / self.ppu_y, 0))
             view = view.scale((dx, dy, 1.0))
+            view = view.translate((ox / self.ppu_x, oy / self.ppu_y, 0))
+        elif ox != 0.0 or oy != 0.0:
+            view = view.translate((ox / self.ppu_x, oy / self.ppu_y, 0))
         return view
-    
+        
     # ======================================== SPACE CONVERSIONS ========================================
     def convert(self, x: float, y: float, from_space: CoordSpace, to_space: CoordSpace, viewport: Viewport = None, camera: Camera = None) -> tuple[float, float]:
         """Convertit une position d'un espace à un autre
@@ -392,11 +395,11 @@ class Pipeline:
         nvc_y = (ty / half_h + 1) / 2
 
         # NVC to Canvas
-        gl_x = int((lx + (ox + nvc_x * lw) * dx) * self._window.framebuffer_scale_x)
-        gl_y = int((ly + (oy + nvc_y * lh) * dy) * self._window.framebuffer_scale_y)
+        cnv_x = int((lx + ox + (nvc_x * lw - ox) * dx) * self._window.framebuffer_scale_x)
+        cnv_y = int((ly + oy + (nvc_y * lh - oy) * dy) * self._window.framebuffer_scale_y)
 
         # Canvas to FrameBuffer
-        return self._window.canvas.x + gl_x, self._window.canvas.y + gl_y
+        return self._window.canvas.x + cnv_x, self._window.canvas.y + cnv_y
 
 
     def framebuffer_to_world(self, x: int, y: int, camera: Camera = None) -> tuple[float, float]:
@@ -412,12 +415,12 @@ class Pipeline:
         cx, cy, vw, vh, zoom, rotation = self._context.camera_resolve if camera is None else camera.resolve(lw, lh)
 
         # FrameBuffer to Canvas
-        gl_x = (x - self._window.canvas.x) / self._window.framebuffer_scale_x - lx
-        gl_y = (y - self._window.canvas.y) / self._window.framebuffer_scale_y - ly
+        cnv_x = (x - self._window.canvas.x) / self._window.framebuffer_scale_x
+        cnv_y = (y - self._window.canvas.y) / self._window.framebuffer_scale_y
 
         # Canvas to NVC
-        nvc_x = (gl_x * dx - ox) / lw
-        nvc_y = (gl_y * dy - oy) / lh
+        nvc_x = ((cnv_x - lx - ox) * dx - ox) / lw
+        nvc_y = ((cnv_y - ly - oy) * dy - oy) / lh
 
         # NVC to Frustum
         half_w, half_h = (vw / zoom) / 2, (vh / zoom) / 2
