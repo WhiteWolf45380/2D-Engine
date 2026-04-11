@@ -4,8 +4,7 @@ from __future__ import annotations
 from .....abc import Shape
 from .....shape import Circle, Ellipse, Capsule
 
-from .._registry import Contact
-from .._registry import _handlers
+from .._registry import _handlers, Contact
 
 from ._vertex import sat, circle_vs_pts, ellipse_vs_pts, capsule_vs_pts
 
