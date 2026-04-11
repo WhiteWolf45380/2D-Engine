@@ -39,7 +39,7 @@ class Follow(Component):
         self._entity: Entity = expect(entity, Entity)
         self._offset: Vector = Vector(offset)
         self._smoothing: float = clamped(float(expect(smoothing, Real)), include_max=False)
-        self._force: float | None = over(float(expect(force, Real)), 0.0, include=False)
+        self._force: float = over(float(expect(force, Real)), 0.0, include=False)
         self._radius: float = abs(float(expect(radius, Real)))
         if not self._entity.has("Transform"):
             raise ValueError(f"Entity {self._entity.id}... has no Transform component")
@@ -102,18 +102,17 @@ class Follow(Component):
         self._smoothing = clamped(float(expect(value, Real)), include_max=False)
 
     @property
-    def max_speed(self) -> float:
-        """Vitesse maximale de suivi
+    def force(self) -> float:
+        """Force de suivi
 
-        La vitesse doit être un ``Réel`` positif non nul.
-        L'unité est le m/s dont l'échelle est définie dans le ``PhysicsSystem``.
-        Mettre à None pour ne pas limiter la vitesse.
+        La force doit être un ``Réel`` positif non nul.
+        L'unité est le Newton.
         """
-        return self._max_speed
+        return self._force
     
-    @max_speed.setter
-    def max_speed(self, value: Real | None) -> None:
-        self._max_speed = over(float(expect(value, Real)), 0.0, include=False) if value is not None else None
+    @force.setter
+    def force(self, value: Real) -> None:
+        self._force: float = over(float(expect(value, Real)), 0.0, include=False)
 
     @property
     def radius(self) -> float:
