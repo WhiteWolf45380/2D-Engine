@@ -128,6 +128,15 @@ class Viewport(Space):
         self._direction.y = value[1]
 
     # ======================================== COLLECTIONS ========================================
+    def copy(self) -> Viewport:
+        """Crée une copie du viewport"""
+        return Viewport(
+            position = self._position.copy(),
+            width = self._width,
+            height = self._height,
+            origin = self._origin.copy(),
+            direction = self._direction.copy()
+        )
 
     # ======================================== RESOLVING ========================================
     def resolve(self, screen_width: int, screen_height: int) -> tuple[float, float, float, float]:
