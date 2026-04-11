@@ -85,6 +85,11 @@ class Entity:
         return self._transform
     
     @property
+    def follow(self) -> Follow | None:
+        """Renvoie le Follow"""
+        return self._follow
+    
+    @property
     def shape_renderer(self) -> ShapeRenderer | None:
         """Renvoie le ShapeRenderer"""
         return self._shape_renderer
@@ -251,7 +256,7 @@ class Entity:
         Args:
             component_type(Type[C]): type du composant
         """
-        if component_type is str:
+        if type(component_type) is str:
             attr_name = f"_{component_type.lower()}"
         else:
             attr_name = _COMPONENTS.get(component_type)
