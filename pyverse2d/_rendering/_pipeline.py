@@ -383,13 +383,13 @@ class Pipeline:
             tx, ty = tx * cos_r + ty * sin_r, -tx * sin_r + ty * cos_r
 
         # Frustum to NVC
-        half_w, half_h = (vw / zoom) / 2, (vh / zoom) / 2
+        half_w, half_h = vw / (zoom * dx * 2), vh / (zoom * dx * 2)
         nvc_x = (tx / half_w + 1) / 2
         nvc_y = (ty / half_h + 1) / 2
 
         # NVC to Canvas
-        cnv_x = int((lx + ox + nvc_x * lw * dx) * self._window.framebuffer_scale_x)
-        cnv_y = int((ly + oy + nvc_y * lh * dy) * self._window.framebuffer_scale_y)
+        cnv_x = int((lx + ox + nvc_x * lw) * self._window.framebuffer_scale_x)
+        cnv_y = int((ly + oy + nvc_y * lh) * self._window.framebuffer_scale_y)
 
         # Canvas to FrameBuffer
         return self._window.canvas.x + cnv_x, self._window.canvas.y + cnv_y
@@ -412,11 +412,11 @@ class Pipeline:
         cnv_y = (y - self._window.canvas.y) / self._window.framebuffer_scale_y
 
         # Canvas to NVC
-        nvc_x = (cnv_x - lx - ox) / (dx * lw)
-        nvc_y = (cnv_y - ly - oy) / (dy * lh)
+        nvc_x = (cnv_x - lx - ox) / lw
+        nvc_y = (cnv_y - ly - oy) / lh
 
         # NVC to Frustum
-        half_w, half_h = (vw / zoom) / 2, (vh / zoom) / 2
+        half_w, half_h = vw / (zoom * dx * 2), vh / (zoom * dx * 2)
         fr_x = (nvc_x * 2 - 1) * half_w
         fr_y = (nvc_y * 2 - 1) * half_h
 
@@ -431,8 +431,9 @@ class Pipeline:
     def visible_world_rect(self) -> tuple[float, float, float, float]:
         """Renvoie ``(x, y, width, height)`` du frustum visible en coordonnées monde"""
         cx, cy, vw, vh, zoom, _ = self._context.camera_resolve
-        half_w = (vw / zoom) / 2
-        half_h = (vh / zoom) / 2
+        _, _, _, _, _, (dx, dy) = self._context.viewport_resolve
+        half_w = (vw / zoom) / 2 / abs(dx)
+        half_h = (vh / zoom) / 2 / abs(dy)
         return (cx - half_w, cy - half_h, half_w * 2, half_h * 2)
 
     def scale_to_screen(self, width: float = None, height: float = None) -> float | tuple[float, float]:
@@ -465,6 +466,8 @@ class Pipeline:
         top = min(y0, y1)
         width = abs(x0 - x1)
         height = abs(y0 - y1)
+
+        print(left, top, width, height)
 
         was_enabled = (gl.GLboolean * 1)()
         prev_box = (c_int * 4)()
