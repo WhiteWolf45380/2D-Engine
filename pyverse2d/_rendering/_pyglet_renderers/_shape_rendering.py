@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from ...typing import BorderAlign
 from ...asset import Color
+from ...abc import Shape
+
 from .._pipeline import Pipeline
 
 import pyglet
@@ -12,9 +14,6 @@ from pyglet.graphics.shader import ShaderProgram
 
 import numpy as np
 from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from ...abc import Shape
 
 # ======================================== CONSTANTS ========================================
 _UNSET = object()

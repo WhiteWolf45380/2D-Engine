@@ -1,9 +1,13 @@
 # ======================================== IMPORTS ========================================
 from __future__ import annotations
 
+from .._flag import CoordSpace
+from ..abc import Layer
+
+from . import Window, LogicalScreen, Viewport, Camera, CoordSpace, CoordContext
+
 import pyglet.gl as gl
 from pyglet.graphics import Batch, Group
-from pyglet.graphics import ShaderGroup
 from pyglet.math import Mat4
 from pyglet.window import Window as PygletWindow
 
@@ -11,13 +15,10 @@ from typing import TYPE_CHECKING
 from dataclasses import dataclass
 from contextlib import contextmanager
 from ctypes import c_int
-from math import radians
+import math
 
-if TYPE_CHECKING:
-    from ..abc import Layer
-    from ..scene import Scene, Viewport, Camera
-    from ._window import Window
-    from ._screen import Screen
+if TYPE_CHECKING: 
+    from ..scene import Scene
 
 # ======================================== DATA ========================================
 @dataclass(slots=True, frozen=True)
@@ -54,7 +55,7 @@ class Pipeline:
     __slots__ = (
         "_window", "_scene", "_layer",
         "_data", "_projection_cache", "_view_cache", '_view_buffer', "_default_view",
-        "_context",
+        "_context", "_coord_context",
         "_batch", "_group", "_z_groups",
     )
 
@@ -75,6 +76,7 @@ class Pipeline:
 
         # Contexte
         self._context: _PipelineContext = _PipelineContext()
+        self._coord_context: CoordContext = CoordContext(self._window, self._window.screen)
 
         # Gpu configuration
         self._batch: Batch = None
@@ -93,7 +95,7 @@ class Pipeline:
         return self._context.gl_viewport
     
     @property
-    def screen(self) -> Screen:
+    def screen(self) -> LogicalScreen:
         """Espace logique de référence assigné"""
         return self._window.screen
     
@@ -320,7 +322,7 @@ class Pipeline:
         """
         view = view.translate((-cx, -cy, 0))
         if rotation != 0.0:
-            view = view.rotate(radians(rotation), (0, 0, 1))
+            view = view.rotate(math.radians(rotation), (0, 0, 1))
         return view
     
     def compute_viewport(self, view: Mat4, ox: float, oy: float, dx: float, dy: float) -> Mat4:
@@ -336,10 +338,102 @@ class Pipeline:
         if dx != 1.0 or dy != 1.0:
             view = view.scale((dx, dy, 1.0))
         return view
+    
+    # ======================================== SPACE CONVERSIONS ========================================
+    def convert(self, x: float, y: float, from_space: CoordSpace, to_space: CoordSpace, viewport: Viewport = None, camera: Camera = None) -> tuple[float, float]:
+        """Convertit une position d'un espace à un autre
+
+        x: position horizontale
+        y: position verticale
+        from_space: espace source
+        to_space: espace cible
+        viewport: viewport à utiliser (par défaut le viewport courant)
+        camera: camera à utiliser (par défaut la camera courante)
+        """
+        # Viewport
+        if viewport is None:
+            viewport = self.viewport
+            viewport_resolve = self._context.viewport_resolve
+        else:
+            viewport_resolve = viewport.resolve(self._window.screen.width, self._window.screen.height)
+
+        # Camera
+        if camera is None:
+            camera = self.camera
+            camera_resolve = self._context.camera_resolve
+        else:
+            camera_resolve = camera.resolve(viewport_resolve[2], viewport_resolve[3])
+
+        # Conversion
+        return self._coord_context.convert(x, y, from_space, to_space, viewport=viewport, camera=camera, viewport_resolve=viewport_resolve, camera_resolve=camera_resolve)
+
+    def world_to_framebuffer(self, x: float, y: float, camera: Camera = None) -> tuple[int, int]:
+        """Convertit un point monde en pixel framebuffer
+
+        Args:
+            x: coordonnée horizontale monde
+            y: coordonnée verticale monde
+            camera: Camera à utiliser (par défaut la caméra courante)
+        """
+        # Resolutions
+        lx, ly, lw, lh, (ox, oy), (dx, dy) = self._context.viewport_resolve
+        cx, cy, vw, vh, zoom, rotation = self._context.camera_resolve if camera is None else camera.resolve(lw, lh)
+
+        # World to Frustum
+        tx, ty = x - cx, y - cy
+        if rotation != 0.0:
+            rad = math.radians(rotation)
+            cos_r, sin_r = math.cos(rad), math.sin(rad)
+            tx, ty = tx * cos_r + ty * sin_r, -tx * sin_r + ty * cos_r
+
+        # Frustum to NVC
+        half_w, half_h = (vw / zoom) / 2, (vh / zoom) / 2
+        nvc_x = (tx / half_w + 1) / 2
+        nvc_y = (ty / half_h + 1) / 2
+
+        # NVC to GlViewport
+        gl_x = int((lx + (nvc_x * lw - ox) / dx) * self._window.framebuffer_scale_x)
+        gl_y = int((ly + (nvc_y * lh - oy) / dy) * self._window.framebuffer_scale_y)
+
+        # GlViewport to FrameBuffer
+        return self._window.viewport.x + gl_x, self._window.viewport.y + gl_y
+
+
+    def framebuffer_to_world(self, x: int, y: int, camera: Camera = None) -> tuple[float, float]:
+        """Convertit un pixel framebuffer en point monde
+
+        Args:
+            x: coordonnée horizontale framebuffer
+            y: coordonnée verticale framebuffer
+            camera: Camera à utiliser (par défaut la caméra courante)
+        """
+        # Resolutions
+        lx, ly, lw, lh, (ox, oy), (dx, dy) = self._context.viewport_resolve
+        cx, cy, vw, vh, zoom, rotation = self._context.camera_resolve if camera is None else camera.resolve(lw, lh)
+
+        # FrameBuffer to GlViewport
+        gl_x = (x - self._window.viewport.x) / self._window.framebuffer_scale_x - lx
+        gl_y = (y - self._window.viewport.y) / self._window.framebuffer_scale_y - ly
+
+        # GlViewport to NVC
+        nvc_x = (gl_x * dx + ox) / lw
+        nvc_y = (gl_y * dy + oy) / lh
+
+        # NVC to Frustum
+        half_w, half_h = (vw / zoom) / 2, (vh / zoom) / 2
+        fr_x = (nvc_x * 2 - 1) * half_w
+        fr_y = (nvc_y * 2 - 1) * half_h
+
+        # Frustum to World
+        if rotation != 0.0:
+            rad = math.radians(rotation)
+            cos_r, sin_r = math.cos(rad), math.sin(rad)
+            fr_x, fr_y = fr_x * cos_r - fr_y * sin_r, fr_x * sin_r + fr_y * cos_r
+        return fr_x + cx, fr_y + cy
 
     # ======================================== UTILITAIRES ========================================
     def visible_world_rect(self) -> tuple[float, float, float, float]:
-        """Renvoie (x, y, width, height) du frustum visible en coordonnées monde"""
+        """Renvoie ``(x, y, width, height)`` du frustum visible en coordonnées monde"""
         cx, cy, vw, vh, zoom, _ = self._context.camera_resolve
         half_w = (vw / zoom) / 2
         half_h = (vh / zoom) / 2
@@ -357,36 +451,9 @@ class Pipeline:
         if height is None:
             return width * self._context.ppu_x
         return (width * self._context.ppu_x, height * self._context.ppu_y)
-
-    def world_to_framebuffer(self, x: float, y: float) -> tuple[int, int]:
-        """Convertit une coordonnée monde en pixels framebuffer
-
-        Args:
-            x: coordonnée horizontale monde
-            y: coordonnée verticale monde
-        """
-        lx, ly, lw, lh, (ox, oy), (dx, dy) = self._context.viewport_resolve
-        cx, cy, vw, vh, zoom, _ = self._context.camera_resolve
-
-        half_w = (vw / zoom) / 2
-        half_h = (vh / zoom) / 2
-
-        # World to NDC
-        ndc_x = (x - cx) / half_w
-        ndc_y = (y - cy) / half_h
-
-        # NDC to viewport logique
-        px_logic = ((ndc_x + 1) * lw / 2 - ox) / dx
-        py_logic = ((ndc_y + 1) * lh / 2 - oy) / dy
-
-        # Viewport logique to framebuffer
-        px_fb = int(self._window.viewport.x + (lx + px_logic) * self._window.framebuffer_scale_x)
-        py_fb = int(self._window.viewport.y + (ly + py_logic) * self._window.framebuffer_scale_y)
-
-        return px_fb, py_fb
-
+    
     @contextmanager
-    def scissor(self, wx: float, wy: float, ww: float, wh: float):
+    def scissor_world(self, wx: float, wy: float, ww: float, wh: float, camera: Camera = None):
         """Context manager appliquant un scissor test en coordonnées monde
 
         Args:
@@ -395,12 +462,8 @@ class Pipeline:
             ww: largeur monde
             wh: hauteur monde
         """
-        _, _, _, _, _, (dx, dy) = self._context.viewport_resolve
-        _, _, vw, vh, zoom, _ = self._context.camera_resolve
-
-        x0, y0 = self.world_to_framebuffer(wx, wy)
-        w = int(ww / (vw / zoom) * self._context.gl_viewport[2] / dx)
-        h = int(wh / (vh / zoom) * self._context.gl_viewport[3] / dy)
+        x0, y0 = self.world_to_framebuffer(wx, wy, camera)
+        x1, y1 = self.world_to_framebuffer(wx + ww, wy + wh, camera)
 
         was_enabled = (gl.GLboolean * 1)()
         prev_box = (c_int * 4)()
@@ -408,7 +471,31 @@ class Pipeline:
         gl.glGetIntegerv(gl.GL_SCISSOR_BOX, prev_box)
 
         gl.glEnable(gl.GL_SCISSOR_TEST)
-        gl.glScissor(x0, y0, w, h)
+        gl.glScissor(x0, y0, x1 - x0, y1 - y0)
+        try:
+            yield
+        finally:
+            gl.glScissor(*prev_box)
+            if not was_enabled[0]:
+                gl.glDisable(gl.GL_SCISSOR_TEST)
+
+    @contextmanager
+    def scissor_framebuffer(self, x: float, y: float, w: float, h: float):
+        """Context manager appliquant un scissor test en coordonnées écran
+
+        Args:
+            x: coordonnée horizontale coin bas-gauche
+            y: coordonnée verticale du coin bas-gauche
+            w: largeur
+            h: hauteur
+        """
+        was_enabled = (gl.GLboolean * 1)()
+        prev_box = (c_int * 4)()
+        gl.glGetBooleanv(gl.GL_SCISSOR_TEST, was_enabled)
+        gl.glGetIntegerv(gl.GL_SCISSOR_BOX, prev_box)
+
+        gl.glEnable(gl.GL_SCISSOR_TEST)
+        gl.glScissor(x, y, w, h)
         try:
             yield
         finally:

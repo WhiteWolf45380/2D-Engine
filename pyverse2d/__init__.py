@@ -9,7 +9,14 @@ from typing import Callable
 from . import typing, abc, math, shape, asset
 
 # ======================================== STATE ========================================
-from ._rendering import Window, LogicalScreen, Viewport, Camera, Pipeline
+from ._rendering import (
+    Window, LogicalScreen, Viewport, Camera,
+    CoordSpace,
+    world_to_frustum, frustum_to_ndc, ndc_to_nvc, nvc_to_viewport, viewport_to_logical, logical_to_glviewport, glviewport_to_framebuffer,
+    framebuffer_to_glviewport, glviewport_to_logical, logical_to_viewport, viewport_to_nvc, nvc_to_ndc, ndc_to_frustum, frustum_to_world,
+    CoordContext,
+    Pipeline,
+)
 
 _pipeline: Pipeline | None = None
 
@@ -142,6 +149,23 @@ __all__ = [
     "LogicalScreen",
     "Viewport",
     "Camera",
+
+    "CoordSpace",
+    "world_to_frustum",
+    "frustum_to_ndc",
+    "ndc_to_nvc",
+    "nvc_to_viewport",
+    "viewport_to_logical",
+    "logical_to_glviewport",
+    "glviewport_to_framebuffer",
+    "framebuffer_to_glviewport",
+    "glviewport_to_logical",
+    "logical_to_viewport",
+    "viewport_to_nvc",
+    "nvc_to_ndc",
+    "ndc_to_frustum",
+    "frustum_to_world",
+    "CoordContext",
 
     "TimeManager",
     "EventManager",

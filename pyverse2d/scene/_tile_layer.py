@@ -15,12 +15,12 @@ class TileLayer(Layer):
     Args:
         tile_map: couche de tuiles à afficher
         chunk_size: nombre de tuiles par côté d'un chunk
-        clip: limitation parallax
+        clip: limitation du rendu par rapport à une autre caméra
         camera: caméra locale
     """
     __slots__ = (
         "_tile_map", "_chunk_size",
-        "_parallax", "_clip",
+        "_clip_camera",
         "_renderer",
     )
 
@@ -28,7 +28,7 @@ class TileLayer(Layer):
         self,
         tile_map: TileMap,
         chunk_size: int = 16,
-        clip: bool = False,
+        clip_camera: Camera | None = None,
         camera: Camera = None,
     ):
         super().__init__(camera)
@@ -36,7 +36,7 @@ class TileLayer(Layer):
         # TileMap
         self._tile_map: TileMap = expect(tile_map, TileMap)
         self._chunk_size: int = max(1, expect(chunk_size, int))
-        self._clip: bool = expect(clip, bool)
+        self._clip_camera: Camera | None = expect(clip_camera, (Camera, None))
 
         # Rendu
         self._renderer: TileRenderer = TileRenderer(self._tile_map, self._chunk_size)
@@ -65,16 +65,16 @@ class TileLayer(Layer):
         self._renderer = TileRenderer(self._tile_map, self._chunk_size)
     
     @property
-    def clip(self) -> bool:
-        """Limitation du rendu à la zone initiale
+    def clip_camera(self) -> Camera | None:
+        """Limitation du rendu à la zone initiale par rapport à une autre caméra
         
         Cette propriété sert à notamment à éviter l'overflow du parallax.
         """
-        return self._clip
+        return self._clip_camera
     
-    @clip.setter
-    def clip(self, value: bool) -> None:
-        self._clip = expect(value, bool)
+    @clip_camera.setter
+    def clip_camera(self, value: Camera | None) -> None:
+        self._clip_camera = expect(value, (Camera, None))
 
     # ======================================== HOOKS========================================
     def on_start(self) -> None:
