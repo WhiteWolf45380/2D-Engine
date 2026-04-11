@@ -149,8 +149,8 @@ class Viewport(Space):
         w = self._width  if self._width  != 0.0 else screen_width
         h = self._height if self._height != 0.0 else screen_height
 
-        ox = self._origin.x * w
-        oy = self._origin.y * h
+        ox = (self._origin.x - 0.5) * w
+        oy = (self._origin.y - 0.5) * h
 
         dx, dy = self._direction
 
