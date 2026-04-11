@@ -7,8 +7,8 @@ from .._pipeline import Pipeline
 
 import pyglet
 import pyglet.gl
-from pyglet.graphics import ShaderGroup, Group
-from pyglet.graphics.shader import Shader, ShaderProgram
+from pyglet.graphics import ShaderGroup
+from pyglet.graphics.shader import ShaderProgram
 
 import math
 import numpy as np
@@ -20,72 +20,9 @@ if TYPE_CHECKING:
 # ======================================== CONSTANTS ========================================
 _UNSET = object()
 
-# ======================================== SHADERS ========================================
-_VERT_SRC = """
-#version 150 core
-
-in vec2 position;
-in vec4 colors;
-
-out vec4 vertex_colors;
-
-uniform float u_scale;
-uniform float u_rotation;
-uniform vec2 u_translation;
-uniform vec2 u_anchor;
-
-uniform WindowBlock {
-    mat4 projection;
-    mat4 view;
-} window;
-
-void main() {
-    float c = cos(u_rotation);
-    float s = sin(u_rotation);
-
-    vec2 p = position * u_scale;
-    p = vec2(p.x * c - p.y * s, p.x * s + p.y * c);
-    p += u_translation - u_anchor;
-
-    gl_Position = window.projection * window.view * vec4(p, 0.0, 1.0);
-    vertex_colors = colors;
-}
-"""
-
-_FRAG_SRC = """
-#version 150 core
-
-in vec4 vertex_colors;
-out vec4 final_color;
-
-void main() {
-    final_color = vertex_colors;
-}
-"""
-
-# ======================================== GROUP ========================================
-class TransformGroup(ShaderGroup):
-
-    def __init__(self, psr: PygletShapeRenderer, program: ShaderProgram, order: int = 0, parent: Group = None):
-        super().__init__(program, order=order, parent=parent)
-        self.psr: PygletShapeRenderer = psr
-
-    def set_state(self):
-        """Applique les uniforms"""
-        p = self.program
-        psr = self.psr
-        p["u_scale"] = psr.scale
-        p["u_rotation"] = math.radians(psr.rotation)
-        p["u_translation"] = (psr.x, psr.y)
-        p["u_anchor"] = _anchor_local(psr)
-
 # ======================================== PUBLIC ========================================
 class PygletShapeRenderer:
-    """
-    Renderer pyglet unifié pour une shape géométrique.
-    Le remplissage utilise le Mesh de la shape (get_vertices + get_indexes),
-    la bordure utilise un triangle strip calculé sur le contour local.
-    Le transform est appliqué GPU-side via uniforms — zéro numpy par frame.
+    """Renderer pyglet unifié pour une shape géométrique
 
     Args:
         shape: shape à rendre
@@ -116,24 +53,21 @@ class PygletShapeRenderer:
 
     # Cache partagé des shader groups
     _PROGRAM: ShaderProgram = None
-    _GROUPS: dict[tuple[int, int], TransformGroup] = {}
+    _GROUPS: dict[tuple[int, int], ShaderGroup] = {}
 
     @classmethod
     def get_program(cls) -> ShaderProgram:
         """Renvoie le shader programme des formes"""
         if cls._PROGRAM is None:
-            cls._PROGRAM = ShaderProgram(
-                Shader(_VERT_SRC, "vertex"),
-                Shader(_FRAG_SRC, "fragment"),
-            )
+            cls._PROGRAM = pyglet.shapes.get_default_shader()
         return cls._PROGRAM
 
     @classmethod
-    def get_group(cls, psr: PygletShapeRenderer, z: int = 0, order: int = 0) -> TransformGroup:
+    def get_group(cls, pipeline: Pipeline, z: int = 0, order: int = 0) -> ShaderGroup:
         """Renvoie le groupe correspondant avec mise en cache"""
         key = (z, order)
         if key not in cls._GROUPS:
-            cls._GROUPS[key] = TransformGroup(psr, cls.get_program(), order=order, parent=psr.pipeline.get_group(z=z))
+            cls._GROUPS[key] = ShaderGroup(cls.get_program(), order=order, parent=pipeline.get_group(z=z))
         return cls._GROUPS[key]
 
     def __init__(
@@ -324,7 +258,7 @@ class _FillRenderer:
             mode = pyglet.gl.GL_TRIANGLES,
             indices = indexes.flatten().tolist(),
             batch = psr.pipeline.batch,
-            group = psr.get_group(psr=psr, z=psr.z, order=0),
+            group = psr.get_group(pipeline=psr.pipeline, z=psr.z, order=0),
             position = ('f', vertices.flatten().tolist()),
             colors = ('Bn', (r, g, b, a) * self._n),
         )
@@ -396,7 +330,7 @@ class _BorderRenderer:
             count = self._n,
             mode = pyglet.gl.GL_TRIANGLE_STRIP,
             batch = psr.pipeline.batch,
-            group = psr.get_group(psr=psr, z=psr.z, order=1),
+            group = psr.get_group(pipeline=psr.pipeline, z=psr.z, order=1),
             position = ('f', strip.flatten().tolist()),
             colors = ('Bn', (r, g, b, a) * self._n),
         )
