@@ -20,7 +20,7 @@ _PIPELINE = [
 ]
 
 # ======================================== REGISTRY ========================================
-_converters: dict[tuple[CoordSpace, CoordSpace], Callable]
+_converters: dict[tuple[CoordSpace, CoordSpace], Callable] = {}
 
 def register(from_space: CoordSpace, to_space: CoordSpace) -> Callable:
     """Enregistre une fonction de conversion"""
