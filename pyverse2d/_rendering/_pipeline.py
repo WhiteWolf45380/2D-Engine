@@ -275,7 +275,7 @@ class Pipeline:
         projection_key = (vw, vh, dx, dy, zoom)
         if projection_key not in self._projection_cache:
             half_w = vw / (dx * zoom * 2)
-            half_h = vh / (dx * zoom * 2)
+            half_h = vh / (dy * zoom * 2)
             self._projection_cache[projection_key] = Mat4.orthogonal_projection(
                 left=-half_w,
                 right=half_w,
