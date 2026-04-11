@@ -67,8 +67,8 @@ warm_start_processor = Processor("warm_start")
 @warm_start_processor.step
 def _check_impulses(ctx: WarmStartContext):
     """Skip si impulsions négligeables pour ne pas perturber les objets au repos"""
-    jn = ctx.cached.jn * ctx.C._WARM_BIAS
-    jt = ctx.cached.jt * ctx.C._WARM_BIAS
+    jn = ctx.cached.jn * ctx.C.WARM_BIAS
+    jt = ctx.cached.jt * ctx.C.WARM_BIAS
     if abs(jn) < 1e-2 and abs(jt) < 1e-2:
         return False
     ctx._jn = jn

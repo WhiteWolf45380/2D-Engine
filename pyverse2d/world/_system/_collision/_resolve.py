@@ -115,7 +115,7 @@ def _position_only(ctx: ResolveContext):
     """Cas sans RigidBody des deux côtés : correction de position uniquement"""
     if ctx.has_rb_a and ctx.has_rb_b:
         return
-    correction = min(max(ctx.depth - ctx.C._SLOP, 0.0) * ctx.C._BAUMGARTE, ctx.C._MAX_CORRECTION)
+    correction = min(max(ctx.depth - ctx.C.SLOP, 0.0) * ctx.C.BAUMGARTE, ctx.C.MAX_CORRECTION)
     if correction > 0:
         if ctx.static_a:
             ctx.tr_b.x -= ctx.nx * correction
@@ -136,7 +136,7 @@ def _baumgarte(ctx: ResolveContext):
     """Correction de position Baumgarte si les objets se rapprochent"""
     if ctx.vel_along >= 0:
         return
-    correction = min(max(ctx.depth - ctx.C._SLOP, 0.0) * ctx.C._BAUMGARTE, ctx.C._MAX_CORRECTION)
+    correction = min(max(ctx.depth - ctx.C.SLOP, 0.0) * ctx.C.BAUMGARTE, ctx.C.MAX_CORRECTION)
     if correction <= 0:
         return
     if ctx.static_a:
@@ -163,13 +163,13 @@ def _normal_impulse(ctx: ResolveContext):
         restitution = ctx.rb_b.restitution
     else:
         restitution = ctx.rb_a.restitution
-    if ctx.vel_along < -ctx.C._RESTITUTION_THRESHOLD:
+    if ctx.vel_along < -ctx.C.RESTITUTION_THRESHOLD:
         # Impact significatif : restitution scalée selon la vitesse
-        t = min((-ctx.vel_along - ctx.C._RESTITUTION_THRESHOLD) / (ctx.C._RESTITUTION_MAX_VEL - ctx.C._RESTITUTION_THRESHOLD), 1.0)
+        t = min((-ctx.vel_along - ctx.C.RESTITUTION_THRESHOLD) / (ctx.C.RESTITUTION_MAX_VEL - ctx.C.RESTITUTION_THRESHOLD), 1.0)
         j_delta_n = -(1.0 + restitution * t) * ctx.vel_along / ctx.inv_sum
     elif ctx.vel_along < 0:
         # Approche lente : correction de pénétration sans restitution
-        bias = ctx.C._BAUMGARTE * max(ctx.depth - ctx.C._SLOP, 0.0)
+        bias = ctx.C.BAUMGARTE * max(ctx.depth - ctx.C.SLOP, 0.0)
         j_delta_n = -(ctx.vel_along + bias) / ctx.inv_sum
     else:
         # Objet qui s'éloigne : pas d'impulsion

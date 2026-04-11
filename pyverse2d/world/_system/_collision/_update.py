@@ -159,9 +159,9 @@ def _wake_lost_supports(ctx: UpdateContext):
 @update_processor.step
 def _solve(ctx: UpdateContext):
     """Résolution itérative des contacts"""
-    iterations = ctx.C.iterations
-    if ctx.max_depth > ctx.C._EXTRA_ITER_THRESHOLD:
-        iterations += ctx.C._EXTRA_ITER
+    iterations = ctx.C.ITER
+    if ctx.max_depth > ctx.C.EXTRA_ITER_THRESHOLD:
+        iterations += ctx.C.EXTRA_ITER
     for _ in range(iterations):
         for a, b, contact, cached in ctx.active_contacts:
             resolve(a, b, contact, cached, ctx.C, ctx.dt)
