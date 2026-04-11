@@ -129,11 +129,11 @@ class PygletShapeRenderer:
         return cls._PROGRAM
 
     @classmethod
-    def get_group(cls, pipeline: Pipeline, z: int = 0, order: int = 0) -> TransformGroup:
+    def get_group(cls, psr: PygletShapeRenderer, z: int = 0, order: int = 0) -> TransformGroup:
         """Renvoie le groupe correspondant avec mise en cache"""
         key = (z, order)
         if key not in cls._GROUPS:
-            cls._GROUPS[key] = TransformGroup(cls, cls.get_program(), order=order, parent=pipeline.get_group(z=z))
+            cls._GROUPS[key] = TransformGroup(psr, cls.get_program(), order=order, parent=psr.pipeline.get_group(z=z))
         return cls._GROUPS[key]
 
     def __init__(
@@ -324,7 +324,7 @@ class _FillRenderer:
             mode = pyglet.gl.GL_TRIANGLES,
             indices = indexes.flatten().tolist(),
             batch = psr.pipeline.batch,
-            group = psr.get_group(pipeline=psr.pipeline, z=psr.z, order=0),
+            group = psr.get_group(psr=psr, z=psr.z, order=0),
             position = ('f', vertices.flatten().tolist()),
             colors = ('Bn', (r, g, b, a) * self._n),
         )
@@ -396,7 +396,7 @@ class _BorderRenderer:
             count = self._n,
             mode = pyglet.gl.GL_TRIANGLE_STRIP,
             batch = psr.pipeline.batch,
-            group = psr.get_group(pipeline=psr.pipeline, z=psr.z, order=1),
+            group = psr.get_group(psr=psr, z=psr.z, order=1),
             position = ('f', strip.flatten().tolist()),
             colors = ('Bn', (r, g, b, a) * self._n),
         )
