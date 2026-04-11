@@ -468,13 +468,18 @@ class Pipeline:
         x0, y0 = self.world_to_framebuffer(wx, wy, camera)
         x1, y1 = self.world_to_framebuffer(wx + ww, wy + wh, camera)
 
+        left = min(x0, x1)
+        top = min(y0, y1)
+        width = abs(x0 - x1)
+        height = abs(y0 - y1)
+
         was_enabled = (gl.GLboolean * 1)()
         prev_box = (c_int * 4)()
         gl.glGetBooleanv(gl.GL_SCISSOR_TEST, was_enabled)
         gl.glGetIntegerv(gl.GL_SCISSOR_BOX, prev_box)
 
         gl.glEnable(gl.GL_SCISSOR_TEST)
-        gl.glScissor(x0, y0, x1 - x0, y1 - y0)
+        gl.glScissor(left, top, width, height)
         try:
             yield
         finally:
