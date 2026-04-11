@@ -15,7 +15,7 @@ class ConstantsDataset:
     EXTRA_ITER_THRESHOLD: float
     EXTRA_ITER: float
     RESTITUTION_THRESHOLD: float
-    RESTITUION_MAX_VEL: float
+    RESTITUTION_MAX_VEL: float
     BAUMGARTE: float = _BAUMGARTE
     MAX_MASS_RATIO: float = _MAX_MASS_RATIO
     WARM_BIAS: float = _WARM_BIAS
