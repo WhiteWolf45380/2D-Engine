@@ -15,7 +15,7 @@ _PIPELINE = [
     CoordSpace.NVC,
     CoordSpace.VIEWPORT,
     CoordSpace.LOGICAL,
-    CoordSpace.DISPLAY_AREA,
+    CoordSpace.CANVAS,
     CoordSpace.FRAMEBUFFER,
 ]
 
