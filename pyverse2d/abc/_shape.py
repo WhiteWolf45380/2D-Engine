@@ -105,14 +105,12 @@ class Shape(ABC):
             vertices = self.get_vertices()
             rad = math.radians(rotation)
             cos_r, sin_r = math.cos(rad), math.sin(rad)
-            R = np.array(
-                [[cos_r, -sin_r],
-                 [sin_r,  cos_r]],
-                dtype=np.float32,
-            )
+            R = np.array([[cos_r, -sin_r], [sin_r, cos_r]], dtype=np.float32)
             self._cache_rotscale = vertices * scale @ R
 
-        self._cache_world = self._cache_rotscale + self._world_translation(x, y, anchor_x, anchor_y)
+        ax, ay = anchor_offset(self.get_bounding_box(), anchor_x, anchor_y)
+        rx, ry = world_point(ax, ay, 0.0, 0.0, scale, rotation)
+        self._cache_world = self._cache_rotscale + np.array([x - rx, y - ry], dtype=np.float32)
         self._cache_key = key
         return self._cache_world
 
@@ -155,19 +153,17 @@ class Shape(ABC):
             anchor_x: ancre relative horizontale [0, 1]
             anchor_y: ancre relative verticale [0, 1]
         """
-        t = self._world_translation(x, y, anchor_x, anchor_y)
-        px = float(point[0]) - float(t[0])
-        py = float(point[1]) - float(t[1])
-
+        ax, ay = anchor_offset(self.get_bounding_box(), anchor_x, anchor_y)
+        rx, ry = world_point(ax, ay, 0.0, 0.0, scale, rotation)
+        px = float(point[0]) - (x - rx)
+        py = float(point[1]) - (y - ry)
         if rotation:
             rad = math.radians(rotation)
             cos_r, sin_r = math.cos(rad), math.sin(rad)
             px, py = px * cos_r + py * sin_r, -px * sin_r + py * cos_r
-
         if scale != 1.0:
             px /= scale
             py /= scale
-
         return self.contains((px, py))
 
     # ======================================== CACHE ========================================
@@ -182,22 +178,20 @@ class Shape(ABC):
         self._cache_rotscale = None
         self._cache_world = None
 
-    # ======================================== INTERNALS ========================================
-    def _anchor_offset(self, anchor_x: float, anchor_y: float) -> NDArray[np.float32]:
-        """Offset local correspondant au point d'ancrage dans la bounding box"""
-        xmin, ymin, xmax, ymax = self.get_bounding_box()
-        return np.array(
-            [xmin + anchor_x * (xmax - xmin),
-             ymin + anchor_y * (ymax - ymin)],
-            dtype=np.float32,
-        )
+# ======================================== HELPERS ========================================
+def anchor_offset(bounding_box: tuple[float, float, float, float], anchor_x: float, anchor_y: float) -> NDArray[np.float32]:
+    """Offset local correspondant au point d'ancrage dans la bounding box"""
+    xmin, ymin, xmax, ymax = bounding_box
+    return np.array(
+        [xmin + anchor_x * (xmax - xmin),
+         ymin + anchor_y * (ymax - ymin)],
+        dtype=np.float32,
+    )
 
-    def _world_translation(
-        self,
-        x: float,
-        y: float,
-        anchor_x: float,
-        anchor_y: float,
-    ) -> NDArray[np.float32]:
-        """Translation nette"""
-        return np.array([x, y], dtype=np.float32) - self._anchor_offset(anchor_x, anchor_y)
+def world_point(x: float, y: float, scale: float, rotation: float) -> tuple[float, float]:
+    """Transforme un point local en coordonnées monde"""
+    rad = math.radians(rotation)
+    cos_r, sin_r = math.cos(rad), math.sin(rad)
+    wx = (x * cos_r - y * sin_r) * scale
+    wy = (y * sin_r + x * cos_r) * scale
+    return wx, wy
