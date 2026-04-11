@@ -112,8 +112,8 @@ class Camera(Space):
             parallax_x: facteur parallax horizontal
             parallax_y: facteur parallax vertical
         """
-        cam = Camera(camera.position, camera.view_width, camera.view_height, camera.zoom * zoom_factor, camera.rotation + rotation_offset)
-        cam.attach_to(
+        derived_camera = camera.copy()
+        derived_camera.attach_to(
             camera,
             offset = offset,
             parallax_x = parallax_x,
@@ -123,7 +123,7 @@ class Camera(Space):
             same_rotation = keep_rotation,
             rotation_offset = rotation_offset,
         )
-        return cam
+        return derived_camera
 
     # ======================================== PROPERTIES ========================================
     @property
@@ -231,6 +231,17 @@ class Camera(Space):
         if self._state is None:
             return
         return self._state._id == "attach"
+    
+    # ======================================== COLLECTIONS ========================================
+    def copy(self) -> Camera:
+        """Crée une copie de la caméra"""
+        return Camera(
+            position = self._position.copy(),
+            view_width = self._view_width,
+            view_height = self._view_height,
+            zoom = self._zoom,
+            rotation = self._rotation,
+        )
     
     # ======================================== POSITION ========================================
     def move(self, vector: Vector) -> None:
