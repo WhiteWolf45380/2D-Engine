@@ -233,7 +233,7 @@ class Pipeline:
         self._window.native.projection = projection
 
         # Matrice de vue
-        view = self.compute_view(cx + ax, cy + ay, rotation, ox, oy)
+        view = self.compute_view(cx, cy, rotation, ax, ay, ox, oy)
         self._group.view = view
         self._context.view_matrix = view
         self._window.native.view = view
@@ -286,7 +286,7 @@ class Pipeline:
             )
         return self._projection_cache[projection_key]
     
-    def compute_view(self, cx: float, cy: float, rotation: float, ox: float, oy: float) -> Mat4:
+    def compute_view(self, cx: float, cy: float, rotation: float, ax: float, ay: float, ox: float, oy: float) -> Mat4:
         """Calcul la matrice de vue
         
         Args
@@ -298,7 +298,7 @@ class Pipeline:
             scale_x: facteur de redimensionnement horizontal
             scale_y: facteur de redimensionnement vertical
         """
-        view_key = (cx, cy, rotation, ox, oy)
+        view_key = (cx, cy, rotation, ax, ay, ox, oy)
         if view_key in self._view_buffer:
             return self._view_buffer[view_key]
         if view_key in self._view_cache:
@@ -306,13 +306,14 @@ class Pipeline:
             self._view_buffer[view_key] = view
             return view
         view = self._default_view
-        view = self.compute_camera(view, cx, cy, rotation)
+        view = self.compute_frustum(view, cx, cy, rotation)
+        view = self.compute_camera(view, ax, ay)
         view = self.compute_viewport(view, ox, oy)
         self._view_buffer[view_key] = view
         return view
     
-    def compute_camera(self, view: Mat4, cx: float, cy: float, rotation: float) -> Mat4:
-        """Transforme une matrice selon l'espace camera
+    def compute_frustum(self, view: Mat4, cx: float, cy: float, rotation: float) -> Mat4:
+        """Transforme une matrice selon l'espace Frustum
         
         Args:
             matrix: matrice de vue
@@ -323,6 +324,16 @@ class Pipeline:
         view = view.translate((-cx, -cy, 0))
         if rotation != 0.0:
             view = view.rotate(math.radians(rotation), (0, 0, 1))
+        return view
+    
+    def compute_camera(self, view: Mat4, ax: float, ay: float) -> Mat4:
+        """Transforme une matrice selon l'espace caméra
+
+        Args:
+            ax: décalage horizontal dû à l'ancre caméra
+            ay: décalage vertical dû à l'acnre caméra
+        """
+        view = view.translate((-ax, -ay, 0))
         return view
     
     def compute_viewport(self, view: Mat4, ox: float, oy: float) -> Mat4:
