@@ -106,7 +106,7 @@ def run(on_update: Callable[[float], None] = None, on_draw: Callable[[], None] =
         if on_update is not None:
             on_update(dt)
 
-        # Draw — garanti après l'update dans le même tick
+        # Draw
         _pipeline.window.clear()
         scene.draw(_pipeline)
         if on_draw is not None:
