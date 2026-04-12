@@ -21,7 +21,8 @@ class Follow(Component):
         entity: ``Entité`` à suivre
         offset: ``Vecteur`` de décalage par rapport à la cible
         force: force d'attraction en Newtons
-        smoothing: facteur de retard relatif [0, 1[
+        damping: facteur de freinage lorsque la cible est atteinte
+        smoothing: facteur de retard relatif [0, 1[ (uniquement dans le cas cinématique)
         radius_min: borne intérieure de la zone acceptable
         radius_max: borne extérieure de la zone acceptable
         dot_min: composante alignée minimale acceptable par rapport à l'offset [-1, 1]
@@ -34,7 +35,7 @@ class Follow(Component):
     """
     __slots__ = (
         "_entity", "_offset",
-        "_force", "_smoothing",
+        "_force", "_damping", "_smoothing",
         "_radius_min", "_radius_max",
         "_dot_min", "_cross_min", "_cross_max",
         "_axis_x", "_axis_y",
@@ -48,6 +49,7 @@ class Follow(Component):
             entity: Entity,
             offset: Vector = (0.0, 0.0),
             force: Real = 5000.0,
+            damping: Real = 1.0,
             smoothing: Real = 0.0,
             radius_min: Real = 0.0,
             radius_max: Real = 0.0,
@@ -63,6 +65,7 @@ class Follow(Component):
         self._entity: Entity = expect(entity, Entity)
         self._offset: Vector = Vector(offset)
         self._force: float = over(float(expect(force, Real)), 0.0, include=False)
+        self._damping: float = float(expect(smoothing, Real))
         self._smoothing: float = clamped(float(expect(smoothing, Real)), include_max=False)
         r_min = abs(float(expect(radius_min, Real)))
         r_max = abs(float(expect(radius_max, Real)))
@@ -144,6 +147,19 @@ class Follow(Component):
     @force.setter
     def force(self, value: Real) -> None:
         self._force = over(float(expect(value, Real)), 0.0, include=False)
+
+    @property
+    def damping(self) -> float:
+        """Facteur de freinage
+
+        Le facteur doit être un ``Réel``.
+        Plus la valeur est élevé, plus le freinage est aggressif.
+        """
+        return self._damping
+    
+    @damping.setter
+    def damping(self, value: Real) -> None:
+        self._damping = float(expect(value, Real))
 
     @property
     def smoothing(self) -> float:

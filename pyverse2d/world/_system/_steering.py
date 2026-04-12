@@ -106,10 +106,10 @@ class SteeringSystem(System):
                 steer_x = fx * follow.force * t
                 steer_y = fy * follow.force * t
 
-                # Freinage à l'approche
-                vel = rb.velocity
-                steer_x -= vel.x * follow.smoothing
-                steer_y -= vel.y * follow.smoothing
+                if follow.damping > 0.0:
+                    vel = rb.velocity
+                    steer_x -= vel.x * follow.damping
+                    steer_y -= vel.y * follow.damping
 
                 rb.apply_force(Vector._make(steer_x, steer_y))
 
