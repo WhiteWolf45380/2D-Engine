@@ -1,7 +1,7 @@
 # ======================================== IMPORTS ========================================
 from __future__ import annotations
 
-from ..._internal import expect, clamped, over, positive
+from ..._internal import expect, clamped, over
 from ...abc import Component
 from ...math import Vector
 
@@ -20,27 +20,28 @@ class Follow(Component):
     Args:
         entity: ``Entité`` à suivre
         offset: ``Vecteur`` de décalage par rapport à la cible
-        force: force d'attraction en Newtons
-        damping: facteur de freinage lorsque la cible est atteinte
-        smoothing: facteur de retard relatif [0, 1[ (uniquement dans le cas cinématique)
-        radius_min: borne intérieure de la zone acceptable
-        radius_max: borne extérieure de la zone acceptable
-        dot_min: composante alignée minimale acceptable par rapport à l'offset [-1, 1]
-        cross_min: composante latérale minimale acceptable par rapport à l'offset [-1, 1]
-        cross_max: composante latérale maximale acceptable par rapport à l'offset [-1, 1]
+        smoothing: facteur de retard relatif [0, 1[ — uniquement cas cinématique
+        force: force d'attraction en Newtons — uniquement cas dynamique
+        damping: coefficient d'amortissement de la vélocité — uniquement cas dynamique.
+                 Applique une force opposée à la vélocité, permettant une décélération
+                 progressive sans arrêt brutal. Plus la valeur est élevée, plus le
+                 ralentissement est fort.
+        radius_min: borne intérieure de la zone de tolérance.
+                    En dessous, force répulsive. Doit être <= radius_max.
+        radius_max: borne extérieure de la zone de tolérance.
+                    Au delà, force attractive. 0 = pile sur la cible.
+        dot_min: composante alignée minimale acceptable par rapport à l'offset [-1, 1].
+        cross_min: composante latérale minimale acceptable [-1, 1].
+        cross_max: composante latérale maximale acceptable [-1, 1].
         axis_x: activer le suivi horizontal
         axis_y: activer le suivi vertical
-        noise_amplitude: amplitude du bruit de déplacement en unités monde. 0 = pas de bruit
-        noise_frequency: fréquence du bruit en Hz — plus élevé = mouvement plus rapide
     """
     __slots__ = (
         "_entity", "_offset",
-        "_force", "_damping", "_smoothing",
+        "_smoothing", "_force", "_damping",
         "_radius_min", "_radius_max",
         "_dot_min", "_cross_min", "_cross_max",
         "_axis_x", "_axis_y",
-        "_noise_amplitude", "_noise_frequency",
-        "_noise_t",
     )
     requires = ("Transform",)
 
@@ -48,9 +49,9 @@ class Follow(Component):
             self,
             entity: Entity,
             offset: Vector = (0.0, 0.0),
-            force: Real = 5000.0,
-            damping: Real = 1.0,
             smoothing: Real = 0.0,
+            force: Real = 5000.0,
+            damping: Real = 0.0,
             radius_min: Real = 0.0,
             radius_max: Real = 0.0,
             dot_min: Real = -1.0,
@@ -58,53 +59,43 @@ class Follow(Component):
             cross_max: Real = 1.0,
             axis_x: bool = True,
             axis_y: bool = True,
-            noise_amplitude: Real = 0.0,
-            noise_frequency: Real = 1.0,
         ):
         from .._entity import Entity
         self._entity: Entity = expect(entity, Entity)
         self._offset: Vector = Vector(offset)
-        self._force: float = over(float(expect(force, Real)), 0.0, include=False)
-        self._damping: float = float(expect(smoothing, Real))
         self._smoothing: float = clamped(float(expect(smoothing, Real)), include_max=False)
+        self._force: float = over(float(expect(force, Real)), 0.0, include=False)
+        self._damping: float = abs(float(expect(damping, Real)))
         r_min = abs(float(expect(radius_min, Real)))
         r_max = abs(float(expect(radius_max, Real)))
+        assert r_min <= r_max, ValueError(f"radius_min ({r_min}) doit être inférieur ou égal à radius_max ({r_max})")
         self._radius_min: float = r_min
         self._radius_max: float = r_max
-        self._dot_min: float = clamped(float(expect(dot_min, Real)), min=-1)
-        self._cross_min: float = clamped(float(expect(cross_min, Real)), min=-1)
-        self._cross_max: float = clamped(float(expect(cross_max, Real)), min=-1)
+        self._dot_min: float = float(clamped(expect(dot_min, Real), min=-1))
+        self._cross_min: float = float(clamped(expect(cross_min, Real), min=-1))
+        self._cross_max: float = float(clamped(expect(cross_max, Real), min=-1))
         self._axis_x: bool = expect(axis_x, bool)
         self._axis_y: bool = expect(axis_y, bool)
-        self._noise_amplitude: float = abs(float(expect(noise_amplitude, Real)))
-        self._noise_frequency: float = over(float(expect(noise_frequency, Real)), 0.0, include=False)
-        self._noise_t: float = 0.0
 
-        assert r_min <= r_max, ValueError(f"radius_min ({r_min}) doit être inférieur ou égal à radius_max ({r_max})")
         assert self._entity.has("Transform"), ValueError(f"Entity {self._entity.id}... has no Transform component")
 
     # ======================================== CONVERSIONS ========================================
     def __repr__(self) -> str:
-        """Renvoie une représentation du composant"""
         return f"Follow(entity={self._entity.id[:8]}..., offset={self._offset}, force={self._force})"
 
     def __iter__(self) -> Iterator:
-        """Renvoie les attributs dans un itérateur"""
         return iter(self.get_attributes())
 
     def __hash__(self) -> int:
-        """Renvoie le hash du composant"""
         return hash(self.get_attributes())
 
     def get_attributes(self) -> tuple:
-        """Renvoie les attributs du composant"""
         return (
             self._entity, self._offset,
-            self._force, self._smoothing,
+            self._smoothing, self._force, self._damping,
             self._radius_min, self._radius_max,
             self._dot_min, self._cross_min, self._cross_max,
             self._axis_x, self._axis_y,
-            self._noise_amplitude, self._noise_frequency,
         )
 
     # ======================================== PROPERTIES ========================================
@@ -136,11 +127,24 @@ class Follow(Component):
         self._offset = Vector(value)
 
     @property
+    def smoothing(self) -> float:
+        """Facteur de retard pour le cas cinématique
+
+        Le facteur doit être un ``Réel`` compris dans l'intervalle [0, 1[.
+        Plus la valeur est élevée, plus le suivi est progressif.
+        Ignoré dans le cas dynamique (rigidbody).
+        """
+        return self._smoothing
+
+    @smoothing.setter
+    def smoothing(self, value: Real) -> None:
+        self._smoothing = clamped(float(expect(value, Real)), include_max=False)
+
+    @property
     def force(self) -> float:
-        """Force d'attraction
+        """Force d'attraction en Newtons — cas dynamique uniquement
 
         La force doit être un ``Réel`` positif non nul.
-        L'unité est le Newton.
         """
         return self._force
 
@@ -150,36 +154,24 @@ class Follow(Component):
 
     @property
     def damping(self) -> float:
-        """Facteur de freinage
+        """Coefficient d'amortissement de la vélocité — cas dynamique uniquement
 
-        Le facteur doit être un ``Réel``.
-        Plus la valeur est élevé, plus le freinage est aggressif.
+        Applique une force opposée à la vélocité à chaque frame, provoquant
+        une décélération progressive. Plus la valeur est élevée, plus le
+        ralentissement est fort. 0 = pas d'amortissement.
         """
         return self._damping
-    
+
     @damping.setter
     def damping(self, value: Real) -> None:
-        self._damping = float(expect(value, Real))
-
-    @property
-    def smoothing(self) -> float:
-        """Facteur de retard
-
-        Le facteur doit être un ``Réel`` compris dans l'intervalle [0, 1[.
-        Plus la valeur est élevée, plus le suivi est progressif.
-        """
-        return self._smoothing
-
-    @smoothing.setter
-    def smoothing(self, value: Real) -> None:
-        self._smoothing = clamped(float(expect(value, Real)), include_max=False)
+        self._damping = abs(float(expect(value, Real)))
 
     @property
     def radius_min(self) -> float:
-        """Borne intérieure de la zone acceptable
+        """Borne intérieure de la zone de tolérance
 
-        En dessous de cette distance, une force répulsive est appliquée pour
-        ramener l'entité dans la zone. Doit être inférieur ou égal à radius_max.
+        En dessous de cette distance, une force répulsive est appliquée.
+        Doit être inférieur ou égal à radius_max.
         """
         return self._radius_min
 
@@ -192,7 +184,7 @@ class Follow(Component):
 
     @property
     def radius_max(self) -> float:
-        """Borne extérieure de la zone acceptable
+        """Borne extérieure de la zone de tolérance
 
         Au delà de cette distance, une force attractive est appliquée.
         0 = pile sur la cible. Doit être supérieur ou égal à radius_min.
@@ -208,9 +200,8 @@ class Follow(Component):
 
     @property
     def dot_min(self) -> float:
-        """Composante alignée minimale acceptable
+        """Composante alignée minimale acceptable [-1, 1]
 
-        Défini l'angle minimal acceptable par rapport à la direction de l'offset.
         1 = exactement dans la direction de l'offset, -1 = direction opposée.
         """
         return self._dot_min
@@ -221,9 +212,8 @@ class Follow(Component):
 
     @property
     def cross_min(self) -> float:
-        """Composante latérale minimale acceptable
+        """Composante latérale minimale acceptable [-1, 1]
 
-        Défini la déviation latérale minimale acceptable par rapport à l'offset.
         0 = aligné, -1 = 90° à droite.
         """
         return self._cross_min
@@ -234,9 +224,8 @@ class Follow(Component):
 
     @property
     def cross_max(self) -> float:
-        """Composante latérale maximale acceptable
+        """Composante latérale maximale acceptable [-1, 1]
 
-        Défini la déviation latérale maximale acceptable par rapport à l'offset.
         0 = aligné, 1 = 90° à gauche.
         """
         return self._cross_max
@@ -247,10 +236,7 @@ class Follow(Component):
 
     @property
     def axis_x(self) -> bool:
-        """Suivi horizontal actif
-
-        Si False, l'entité ne suit pas la cible horizontalement.
-        """
+        """Suivi horizontal actif"""
         return self._axis_x
 
     @axis_x.setter
@@ -259,39 +245,9 @@ class Follow(Component):
 
     @property
     def axis_y(self) -> bool:
-        """Suivi vertical actif
-
-        Si False, l'entité ne suit pas la cible verticalement.
-        """
+        """Suivi vertical actif"""
         return self._axis_y
 
     @axis_y.setter
     def axis_y(self, value: bool) -> None:
         self._axis_y = expect(value, bool)
-
-    @property
-    def noise_amplitude(self) -> float:
-        """Amplitude du bruit de déplacement
-
-        Défini l'amplitude maximale du bruit organique appliqué à l'offset cible.
-        0 = pas de bruit, exprimé en unités monde.
-        """
-        return self._noise_amplitude
-
-    @noise_amplitude.setter
-    def noise_amplitude(self, value: Real) -> None:
-        self._noise_amplitude = abs(float(expect(value, Real)))
-
-    @property
-    def noise_frequency(self) -> float:
-        """Fréquence du bruit
-
-        Défini la vitesse d'évolution du bruit organique.
-        Plus la valeur est élevée, plus le mouvement est rapide.
-        L'unité est le Hz.
-        """
-        return self._noise_frequency
-
-    @noise_frequency.setter
-    def noise_frequency(self, value: Real) -> None:
-        self._noise_frequency = over(float(expect(value, Real)), 0.0, include=False)
