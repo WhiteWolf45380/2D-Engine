@@ -286,7 +286,7 @@ class Pipeline:
             )
         return self._projection_cache[projection_key]
     
-    def compute_view(self, cx: float, cy: float, rotation: float, ax: float, ay: float, ox: float, oy: float) -> Mat4:
+    def compute_view(self, cx: float, cy: float, rotation: float, ox: float, oy: float) -> Mat4:
         """Calcul la matrice de vue
         
         Args
