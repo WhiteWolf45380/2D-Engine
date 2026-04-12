@@ -221,7 +221,7 @@ class Pipeline:
 
         # Transformation camera
         self._context.camera_resolve = self.camera.resolve(lw, lh)
-        cx, cy, vw, vh, zoom, rotation, (ax, ay) = self._context.camera_resolve
+        cx, cy, vw, vh, zoom, rotation = self._context.camera_resolve
 
         # Ratios pixels per unit
         self._context.ppu_x,  self._context.ppu_y = self.compute_ppu(lw, lh, vw, vh, zoom)
@@ -233,7 +233,7 @@ class Pipeline:
         self._window.native.projection = projection
 
         # Matrice de vue
-        view = self.compute_view((cx + ax), (cy + ay), rotation, ox, oy)
+        view = self.compute_view(cx, cy, rotation, ox, oy)
         self._group.view = view
         self._context.view_matrix = view
         self._window.native.view = view
@@ -373,10 +373,10 @@ class Pipeline:
         """
         # Resolutions
         lx, ly, lw, lh, (ox, oy), (dx, dy) = self._context.viewport_resolve
-        cx, cy, vw, vh, zoom, rotation, (ax, ay) = self._context.camera_resolve if camera is None else camera.resolve(lw, lh)
+        cx, cy, vw, vh, zoom, rotation = self._context.camera_resolve if camera is None else camera.resolve(lw, lh)
 
         # World to Frustum
-        tx, ty = x - (cx + ax), y - (cy + ay)
+        tx, ty = x - cx, y - cy
         if rotation != 0.0:
             rad = math.radians(rotation)
             cos_r, sin_r = math.cos(rad), math.sin(rad)
@@ -405,7 +405,7 @@ class Pipeline:
         """
         # Resolutions
         lx, ly, lw, lh, (ox, oy), (dx, dy) = self._context.viewport_resolve
-        cx, cy, vw, vh, zoom, rotation, (ax, ay) = self._context.camera_resolve if camera is None else camera.resolve(lw, lh)
+        cx, cy, vw, vh, zoom, rotation = self._context.camera_resolve if camera is None else camera.resolve(lw, lh)
 
         # FrameBuffer to Canvas
         cnv_x = (x - self._window.canvas.x) / self._window.framebuffer_scale_x
@@ -425,7 +425,7 @@ class Pipeline:
             rad = math.radians(rotation)
             cos_r, sin_r = math.cos(rad), math.sin(rad)
             fr_x, fr_y = fr_x * cos_r - fr_y * sin_r, fr_x * sin_r + fr_y * cos_r
-        return fr_x + (cx + ax), fr_y + (cy + ay)
+        return fr_x + cx, fr_y + cy
 
     # ======================================== UTILITAIRES ========================================
     def visible_world_rect(self) -> tuple[float, float, float, float]:
