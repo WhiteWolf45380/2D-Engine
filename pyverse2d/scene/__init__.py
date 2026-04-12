@@ -6,6 +6,7 @@ from .._rendering import Pipeline
 from ._world_layer import WorldLayer
 from ._tile_layer import TileLayer
 from ._gui_layer import GuiLayer
+from ._light_layer import LightLayer
 from ._scene import Scene
 
 # ======================================== STATE ========================================
@@ -96,6 +97,7 @@ __all__ = [
     "WorldLayer",
     "TileLayer",
     "GuiLayer",
+    "LightLayer",
     "Scene",
 
     "get_current",
