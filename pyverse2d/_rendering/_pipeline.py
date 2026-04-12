@@ -298,7 +298,7 @@ class Pipeline:
             scale_x: facteur de redimensionnement horizontal
             scale_y: facteur de redimensionnement vertical
         """
-        view_key = (cx, cy, rotation, ax, ay, ox, oy)
+        view_key = (cx, cy, rotation, ox, oy)
         if view_key in self._view_buffer:
             return self._view_buffer[view_key]
         if view_key in self._view_cache:
