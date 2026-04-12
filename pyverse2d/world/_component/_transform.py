@@ -15,10 +15,10 @@ class Transform(Component):
     Ce composant est manipulé par ``PhysicsSystem``, ``CollisionSystem`` et ``SteeringSystem``.
 
     Args:
-        position(Point): position
-        anchor(Point, optional): ancre de positionnement (écart normalisé à l'origine)
-        rotation(float, optional): angle de rotation en radians
-        scale(float, otional): facteur de redimensionnement
+        position: position
+        anchor: ancre de positionnement
+        rotation: angle de rotation en degrés
+        scale: facteur de redimensionnement
     """
     __slots__ = ("_position", "_anchor", "_rotation", "_scale")
 
@@ -31,8 +31,9 @@ class Transform(Component):
         ):
         self._position: Point = Point(position)
         self._anchor: Point = Point(anchor)
-        self._rotation: float = float(expect(rotation, Real))
-        self._scale: float = float(not_null(positive(expect(scale, Real))))
+        self._rotation: float = float(rotation)
+        self._scale: float = float(scale)
+        assert self._scale != 0, ValueError("Scale cannot be null")
 
     # ======================================== CONVERSIONS ========================================
     def __repr__(self) -> str:
@@ -51,98 +52,134 @@ class Transform(Component):
         """Renvoie les attributs du composant"""
         return (self._position, self._anchor, self._rotation, self._scale)
 
-    # ======================================== GETTERS ========================================
+    # ======================================== PROPERTIES ========================================
     @property
     def position(self) -> Point:
-        """Renvoie le point de position"""
+        """Position
+
+        La position peut être un objet ``Point`` ou un tuple ``(x, y)``.
+        """
         return self._position
+    
+    @position.setter
+    def position(self, value: Point) -> None:
+        self._position.x, self._position.y = value
 
     @property
     def x(self) -> float:
-        """Renvoie la coordonnée horizontale"""
+        """Position horizontale
+        
+        La coordonnée doit être un ``Réel``.
+        """
         return self._position.x
+    
+    @x.setter
+    def x(self, value: Real) -> None:
+        self._position.x = value
     
     @property
     def y(self) -> float:
-        """Renvoie la coordonnée verticale"""
+        """Position verticale
+
+        La coordonnée doit être un ``Réel``.
+        """
         return self._position.y
-    
-    @property
-    def anchor(self) -> Point:
-        """Renvoie l'ancre de positionnement"""
-        return self._anchor
-    
-    @property
-    def anchor_x(self) -> float:
-        """Renvoie l'ancre de positionnement horizontal"""
-        return self._anchor.x
-    
-    @property
-    def anchor_y(self) -> float:
-        """Renvoie l'acre de positionnement vertical"""
-        return self._anchor.y
-    
-    @property
-    def rotation(self) -> float:
-        """Renvoie la rotation en radians"""
-        return self._rotation
-    
-    @property
-    def scale(self) -> float:
-        """Renvoie le facteur de redimensionnement"""
-        return self._scale
-
-    # ======================================== SETTERS ========================================
-    @position.setter
-    def position(self, value: Point) -> None:
-        """Fixe le point de position"""
-        self._position = Point(value)
-
-    @x.setter
-    def x(self, value: Real) -> None:
-        """Fixe la coordonnée horizontale"""
-        self._position.x = value
     
     @y.setter
     def y(self, value: Real) -> None:
-        """Fixe la coordonnée verticale"""
         self._position.y = value
-
+    
+    @property
+    def anchor(self) -> Point:
+        """Ancre locale normalisée
+        
+        L'ancre peut être un objet ``Point`` ou un tuple ``(ax, ay)``.
+        Les coordonnées de l'ancre doivent être dans l'intervalle [0, 1].
+        """
+        return self._anchor
+    
     @anchor.setter
     def anchor(self, value: Point) -> None:
-        """Fixe l'ancre de positionnement"""
-        self._anchor = Point(value)
-
+        self._anchor.x, self._anchor.y = value
+    
+    @property
+    def anchor_x(self) -> float:
+        """Ancre locale horizontale normalisée
+        
+        La coordonnée doit être un ``Réel`` compris dans l'intervalle [0, 1].
+        """
+        return self._anchor.x
+    
     @anchor_x.setter
     def anchor_x(self, value: Real) -> None:
-        """Fixe l'ancre de positionnement horizontal"""
         self._anchor.x = value
+    
+    @property
+    def anchor_y(self) -> float:
+        """Ancre locale verticale normalisée
+        
+        La coordonnée doit être un ``Réel`` compris dans l'intervalle [0, 1].
+        """
+        return self._anchor.y
     
     @anchor_y.setter
     def anchor_y(self, value: Real) -> None:
-        """Fixe l'ancre de positionnement vertical"""
         self._anchor.y = value
+    
+    @property
+    def rotation(self) -> float:
+        """Angle de rotation
+        
+        La rotation doit être un ``Réel``.
+        L'angle est en *degrés*.
+        La rotation se fait dans le sens trigonométrique *(CCW)*.
+        """
+        return self._rotation
     
     @rotation.setter
     def rotation(self, value: Real) -> None:
-        """Fixe la rotation"""
-        self._rotation = float(expect(value, Real))
+        self._rotation = float(value)
+    
+    @property
+    def scale(self) -> float:
+        """Facteur de redimensionnement
+        
+        Le facteur doit être un ``Réel`` positif non nul.
+        """
+        return self._scale
     
     @scale.setter
     def scale(self, value: Real) -> None:
-        """Fixe le facteur de redimensionnement"""
-        self._scale = float(not_null(positive(expect(value, Real))))
+        self._scale = float(value)
+        assert self._scale != 0, ValueError("Scale cannot be null")
 
-    # ======================================== PUBLIC METHODS ========================================
+    # ======================================== COLLECTIONS ========================================
     def copy(self) -> Transform:
         """Renvoie une copie du composant"""
         return Transform(self._position.copy(), self._anchor, self._rotation, self._scale)
     
-    def translate(self, vector: Vector):
-        """
-        Applique une translation au transform
+    def translate(self, vector: Vector) -> None:
+        """Applique une translation
 
         Args:
-            vector(Vector): vecteur de translation
+            vector: vecteur de translation
         """
-        self._position += expect(vector, Vector)
+        self._position.x += vector[0]
+        self._position.y += vector[1]
+
+    def rotate(self, angle: Real) -> None:
+        """Applique une rotation dans le sens trigonométrique *(CCW)*
+        
+        Args:
+            angle: angle de rotation *en degrés*
+        """
+        self._rotation += float(angle)
+
+    def resize(self, factor: Real) -> None:
+        """Applique un redimensionnement
+        
+        Args:
+            factor: facteur de redimensionnement
+        """
+        assert factor != 0, "Scale factor cannot be null"
+        self._scale *= float(factor)
