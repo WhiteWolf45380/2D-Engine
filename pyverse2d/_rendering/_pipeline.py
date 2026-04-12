@@ -430,7 +430,7 @@ class Pipeline:
     # ======================================== UTILITAIRES ========================================
     def visible_world_rect(self) -> tuple[float, float, float, float]:
         """Renvoie ``(x, y, width, height)`` du frustum visible en coordonnées monde"""
-        cx, cy, vw, vh, zoom, _, _ = self._context.camera_resolve
+        cx, cy, vw, vh, zoom, _ = self._context.camera_resolve
         _, _, _, _, _, (dx, dy) = self._context.viewport_resolve
         half_w = vw / (zoom * 2 * abs(dx))
         half_h = vh / (zoom * 2 * abs(dy))
