@@ -92,6 +92,11 @@ class Pipeline:
 
     # ======================================== GETTERS ========================================
     @property
+    def quad(self) -> ScreenQuad:
+        """Rectangle d'écran complet"""
+        return self._quad
+
+    @property
     def window(self) -> Window:
         """Fenêtre OS assignée"""
         return self._window

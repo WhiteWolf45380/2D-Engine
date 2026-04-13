@@ -83,4 +83,5 @@ class LightLayer(Layer):
 
     def _draw(self, pipeline: Pipeline) -> None:
         """Affichage"""
+        pipeline.flush()
         self._renderer.render_ambient(pipeline, self._tint.rgb, self._ambient)
