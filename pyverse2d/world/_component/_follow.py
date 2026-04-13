@@ -77,7 +77,7 @@ class Follow(Component):
         if __debug__:
             from .._entity import Entity
             expect(self._entity, Entity)
-            assert self._entity.has("Transform"), ValueError(f"Entity {self._entity.id}... has no Transform component") 
+            if not self._entity.has("Transform"): raise ValueError(f"Entity {self._entity.id}... has no Transform component") 
             clamped(self._smoothing, include_max=False)
             over(self._force, 0.0, include=False)
             inferior_to(self._radius_min, self._radius_max)
@@ -123,10 +123,9 @@ class Follow(Component):
     @entity.setter
     def entity(self, value: Entity) -> None:
         from .._entity import Entity
+        assert isinstance(value, Entity), f"Entity must be an instance of Entity, got {type(value).__name__}"
+        assert value.has("Transform"), f"Entity {value.id}... has no Transform component"
         self._entity = value
-        assert isinstance(self._entity, Entity), ValueError(f"Entity must be an instance of Entity, got {type(self._entity).__name__}")
-        assert self._entity.has("Transform"), ValueError(f"Entity {self._entity.id}... has no Transform component")
-
     @property
     def offset(self) -> Vector:
         """Décalage par rapport à la cible
@@ -151,8 +150,9 @@ class Follow(Component):
 
     @smoothing.setter
     def smoothing(self, value: Real) -> None:
-        self._smoothing = float(value)
-        assert 0 <= self._smoothing < 1.0, ValueError(f"smoothing must be within 0.0 and 1.0, got {self._smoothing}")
+        value = float(value)
+        assert 0 <= value < 1.0, f"smoothing must be within 0.0 and 1.0, got {value}"
+        self._smoothing = value
 
     @property
     def force(self) -> float:
@@ -165,8 +165,9 @@ class Follow(Component):
 
     @force.setter
     def force(self, value: Real) -> None:
-        self._force = float(value)
-        assert 0 < self._force, ValueError(f"force must be over 0.0, got {self._smoothing}")
+        value = float(value)
+        assert 0 < value, f"force must be over 0.0, got {value}"
+        self._force = value
 
     @property
     def damping(self) -> float:
@@ -196,8 +197,9 @@ class Follow(Component):
 
     @radius_min.setter
     def radius_min(self, value: Real) -> None:
-        self._radius_min = abs(float(value))
-        assert self._radius_min <= self._radius_max, ValueError(f"radius_min ({self._radius_min}) cannot be superior to radius_max ({self._radius_max})")
+        value = abs(float(value))
+        assert value <= self._radius_max, f"radius_min ({value}) cannot be superior to radius_max ({self._radius_max})"
+        self._radius_min = value
 
     @property
     def radius_max(self) -> float:
@@ -211,8 +213,9 @@ class Follow(Component):
 
     @radius_max.setter
     def radius_max(self, value: Real) -> None:
-        self._radius_max = abs(float(value))
-        assert self._radius_max >= self._radius_min, ValueError(f"radius_max ({self._radius_max}) cannot be inferior to radius_min ({self._radius_min})")
+        value = abs(float(value))
+        assert value >= self._radius_min, f"radius_max ({value}) cannot be inferior to radius_min ({self._radius_min})"
+        self._radius_max = value
 
     @property
     def angle(self) -> float:
@@ -241,8 +244,9 @@ class Follow(Component):
 
     @cone.setter
     def cone(self, value: Real) -> None:
-        self._cone = abs(float(value))
-        assert self._cone >= self._cone_gap, ValueError(f"cone ({self._cone}) cannot be inferior to cone_gap ({self._cone_gap})")
+        value = abs(float(value))
+        assert value >= self._cone_gap, f"cone ({value}) cannot be inferior to cone_gap ({self._cone_gap})"
+        self._cone = value
 
     @property
     def cone_gap(self) -> float:
@@ -257,8 +261,9 @@ class Follow(Component):
 
     @cone_gap.setter
     def cone_gap(self, value: Real) -> None:
-        self._cone_gap = abs(float(value))
-        assert self._cone_gap <= self._cone, ValueError(f"cone_gap ({self._cone_gap}) cannot be superior to cone ({self._cone})")
+        value = abs(float(value))
+        assert value <= self._cone, f"cone_gap ({value}) cannot be superior to cone ({self._cone})"
+        self._cone_gap = value
 
     @property
     def axis_x(self) -> bool:
@@ -270,8 +275,8 @@ class Follow(Component):
 
     @axis_x.setter
     def axis_x(self, value: bool) -> None:
+        assert isinstance(value, bool) , f"axis_x must be a boolean, got {type(value).__name__}"
         self._axis_x = value
-        assert type(self._axis_x) is bool, TypeError(f"axis_x must be a boolean, got {type(value).__name__}")
 
     @property
     def axis_y(self) -> bool:
@@ -282,8 +287,8 @@ class Follow(Component):
 
     @axis_y.setter
     def axis_y(self, value: bool) -> None:
+        assert isinstance(value, bool), f"axis_y must be a boolean, got {type(value).__name__}"
         self._axis_y = value
-        assert type(self._axis_y) is bool, TypeError(f"axis_y must be a boolean, got {type(value).__name__}")
 
     # ======================================== PREDICATES ========================================
     def is_arrived(self) -> bool:
