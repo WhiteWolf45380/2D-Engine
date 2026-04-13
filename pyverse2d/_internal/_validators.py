@@ -278,6 +278,60 @@ def clamped(value: object, min: Real = 0.0, max: Real = 1.0, include_min: bool =
     # Par défaut
     return value
 
+def inferior_to(value: object, threshold: Real, include: bool = True, arg: str = "Argument"):
+    """
+    Vérifie que la valeur soit inférieure à un seuil
+
+    Args:
+        value(object): valeur à vérifier
+        threshold(Real): seuil maximum
+        include(bool): inclure le seuil
+        arg(str): nom de l'argument à vérifier
+    """
+    if not __debug__:
+        return value
+
+    if isinstance(value, Real):
+        if (value > threshold if include else value >= threshold):
+            raise ValueError(f"{arg} must be inferior to {threshold}")
+    return value
+
+
+def superior_to(value: object, threshold: Real, include: bool = True, arg: str = "Argument"):
+    """
+    Vérifie que la valeur soit supérieure à un seuil
+
+    Args:
+        value(object): valeur à vérifier
+        threshold(Real): seuil minimum
+        include(bool): inclure le seuil
+        arg(str): nom de l'argument à vérifier
+    """
+    if not __debug__:
+        return value
+
+    if isinstance(value, Real):
+        if (value < threshold if include else value <= threshold):
+            raise ValueError(f"{arg} must be superior to {threshold}")
+    return value
+
+
+def equal_to(value: object, target: object, arg: str = "Argument"):
+    """
+    Vérifie que la valeur soit égale à une cible
+
+    Args:
+        value(object): valeur à vérifier
+        target(object): valeur attendue
+        arg(str): nom de l'argument à vérifier
+    """
+    if not __debug__:
+        return value
+
+    if value != target:
+        raise ValueError(f"{arg} must be equal to {target!r}, got {value!r}")
+    return value
+
 # ======================================== CONVERSIONS ========================================
 def rgba(value: object, argument: str = "Argument") -> tuple[int, int, int, float]:
     """

@@ -7,6 +7,17 @@ from .._world import World
 from .._component import Transform, Follow
 
 
+# ======================================== IMPORTS ========================================
+from __future__ import annotations
+
+import math
+
+from ...abc import System
+from ...math import Vector
+from .._world import World
+from .._component import Transform, Follow
+
+
 # ======================================== SYSTEM ========================================
 class SteeringSystem(System):
     """Système gérant le pilotage positionnel"""
@@ -35,16 +46,25 @@ class SteeringSystem(System):
 
             in_zone = follow.radius_min <= dist <= follow.radius_max
 
-            # ======== CAS CINEMATIQUE ========
+            # Vérification du cône angulaire
+            in_direction = True
+            if follow.cone < 180.0 and dist > 1e-8:
+                entity_angle = math.degrees(math.atan2(-dy, -dx))
+                diff = abs((entity_angle - follow.angle + 180.0) % 360.0 - 180.0)
+                in_direction = follow.cone_gap <= diff <= follow.cone
+
+            follow._arrived = in_zone and in_direction
+
+            # Cas cinématique
             rb = entity.rigid_body
             if rb is None:
-                if in_zone:
+                if follow._arrived:
                     continue
                 t = 1.0 - follow.smoothing ** dt
                 tr.x += dx * t
                 tr.y += dy * t
 
-            # ======== CAS DYNAMIQUE ========
+            # Cas dynamique
             else:
                 if rb.is_static():
                     continue
@@ -59,16 +79,6 @@ class SteeringSystem(System):
                         continue
 
                     nx, ny = dx / dist, dy / dist
-
-                    # Vérification de la zone directionnelle acceptable
-                    in_direction = True
-                    ref_len = (follow.offset.x ** 2 + follow.offset.y ** 2) ** 0.5
-                    if ref_len > 1e-8:
-                        rx, ry = follow.offset.x / ref_len, follow.offset.y / ref_len
-                        ex, ey = -nx, -ny
-                        dot   = ex * rx + ey * ry
-                        cross = ex * ry - ey * rx
-                        in_direction = dot >= follow.dot_min and follow.cross_min <= cross <= follow.cross_max
 
                     if dist < follow.radius_min:
                         # Force répulsive
@@ -89,7 +99,7 @@ class SteeringSystem(System):
                         fx = nx * follow.force * t
                         fy = ny * follow.force * t
 
-                # Damping appliqué en permanence (dans et hors zone)
+                # Damping
                 if follow.damping > 0.0:
                     fx -= vel.x * follow.damping
                     fy -= vel.y * follow.damping

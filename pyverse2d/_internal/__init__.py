@@ -8,6 +8,9 @@ from ._validators import (
     over,
     under,
     clamped,
+    inferior_to,
+    superior_to,
+    equal_to,
     rgba,
 )
 
@@ -28,6 +31,9 @@ __all__ = [
     "over",
     "under",
     "clamped",
+    "inferior_to",
+    "superior_to",
+    "equal_to",
     "rgba",
 
     "Positionnal",
