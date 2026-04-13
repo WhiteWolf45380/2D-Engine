@@ -63,7 +63,7 @@ class LightRenderer:
             )
         return cls._program
 
-    def render_ambient(self, pipeline: Pipeline, tint: tuple, ambient: float, z: int = 0) -> None:
+    def render_ambient(self, pipeline: Pipeline, tint: tuple[int, int, int], ambient: float, z: int = 0) -> None:
         """Applique l'ambiance lumineuse
 
         Args:
