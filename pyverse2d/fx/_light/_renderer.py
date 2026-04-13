@@ -76,26 +76,26 @@ class LightRenderer:
         r, g, b = tint
         a = 1.0 - ambient
 
-        # Visible world rect → NDC
-        wx, wy, ww, wh = pipeline.visible_world_rect()
+        # Vertices
+        wx, wy, ww, wh = pipeline.gl_viewport
 
-        x0, y0 = pipeline.world_to_framebuffer(wx,      wy      )
-        x1, y1 = pipeline.world_to_framebuffer(wx + ww, wy      )
-        x2, y2 = pipeline.world_to_framebuffer(wx + ww, wy + wh )
-        x3, y3 = pipeline.world_to_framebuffer(wx,      wy + wh )
+        x0, y0 = wx, wy
+        x1, y1 = wx + ww, wy
+        x2, y2 = wx + ww, wy + wh
+        x3, y3 = wx, wy + wh
 
-        fw = pipeline.window.width
-        fh = pipeline.window.height
-
-        def to_ndc(px, py):
-            return (px / fw) * 2 - 1, (py / fh) * 2 - 1
-
+        # Passage en NDC
+        fw, fh = pipeline.window.size
+        def to_ndc(x: float, y: float) -> tuple[float, float]:
+            return (x / fw) * 2 - 1, (y / fh) * 2 - 1
+        
         nx0, ny0 = to_ndc(x0, y0)
         nx1, ny1 = to_ndc(x1, y1)
         nx2, ny2 = to_ndc(x2, y2)
         nx3, ny3 = to_ndc(x3, y3)
 
-        vertices = [
+        # Calcul du quad
+        mesh = [
             nx0, ny0, nx1, ny1, nx2, ny2,
             nx0, ny0, nx2, ny2, nx3, ny3,
         ]
@@ -117,7 +117,7 @@ class LightRenderer:
             self._vlist = program.vertex_list(6, gl.GL_TRIANGLES,
                 batch=pipeline.batch,
                 group=self._group,
-                position=('f', vertices),
+                position=('f', mesh),
             )
         else:
-            self._vlist.position[:] = vertices
+            self._vlist.position[:] = mesh
