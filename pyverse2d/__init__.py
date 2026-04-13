@@ -119,7 +119,7 @@ def run(on_update: Callable[[float], None] = None, on_draw: Callable[[], None] =
 
     # Draw hook
     if on_draw is not None:
-        pyglet.window.Window.push_handlers(on_draw=on_draw)
+        _pipeline.window.native.push_handlers(on_draw=on_draw)
 
     # Lancement
     time.schedule(_update)
