@@ -22,7 +22,12 @@ class LightLayer(Layer):
         "_renderer",
     )
 
-    def __init__(self, tint: Color, ambient: Real, camera: Camera = None):
+    def __init__(
+            self,
+            tint: Color = (255, 255, 255),
+            ambient: Real = 1.0,
+            camera: Camera = None
+        ):
         super().__init__(camera)
         self._tint: Color = Color(tint)
         self._ambient: float = float(ambient)
@@ -78,4 +83,4 @@ class LightLayer(Layer):
 
     def _draw(self, pipeline: Pipeline) -> None:
         """Affichage"""
-        pass
+        self._renderer.render_ambient(pipeline, self._tint, self._ambient)
