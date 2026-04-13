@@ -121,7 +121,7 @@ class TimeManager(Manager):
 
     # ======================================== COLLECTIONS ========================================
     def schedule(self, func: Callable) -> None:
-        """Lance un loop sur une fonction"""
+        """Lance une boucle sur une fonction"""
         if self._target_fps is None:
             return pyglet.clock.schedule(func)
         return pyglet.clock.schedule_interval(func, self.target_dt)

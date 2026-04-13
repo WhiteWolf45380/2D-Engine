@@ -242,10 +242,6 @@ class InputsManager(Manager):
     # ======================================== LIFE CYCLE ========================================
     def update(self, dt: float) -> None:
         """Actualisation"""
-        pass
-
-    def flush(self) -> None:
-        """Nettoie les états courants"""
         # Repeat sur touches individuelles
         for event_id, listeners in list(self._listeners.items()):
             if not self._is_currently_pressed(event_id):
@@ -282,11 +278,10 @@ class InputsManager(Manager):
                     listener._fire()
                     self._triggered_combos.add(combo_key)
 
+    def flush(self) -> None:
+        """Nettoie les états courants"""
         # Nettoie les combos qui ne sont plus maintenus
-        self._triggered_combos = {
-            combo for combo in self._triggered_combos
-            if all(self._is_currently_pressed(k) for k in combo)
-        }
+        self._triggered_combos = {combo for combo in self._triggered_combos if all(self._is_currently_pressed(k) for k in combo)}
 
     # ======================================== INTERNALS ========================================
     def _is_currently_pressed(self, event_id: int) -> bool:

@@ -67,6 +67,12 @@ def set_window(window: Window):
     for manager in _context_manager:
         manager.bind(window)
 
+    @_pipeline.window.native.event
+    def on_draw():
+        """Draw call"""
+        _pipeline.window.clear()
+        scene.draw(_pipeline)
+
 # ======================================== COLLECTIONS ========================================
 def preload(loadable: scene.Scene = None) -> None:
     """Précharge le rendu
@@ -106,15 +112,13 @@ def run(on_update: Callable[[float], None] = None, on_draw: Callable[[], None] =
         if on_update is not None:
             on_update(dt)
 
-        # Draw
-        _pipeline.window.clear()
-        scene.draw(_pipeline)
-        if on_draw is not None:
-            on_draw()
-
         # Nettoyage
         for manager in _context_manager:
             manager.flush()
+
+    # Draw hook
+    if on_draw is not None:
+        pyglet.window.Window.push_handlers(on_draw=on_draw)
 
     # Lancement
     time.schedule(_update)
