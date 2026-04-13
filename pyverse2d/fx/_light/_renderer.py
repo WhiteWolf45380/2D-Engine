@@ -28,7 +28,7 @@ in vec2 v_uv;
 out vec4 out_color;
 void main() {
     vec4 pixel = texture(u_texture, v_uv);
-    out_color = vec4(pixel.rgb * u_tint * u_ambient, pixel.a);
+    out_color = vec4(mix(pixel.rgb, pixel.rgb * u_tint, u_ambient), pixel.a);
 }
 """
 
@@ -77,24 +77,21 @@ class LightRenderer:
         scene_fbo = pipeline.fbo
         temp_fbo = self._get_temp_fbo(scene_fbo)
 
-        # Rendu dans le temp_fbo
+        # Passe 1 : applique l'effet dans temp_fbo
         temp_fbo.bind()
         temp_fbo.clear()
-
         program = self._get_ambient_program()
         program.use()
         program['u_tint'] = tint
         program['u_ambient'] = ambient
         program['u_texture'] = 0
-
         gl.glActiveTexture(gl.GL_TEXTURE0)
         gl.glBindTexture(gl.GL_TEXTURE_2D, scene_fbo.texture_id)
         pipeline.quad.draw_raw()
 
-        # Recopie temp_fbo dans scene_fbo
+        # Passe 2 : recopie temp_fbo vers scene_fbo
         scene_fbo.bind()
         scene_fbo.clear()
-        pipeline.quad.draw_raw()
+        pipeline.quad.blit(temp_fbo.texture_id)
 
-        # Rebind scene_fbo pour la suite
         scene_fbo.bind()

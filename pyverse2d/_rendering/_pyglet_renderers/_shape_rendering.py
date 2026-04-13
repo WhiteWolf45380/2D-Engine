@@ -13,7 +13,6 @@ from pyglet.graphics import ShaderGroup
 from pyglet.graphics.shader import ShaderProgram
 
 import numpy as np
-from typing import TYPE_CHECKING
 
 # ======================================== CONSTANTS ========================================
 _UNSET = object()
