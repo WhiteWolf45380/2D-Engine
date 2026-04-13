@@ -32,7 +32,7 @@ class Window(Space):
     __slots__ = (
         "_screen", "_pyglet_window", "_canvas",
         "_framebuffer_scale_x", "_framebuffer_scale_y",
-        "_on_canvas_resize",
+        "_on_canvas_resize_callbacks",
     )
 
     def __init__(
@@ -90,7 +90,7 @@ class Window(Space):
 
         # Projection
         self._canvas: _Canvas = _Canvas(0, 0, width, height)
-        self._on_canvas_resize: list[Callable[[int, int], None]] = []
+        self._on_canvas_resize_callbacks: list[Callable[[int, int], None]] = []
         self._framebuffer_scale_x: float = 1.0
         self._framebuffer_scale_y: float = 1.0
         self._apply_letterboxing(width, height)
