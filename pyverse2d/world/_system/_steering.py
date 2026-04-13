@@ -8,6 +8,18 @@ from .._component import Transform, Follow
 
 import math
 
+"""
+En fait mathématiquement:
+
+la cible est donné par entity.transform.position + offset
+
+Autour de cette cible on a un anneau entre radius_min et radius_max
+
+angle fait qu'on ne se dirige plus vers la cible mais vers le point de l'anneau tel que l'angle de l'entité vers ce point soit cet angle. Par convetion angle=0 signifie le point droit de l'anneau.
+
+Et derrière cone indique qu'on ne cible plus directement ce point mais n'importe quel point dans l'anneau tel que l'angle soit compris entre [angle - cone, angle + cone]. Et si un cone_gap et précisé l'intervalle devient [angle - cone, angle - cone_gape]u[angle+cone_gap, angle + cone]
+"""
+
 # ======================================== SYSTEM ========================================
 class SteeringSystem(System):
     """Système gérant le pilotage positionnel"""

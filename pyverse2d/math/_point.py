@@ -12,8 +12,7 @@ from math import sqrt
 
 # ======================================== OBJECT ========================================
 class Point(MathObject):
-    """
-    Objet mathématique 2D abstrait : Point
+    """Objet mathématique 2D abstrait : Point
 
     Args:
         x(Real): coordonnée horizontale, ou Point/tuple à coercer

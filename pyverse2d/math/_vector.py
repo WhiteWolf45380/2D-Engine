@@ -10,8 +10,7 @@ from math import acos, sqrt
 
 # ======================================== OBJET ========================================
 class Vector(MathObject):
-    """
-    Objet mathématique 2D abstrait : Vecteur
+    """Objet mathématique 2D abstrait : Vecteur
 
     Args:
         x(Real): composante x, ou Vector/tuple à coercer
