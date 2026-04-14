@@ -130,7 +130,8 @@ class LightLayer(Layer):
 
     def _update(self, dt: float) -> None:
         """Actualisation"""
-        pass
+        for light in self._sources:
+            light.update(dt)
 
     def _draw(self, pipeline: Pipeline) -> None:
         """Affichage"""
