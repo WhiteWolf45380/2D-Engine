@@ -50,7 +50,7 @@ ui: UiManager = UiManager(_context_manager)
 _context_manager.ui = ui
 
 # ======================================== NODES ========================================
-from . import world, tile, gui, scene
+from . import world, tile, gui, fx, scene
 
 # ======================================== SETTERS ========================================
 def set_window(window: Window):
@@ -191,6 +191,7 @@ __all__ = [
     "world",
     "tile",
     "gui",
+    "fx",
     "scene",
 
     "set_window",
