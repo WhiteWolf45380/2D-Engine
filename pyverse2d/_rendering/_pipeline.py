@@ -571,6 +571,8 @@ class Pipeline:
     def _to_c_array(value: list):
         """Convertit une liste python en  array C"""
         flat = [x for v in value for x in (v if isinstance(v, tuple) else (v,))]
+        if len(flat) == 1:
+            return flat[0]  # scalaire, pas de ctypes array
         t = c_float if isinstance(flat[0], float) else c_int
         return (t * len(flat))(*flat)
 
