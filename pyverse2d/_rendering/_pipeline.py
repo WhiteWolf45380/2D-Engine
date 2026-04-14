@@ -11,7 +11,6 @@ from ._quad import ScreenQuad
 import pyglet.gl as gl
 from pyglet.graphics import Batch, Group
 from pyglet.math import Mat4
-from pyglet.window import Window as PygletWindow
 
 from typing import TYPE_CHECKING
 from dataclasses import dataclass
@@ -41,17 +40,16 @@ class Pipeline:
         window(Window): fenêtre associée
     """
     __slots__ = (
-        "_window",
+        "_window", "_quad",
         "_data", "_projection_cache", "_view_cache",
         "_view_buffer", "_default_view",
         "_context", "_coord_context",
     )
 
-    _QUAD: ScreenQuad = ScreenQuad()
-
     def __init__(self, window: Window):
         # Binding
         self._window: Window = window
+        self._quad: ScreenQuad = ScreenQuad()
 
         # Cache
         self._data: dict[Scene, SceneData] = {}
@@ -77,7 +75,7 @@ class Pipeline:
     @property
     def quad(self) -> ScreenQuad:
         """Rectangle d'écran complet"""
-        return self._QUAD
+        return self._quad
     
     @property
     def gl_viewport(self) -> tuple[int, int, int, int]:
@@ -258,7 +256,7 @@ class Pipeline:
         # Blit FBO sur window
         gl.glBindFramebuffer(gl.GL_FRAMEBUFFER, 0)
         gl.glViewport(*self._context.gl_viewport)
-        self._QUAD.blit(self._context.fbo.texture_id)
+        self._quad.blit(self._context.fbo.texture_id)
 
         # Nettoyage de l'état courant
         self._context.clear()
