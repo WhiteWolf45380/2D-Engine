@@ -11,6 +11,7 @@ from ._quad import ScreenQuad
 import pyglet.gl as gl
 from pyglet.graphics import Batch, Group
 from pyglet.math import Mat4
+from pyglet.graphics.shader import ShaderProgram
 
 from typing import TYPE_CHECKING
 from dataclasses import dataclass
@@ -40,7 +41,7 @@ class Pipeline:
         window(Window): fenêtre associée
     """
     __slots__ = (
-        "_window", "_quad",
+        "_window", "_quad", "_temp_fbo",
         "_data", "_projection_cache", "_view_cache",
         "_view_buffer", "_default_view",
         "_context", "_coord_context",
@@ -49,7 +50,10 @@ class Pipeline:
     def __init__(self, window: Window):
         # Binding
         self._window: Window = window
+
+        # Objets OpenGl
         self._quad: ScreenQuad = ScreenQuad()
+        self._temp_fbo: Framebuffer = None
 
         # Cache
         self._data: dict[Scene, SceneData] = {}
@@ -76,6 +80,11 @@ class Pipeline:
     def quad(self) -> ScreenQuad:
         """Rectangle d'écran complet"""
         return self._quad
+    
+    @property
+    def temp_fbo(self) -> Framebuffer:
+        """Renvoie le FrameBuffer éphémère"""
+        return self._temp_fbo
     
     @property
     def gl_viewport(self) -> tuple[int, int, int, int]:
@@ -167,6 +176,31 @@ class Pipeline:
         if z not in self._context.z_groups:
             self._context.z_groups[z] = Group(order=z)
         return self._context.z_groups[z]
+    
+    def apply_shader(self, program: ShaderProgram, **uniforms) -> None:
+        """Applique un shader post-process sur le FBO courant (ping-pong)
+
+        Args:
+            program: shader program à appliquer
+            **uniforms: uniforms à passer au shader (u_texture réservé)
+        """
+        scene_fbo = self._context.fbo
+        temp_fbo = self._get_temp_fbo(scene_fbo)
+
+        temp_fbo.bind()
+        temp_fbo.clear()
+        program.use()
+        for name, value in uniforms.items():
+            program[name] = value
+        program['u_texture'] = 0
+        gl.glActiveTexture(gl.GL_TEXTURE0)
+        gl.glBindTexture(gl.GL_TEXTURE_2D, scene_fbo.texture_id)
+        self.quad.draw_raw()
+
+        scene_fbo.bind()
+        scene_fbo.clear()
+        self.quad.blit(temp_fbo.texture_id)
+        scene_fbo.bind()
 
     # ======================================== PIPELINE ========================================
     def bind_scene(self, scene: Scene) -> None:
@@ -522,8 +556,17 @@ class Pipeline:
             gl.glScissor(*prev_box)
             if not was_enabled[0]:
                 gl.glDisable(gl.GL_SCISSOR_TEST)
+        
+    # ======================================== INTERNALS ========================================
+    def _get_temp_fbo(self, fbo: Framebuffer) -> Framebuffer:
+        """Renvoie le FrameBuffer temporaire"""
+        if self._temp_fbo is None:
+            self._temp_fbo = Framebuffer(fbo.width, fbo.height)
+        elif self._temp_fbo.width != fbo.width or self._temp_fbo.height != fbo.height:
+            self._temp_fbo.resize(fbo.width, fbo.height)
+        return self._temp_fbo
 
-# ======================================== CONTEXTE ========================================
+# ======================================== CONTEXT ========================================
 @dataclass(slots=True)
 class _PipelineContext:
     # Binding

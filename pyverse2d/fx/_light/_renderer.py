@@ -2,9 +2,7 @@
 from __future__ import annotations
 
 from ..._rendering import Pipeline
-from ..._rendering._fbo import Framebuffer
 
-import pyglet.gl as gl
 from pyglet.graphics.shader import Shader, ShaderProgram
 
 # ======================================== SHADERS ========================================
@@ -22,28 +20,35 @@ void main() {
 _FRAG_AMBIENT = """
 #version 330 core
 uniform sampler2D u_texture;
-uniform vec3 u_tint;
 uniform float u_ambient;
 in vec2 v_uv;
 out vec4 out_color;
 void main() {
     vec4 pixel = texture(u_texture, v_uv);
-    out_color = vec4(mix(pixel.rgb, pixel.rgb * u_tint, u_ambient), pixel.a);
+    out_color = vec4(pixel.rgb * u_ambient, pixel.a);
+}
+"""
+
+_FRAG_TINT = """
+#version 330 core
+uniform sampler2D u_texture;
+uniform vec3 u_tint;
+uniform float u_strength;
+in vec2 v_uv;
+out vec4 out_color;
+void main() {
+    vec4 pixel = texture(u_texture, v_uv);
+    out_color = vec4(mix(pixel.rgb, pixel.rgb * u_tint, u_strength), pixel.a);
 }
 """
 
 # ======================================== RENDERER ========================================
 class LightRenderer:
-    """Renderer de lumière
-
-    Gère les effets lumineux via ping-pong FBO.
-    """
-    __slots__ = ("_temp_fbo",)
+    """Renderer de lumière"""
+    __slots__ = ()
 
     _ambient_program: ShaderProgram = None
-
-    def __init__(self):
-        self._temp_fbo: Framebuffer = None   # ping-pong, lazy
+    _tint_program: ShaderProgram = None
 
     # ======================================== PROGRAMS ========================================
     @classmethod
@@ -55,43 +60,32 @@ class LightRenderer:
             )
         return cls._ambient_program
 
-    # ======================================== FBO ========================================
-    def _get_temp_fbo(self, fbo: Framebuffer) -> Framebuffer:
-        """Retourne un FBO temporaire aux bonnes dimensions (lazy + resize)"""
-        if self._temp_fbo is None:
-            self._temp_fbo = Framebuffer(fbo.width, fbo.height)
-        elif self._temp_fbo.width != fbo.width or self._temp_fbo.height != fbo.height:
-            self._temp_fbo.resize(fbo.width, fbo.height)
-        return self._temp_fbo
+    @classmethod
+    def _get_tint_program(cls) -> ShaderProgram:
+        if cls._tint_program is None:
+            cls._tint_program = ShaderProgram(
+                Shader(_VERT, 'vertex'),
+                Shader(_FRAG_TINT, 'fragment'),
+            )
+        return cls._tint_program
 
     # ======================================== AMBIENT ========================================
-    def render_ambient(self, pipeline: Pipeline, tint: tuple[int, int, int], ambient: float) -> None:
-        """Applique la lumière ambiante multiplicative sur le FBO courant
-
+    def render_ambient(self, pipeline: Pipeline, ambient: float) -> None:
+        """Applique la luminosité ambiante
 
         Args:
             pipeline: pipeline de rendu
-            tint: couleur de teinte (r, g, b) en [0.0, 1.0]
-            ambient: luminosité ambiante [0, 1]
+            ambient: luminosité [0, 1] — 0 = noir total, 1 = pleine luminosité
         """
-        scene_fbo = pipeline.fbo
-        temp_fbo = self._get_temp_fbo(scene_fbo)
+        pipeline.apply_shader(self._get_ambient_program(), u_ambient=ambient)
 
-        # Passe 1 : applique l'effet dans temp_fbo
-        temp_fbo.bind()
-        temp_fbo.clear()
-        program = self._get_ambient_program()
-        program.use()
-        program['u_tint'] = tint
-        program['u_ambient'] = ambient
-        program['u_texture'] = 0
-        gl.glActiveTexture(gl.GL_TEXTURE0)
-        gl.glBindTexture(gl.GL_TEXTURE_2D, scene_fbo.texture_id)
-        pipeline.quad.draw_raw()
+    # ======================================== TINT ========================================
+    def render_tint(self, pipeline: Pipeline, tint: tuple[float, float, float], strength: float) -> None:
+        """Applique une teinte colorée
 
-        # Passe 2 : recopie temp_fbo vers scene_fbo
-        scene_fbo.bind()
-        scene_fbo.clear()
-        pipeline.quad.blit(temp_fbo.texture_id)
-
-        scene_fbo.bind()
+        Args:
+            pipeline: pipeline de rendu
+            tint: couleur RGB normalisée [0.0, 1.0]
+            strength: force de la teinte [0, 1]
+        """
+        pipeline.apply_shader(self._get_tint_program(), u_tint=tint, u_strength=strength)

@@ -50,7 +50,6 @@ def _get_program() -> shader_module.ShaderProgram:
         _program = shader_module.ShaderProgram(vert, frag)
     return _program
 
-
 # ======================================== TEXTURE ARRAY ========================================
 class TileArrayTexture:
     """Texture array GL — une tranche par tile du tileset"""
@@ -118,7 +117,7 @@ class TileArrayTexture:
         gl.glTexParameteri(gl.GL_TEXTURE_2D_ARRAY, gl.GL_TEXTURE_WRAP_T, gl.GL_CLAMP_TO_EDGE)
         gl.glBindTexture(gl.GL_TEXTURE_2D_ARRAY, 0)
 
-    # ======================================== PUBLIC METHODS ========================================
+    # ======================================== INTERFACE ========================================
     def get_layer(self, tile_id: int) -> int:
         """Renvoie l'index de tranche pour un tile_id, ou -1 si inconnu"""
         return self._tile_to_layer.get(tile_id, -1)
@@ -134,7 +133,6 @@ class TileArrayTexture:
             tex = gl.GLuint(self._tex_id)
             gl.glDeleteTextures(1, ctypes.byref(tex))
             self._tex_id = None
-
 
 # ======================================== TILE RENDERER ========================================
 class TileRenderer:
@@ -331,7 +329,6 @@ class TileRenderer:
             self._texture.delete()
             self._texture = None
         self._built = False
-
 
 # ======================================== UV HELPERS ========================================
 def _flip_uvs(flip: int) -> tuple[tuple, tuple, tuple, tuple]:

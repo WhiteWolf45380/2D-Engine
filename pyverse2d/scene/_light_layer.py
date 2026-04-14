@@ -13,12 +13,13 @@ class LightLayer(Layer):
     """Layer gérant la lumière
 
     Args:
-        tint: couleur d'accentuation *(RGB)*
         ambient: luminosité ambiante [0, 1]
+        tint: couleur d'accentuation *(RGB)*
+        tint_strength: force de la teinte
         camera: caméra locale
     """
     __slots__ = (
-        "_tint", "_ambient",
+        "_ambient", "_tint", "_tint_strength",
         "_renderer",
     )
 
@@ -26,18 +27,42 @@ class LightLayer(Layer):
 
     def __init__(
             self,
-            tint: Color = (255, 255, 255),
             ambient: Real = 1.0,
+            tint: Color = (255, 255, 255),
+            tint_strength: Real = 0.0,
             camera: Camera = None
         ):
+        # Initialisation du layer
         super().__init__(camera)
-        self._tint: Color = Color(tint)
+
+        # Paramètres publiques
         self._ambient: float = float(ambient)
+        self._tint: Color = Color(tint)
+        self._tint_strength: float = float(tint_strength)
+
+        if __debug__:
+            if not 0.0 <= self._ambient <= 1.0: raise ValueError(f"ambient must be within 0.0 and 1.0, got {self._ambient}")
+            if not 0.0 <= self._tint_strength <= 1.0: raise ValueError(f"tint_strength must be within 0.0 and 1.0, got {self._tint_strength}")
+
+        # Paramètres internes
         self._renderer: LightRenderer = LightRenderer()
 
-        assert 0 <= self._ambient <= 1.0, ValueError("Ambient must be within 0.0 and 1.0")
-
     # ======================================== PROPERTIES ========================================
+    @property
+    def ambient(self) -> float:
+        """Luminosité ambiante
+
+        La luminosité doit être un ``Réel`` compris dans l'intervalle *[0, 1]*.
+        Mettre cette propriété à 1.0 pour une luminosité maximale.
+        """
+        return self._ambient
+    
+    @ambient.setter
+    def ambient(self, value: Real) -> None:
+        value = float(value)
+        assert 0 <= value <= 1.0, ValueError(f"ambient must be within 0 and 1, got {value}")
+        self._ambient = value
+
     @property
     def tint(self) -> Color:
         """Couleur d'accentuation
@@ -52,18 +77,19 @@ class LightLayer(Layer):
         self._tint = Color(value)
 
     @property
-    def ambient(self) -> float:
-        """Luminosité ambiante
+    def tint_strength(self) -> float:
+        """Force de la couleur d'accentuation
 
-        La luminosité doit être un ``Réel`` compris dans l'intervalle [0, 1].
-        Mettre cette propriété à 1.0 pour une luminosité maximale.
+        Le facteur force doit être un ``Réel`` compris dans l'intervalle *[0, 1]*.
+        Mettre cette propriété à 0.0 pour ne pas appliquer la couleur d'accentuation.
         """
-        return self._ambient
+        return self._tint_strength
     
-    @ambient.setter
-    def ambient(self, value: Real) -> None:
-        self._ambient = float(value)
-        assert 0 <= self._ambient <= 1.0, ValueError("Ambient must be within 0 and 1")
+    @tint_strength.setter
+    def tint_strength(self, value: Real) -> None:
+        value = float(value)
+        assert 0 <= value <= 1.0, ValueError(f"tint_strength must be within 0 and 1, got {value}")
+        self._tint_strength = value
 
     # ======================================== HOOKS ========================================
     def on_start(self):
@@ -85,4 +111,5 @@ class LightLayer(Layer):
 
     def _draw(self, pipeline: Pipeline) -> None:
         """Affichage"""
-        self._renderer.render_ambient(pipeline, self._tint.rgb, self._ambient)
+        self._renderer.render_ambient(pipeline, self._ambient)
+        self._apply_tint(pipeline, self._tint, self._tint_strength)
