@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from ..._rendering import Pipeline
-from ...abc import LightSource
 from ._point import PointLight
 
 import ctypes

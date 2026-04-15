@@ -478,6 +478,42 @@ class Pipeline:
             cos_r, sin_r = math.cos(rad), math.sin(rad)
             fr_x, fr_y = fr_x * cos_r - fr_y * sin_r, fr_x * sin_r + fr_y * cos_r
         return fr_x + cx, fr_y + cy
+    
+    def world_to_framebuffer_dir(self, dx: float, dy: float) -> tuple[float, float]:
+        """Convertit un vecteur directionnel monde en vecteur framebuffer (sans translation)
+
+        Args:
+            dx: composante horizontale monde
+            dy: composante verticale monde
+        """
+        _, _, vw, vh, zoom, rotation = self._context.camera_resolve
+        _, _, lw, lh, _, (fdx, fdy) = self._context.viewport_resolve
+
+        # Rotation caméra uniquement (pas de translation)
+        if rotation != 0.0:
+            rad = math.radians(rotation)
+            cos_r, sin_r = math.cos(rad), math.sin(rad)
+            dx, dy = dx * cos_r + dy * sin_r, -dx * sin_r + dy * cos_r
+
+        # Scale frustum -> NVC -> framebuffer
+        half_w, half_h = vw / (zoom * fdx * 2), vh / (zoom * fdy * 2)
+        fx = (dx / half_w / 2) * lw * self._window.framebuffer_scale_x
+        fy = (dy / half_h / 2) * lh * self._window.framebuffer_scale_y
+
+        return fx, fy
+
+    def world_to_framebuffer_dir_normalized(self, dx: float, dy: float) -> tuple[float, float]:
+        """Convertit un vecteur directionnel monde en vecteur framebuffer normalisé
+
+        Args:
+            dx: composante horizontale monde
+            dy: composante verticale monde
+        """
+        fx, fy = self.world_to_framebuffer_dir(dx, dy)
+        length = math.sqrt(fx * fx + fy * fy)
+        if length == 0.0:
+            return (0.0, 0.0)
+        return (fx / length, fy / length)
 
     # ======================================== UTILITAIRES ========================================
     def visible_world_rect(self) -> tuple[float, float, float, float]:
