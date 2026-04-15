@@ -81,7 +81,7 @@ void main() {{
         float falloff = texture(u_lut_atlas, vec2(1.0 - normalized, row)).r;
         light_accum += u_colors[i] * u_intensities[i] * falloff;
     }}
-
+    light_accum = 1.0 - exp(-light_accum);
     vec3 lit = pixel.rgb * max(vec3(u_ambient), light_accum);
     out_color = vec4(lit, pixel.a);
 }}
@@ -116,19 +116,24 @@ void main() {{
 
         float t = clamp(dist / u_radii[i], 0.0, 1.0);
         float row = (float(i) + 0.5) / float({max_lights});
-        float radial_falloff = texture(u_lut_atlas, vec2(1.0 - t, row)).r;
+        float radial_falloff;
+
+        if (u_cone_radii[i] <= 0.0001) {{
+            radial_falloff = 1.0;
+        }} else {{
+            float t = clamp(dist / u_cone_radii[i], 0.0, 1.0);
+            radial_falloff = texture(u_cone_lut, vec2(1.0 - t, row)).r;
+        }}
 
         float angle = acos(clamp(dot(normalize(to_frag), u_directions[i]), -1.0, 1.0));
-        float angular_falloff;
-        if (u_inner_angles[i] >= u_outer_angles[i]) {{
-            angular_falloff = angle <= u_outer_angles[i] ? 1.0 : 0.0;
-        }} else {{
-            angular_falloff = 1.0 - smoothstep(u_inner_angles[i], u_outer_angles[i], angle);
-        }}
+        float inner = min(u_cone_inner_angles[i], u_cone_outer_angles[i]);
+        float outer = max(u_cone_inner_angles[i], u_cone_outer_angles[i]);
+
+        float angular_falloff = 1.0 - smoothstep(inner, outer, angle);
 
         light_accum += u_colors[i] * u_intensities[i] * radial_falloff * angular_falloff;
     }}
-
+    light_accum = 1.0 - exp(-light_accum);
     vec3 lit = pixel.rgb * max(vec3(u_ambient), light_accum);
     out_color = vec4(lit, pixel.a);
 }}
@@ -178,19 +183,24 @@ void main() {{
         float dist = length(to_frag);
         float t = clamp(dist / u_cone_radii[i], 0.0, 1.0);
         float row = (float(i) + 0.5) / float({max_cones});
-        float radial_falloff = texture(u_cone_lut, vec2(1.0 - t, row)).r;
+        float radial_falloff;
+
+        if (u_cone_radii[i] <= 0.0001) {{
+            radial_falloff = 1.0;
+        }} else {{
+            float t = clamp(dist / u_cone_radii[i], 0.0, 1.0);
+            radial_falloff = texture(u_cone_lut, vec2(1.0 - t, row)).r;
+        }}
 
         float angle = acos(clamp(dot(normalize(to_frag), u_cone_directions[i]), -1.0, 1.0));
-        float angular_falloff;
-        if (u_cone_inner_angles[i] >= u_cone_outer_angles[i]) {{
-            angular_falloff = angle <= u_cone_outer_angles[i] ? 1.0 : 0.0;
-        }} else {{
-            angular_falloff = 1.0 - smoothstep(u_cone_inner_angles[i], u_cone_outer_angles[i], angle);
-        }}
+        float inner = min(u_cone_inner_angles[i], u_cone_outer_angles[i]);
+        float outer = max(u_cone_inner_angles[i], u_cone_outer_angles[i]);
+
+        float angular_falloff = 1.0 - smoothstep(inner, outer, angle);
 
         light_accum += u_cone_colors[i] * u_cone_intensities[i] * radial_falloff * angular_falloff;
     }}
-
+    light_accum = 1.0 - exp(-light_accum);
     vec3 lit = pixel.rgb * max(vec3(u_ambient), light_accum);
     out_color = vec4(lit, pixel.a);
 }}
