@@ -172,7 +172,7 @@ class TimeManager(Manager):
         self._clock += raw_dt
         self._raw_dt = raw_dt
         self._dt = min(_DT_MAX, raw_dt)
-        self._fps = 1 / self._dt
+        self._fps = 1 / max(self._dt, 10e-8)
         self._fps_buffer.append(self._fps)
         self._eff_dt = self._dt * self._time_scale
         return self._eff_dt
