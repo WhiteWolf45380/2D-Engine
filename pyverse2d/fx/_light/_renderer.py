@@ -31,6 +31,18 @@ void main() {
 }
 """
 
+_FRAG_AMBIENT = """
+#version 330 core
+uniform sampler2D u_texture;
+uniform float u_ambient;
+in vec2 v_uv;
+out vec4 out_color;
+void main() {
+    vec4 pixel = texture(u_texture, v_uv);
+    out_color = vec4(pixel.rgb * u_ambient, pixel.a);
+}
+"""
+
 _FRAG_TINT = """
 #version 330 core
 uniform sampler2D u_texture;
@@ -83,6 +95,7 @@ class LightRenderer:
     __slots__ = ()
 
     _tint_program: ShaderProgram = None
+    _ambient_only_program: ShaderProgram = None
     _ambient_point_programs: dict[int, ShaderProgram] = {}
 
     # ======================================== PROGRAMS ========================================
@@ -94,6 +107,15 @@ class LightRenderer:
                 Shader(_FRAG_TINT, 'fragment'),
             )
         return cls._tint_program
+
+    @classmethod
+    def _get_ambient_only_program(cls) -> ShaderProgram:
+        if cls._ambient_only_program is None:
+            cls._ambient_only_program = ShaderProgram(
+                Shader(_VERT, 'vertex'),
+                Shader(_FRAG_AMBIENT, 'fragment'),
+            )
+        return cls._ambient_only_program
 
     @classmethod
     def _get_ambient_point_program(cls, max_lights: int) -> ShaderProgram:
@@ -129,45 +151,50 @@ class LightRenderer:
         return tex
 
     # ======================================== AMBIENT + POINTS ========================================
-    def render_ambient(self, pipeline: Pipeline, ambient: float, sources: set[LightSource]) -> None:
+    def render_ambient(self, pipeline: Pipeline, ambient: float, points: list[PointLight]) -> None:
         """Applique la luminosité ambiante et les sources lumineuses
 
         Args:
             pipeline: pipeline de rendu
             ambient: luminosité ambiante [0, 1]
-            sources: ensemble des sources de lumière
+            points: ensemble des points lumineux actifs
         """
-        point_lights = [s for s in sources if isinstance(s, PointLight) and s.is_enabled()]
-        bucket = _get_bucket(len(point_lights)) if point_lights else 1
+        # Cas trivial
+        if not points:
+            if ambient < 1.0:
+                pipeline.apply_shader(self._get_ambient_only_program(), u_ambient=ambient)
+            return
+
+        bucket = _get_bucket(len(points)) if points else 1
         program = self._get_ambient_point_program(bucket)
 
         # Atlas LUT
-        atlas_tex = self._build_lut_atlas(point_lights, bucket)
+        atlas_tex = self._build_lut_atlas(points, bucket)
         gl.glActiveTexture(gl.GL_TEXTURE1)
         gl.glBindTexture(gl.GL_TEXTURE_2D, atlas_tex)
 
         # Données par lumière (paddées jusqu'au bucket)
         fb_scale = pipeline.window.framebuffer_scale_x
-        positions   = [(0.0, 0.0)] * bucket
-        radii       = [1.0]        * bucket
-        colors      = [(1.0, 1.0, 1.0)] * bucket
-        intensities = [0.0]        * bucket
+        positions = [(0.0, 0.0)] * bucket
+        radii = [1.0] * bucket
+        colors = [(1.0, 1.0, 1.0)] * bucket
+        intensities = [0.0] * bucket
 
-        for i, light in enumerate(point_lights):
+        for i, light in enumerate(points):
             fx, fy = pipeline.world_to_framebuffer(light.x, light.y)
-            positions[i]   = (float(fx), float(fy))
-            radii[i]       = light.radius * pipeline.ppu * fb_scale
-            colors[i]      = light.color.rgb
+            positions[i] = (float(fx), float(fy))
+            radii[i] = light.radius * pipeline.ppu * fb_scale
+            colors[i] = light.color.rgb
             intensities[i] = light.intensity
 
         pipeline.apply_shader(program,
-            u_ambient     = ambient,
-            u_count       = len(point_lights),
-            u_positions   = positions,
-            u_radii       = radii,
-            u_colors      = colors,
+            u_ambient = ambient,
+            u_count = len(points),
+            u_positions = positions,
+            u_radii = radii,
+            u_colors = colors,
             u_intensities = intensities,
-            u_lut_atlas   = 1,
+            u_lut_atlas = 1,
         )
 
         # Cleanup atlas

@@ -4,6 +4,7 @@ from ._component_type import ComponentType
 from ._scene_state import SceneState
 from ._stack_mode import StackMode
 from ._super import Super
+from ._activity import Activity
 
 # ======================================== EXPORTS ========================================
 __all__ = [
@@ -13,4 +14,5 @@ __all__ = [
     "SceneState",
     "StackMode",
     "Super",
+    "Activity",
 ]

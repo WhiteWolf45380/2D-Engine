@@ -2,9 +2,10 @@
 from __future__ import annotations
 
 from .._rendering import Pipeline, Camera
+from .._flag import Activity
 from ..asset import Color
 from ..abc import Layer, LightSource
-from ..fx import LightRenderer
+from ..fx import LightRenderer, PointLight, ConeLight, AreaLight
 
 from numbers import Real
 
@@ -20,7 +21,8 @@ class LightLayer(Layer):
     """
     __slots__ = (
         "_ambient", "_tint", "_tint_strength",
-        "_renderer", "_sources",
+        "_sources", "_active_points", "_active_cones", "_active_areas",
+        "_renderer",
     )
 
     _IS_FX = True
@@ -47,6 +49,9 @@ class LightLayer(Layer):
         # Paramètres internes
         self._renderer: LightRenderer = LightRenderer()
         self._sources: set[LightSource] = set()
+        self._active_points: list[PointLight] = []
+        self._active_cones: list[ConeLight] = []
+        self._active_areas: list[AreaLight] = []
 
     # ======================================== PROPERTIES ========================================
     @property
@@ -101,6 +106,8 @@ class LightLayer(Layer):
         """
         assert isinstance(source, LightSource), f"source must be a LightSource, got {source}"
         self._sources.add(source)
+        if source.is_enabled():
+            self._get_active_list(source).append(source)
 
     def remove_source(self, source: LightSource) -> None:
         """Retire une source de lumière
@@ -108,6 +115,8 @@ class LightLayer(Layer):
         Args:
             source: source à retirer
         """
+        if source.is_enabled():
+            self._get_active_list(source)
         self._sources.discard(source)
 
     def get_sources(self) -> set[LightSource]:
@@ -130,10 +139,24 @@ class LightLayer(Layer):
 
     def _update(self, dt: float) -> None:
         """Actualisation"""
-        for light in self._sources:
-            light.update(dt)
+        for source in self._sources:
+            state: Activity = source.update(dt)
+            if state is Activity.DEFAULT:
+                continue
+            if state is Activity.ENABLED:
+                self._get_active_list(source).append(source)
+            elif state is Activity.DISABLED:
+                self._get_active_list(source).remove(source)
 
     def _draw(self, pipeline: Pipeline) -> None:
         """Affichage"""
-        self._renderer.render_ambient(pipeline, self._ambient, self._sources)
+        self._renderer.render_ambient(pipeline, self._ambient, self._active_points)
         self._renderer.render_tint(pipeline, self._tint.rgb, self._tint_strength)
+
+    # ======================================== LIFE CYCLE ========================================
+    def _get_active_list(self, source: LightSource) -> list:
+        """Renvoie la liste active correspondant au type de source"""
+        match source:
+            case PointLight(): return self._active_points
+            case ConeLight():  return self._active_cones
+            case AreaLight():  return self._active_areas

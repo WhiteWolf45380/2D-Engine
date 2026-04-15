@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from ...abc import LightSource
 from ...math import Point
-from ...math.easing import EasingFunc, is_easing, linear
+from ...math.easing import EasingFunc
 from ...asset import Color
 
 from numbers import Real

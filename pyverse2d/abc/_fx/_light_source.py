@@ -2,8 +2,9 @@
 from __future__ import annotations
 
 from ..._internal import Positionnal
+from ..._flag import Activity
 from ...math import Vector, Point
-from ...math.easing import EasingFunc, is_easing, linear
+from ...math.easing import EasingFunc, is_easing
 from ...asset import Color
 
 from abc import ABC
@@ -57,6 +58,7 @@ class LightSource(ABC):
 
         # Paramètres internes
         self._attach: AttachRequest | None = None
+        self._activity: Activity = Activity.DEFAULT
 
     # ======================================== PROPERTIES ========================================
     @property
@@ -137,31 +139,27 @@ class LightSource(ABC):
         assert value is None or is_easing(value), "falloff must be an EasingFunc from math.easing module or None"
         self._falloff = value
 
-    @property
-    def enabled(self) -> bool:
-        """Renvoie l'état d'activation de la lumière
-
-        L'état doit être un booléen.
-        """
-        return self._enabled
-    
-    @enabled.setter
-    def enabled(self, value: bool) -> None:
-        assert isinstance(value, bool), f"enabled must be a boolean, got {type(value).__name__}"
-        self._enabled = value
-
     # ======================================== STATE ========================================
     def enable(self) -> None:
         """Active la lumière"""
+        if self._enabled:
+            return
         self._enabled = True
+        self._activity = Activity.ENABLED
 
     def disable(self) -> None:
         """Désactive la lumière"""
+        if not self._enabled:
+            return
         self._enabled = False
+        self._activity = Activity.DISABLED
 
     def toggle(self) -> None:
         """Bascule l'activation de la lumière"""
-        self._enabled = not self._enabled
+        if self._enabled:
+            self.disable()
+            return
+        self.enable()
 
     def is_enabled(self) -> bool:
         """Vérifie l'activation de la lumière"""
@@ -206,6 +204,10 @@ class LightSource(ABC):
         if self._attach is not None:
             self._update_attach(dt)
         self._update(dt)
+
+        activity = self._activity
+        self._activity = Activity.DEFAULT
+        return activity
 
     def _update(self, dt: float) -> None:
         """Actualisation personnalisée (à override)"""
