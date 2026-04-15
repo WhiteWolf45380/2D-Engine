@@ -124,8 +124,16 @@ void main() {{
         float radial_falloff = texture(u_lut_atlas, vec2(1.0 - t, row)).r;
 
         // Falloff angulaire
+        // angle = 0 au centre du cone, croît vers l'extérieur
         float angle = acos(clamp(dot(normalize(to_frag), u_directions[i]), -1.0, 1.0));
-        float angular_falloff = smoothstep(u_outer_angles[i], u_inner_angles[i], angle);
+        float angular_falloff;
+        if (u_inner_angles[i] >= u_outer_angles[i]) {{
+            // softness=0 : cone net, pas de fondu
+            angular_falloff = angle <= u_outer_angles[i] ? 1.0 : 0.0;
+        }} else {{
+            // 1.0 dans le cone, décroît vers 0.0 sur le bord
+            angular_falloff = 1.0 - smoothstep(u_inner_angles[i], u_outer_angles[i], angle);
+        }}
 
         light_accum += u_colors[i] * u_intensities[i] * radial_falloff * angular_falloff;
     }}
@@ -180,8 +188,15 @@ void main() {{
         float t = clamp(dist / u_cone_radii[i], 0.0, 1.0);
         float row = (float(i) + 0.5) / float({max_cones});
         float radial_falloff = texture(u_cone_lut, vec2(1.0 - t, row)).r;
+
         float angle = acos(clamp(dot(normalize(to_frag), u_cone_directions[i]), -1.0, 1.0));
-        float angular_falloff = smoothstep(u_cone_outer_angles[i], u_cone_inner_angles[i], angle);
+        float angular_falloff;
+        if (u_cone_inner_angles[i] >= u_cone_outer_angles[i]) {{
+            angular_falloff = angle <= u_cone_outer_angles[i] ? 1.0 : 0.0;
+        }} else {{
+            angular_falloff = 1.0 - smoothstep(u_cone_inner_angles[i], u_cone_outer_angles[i], angle);
+        }}
+
         light_accum += u_cone_colors[i] * u_cone_intensities[i] * radial_falloff * angular_falloff;
     }}
 
@@ -241,6 +256,15 @@ class LightRenderer:
         if key not in cls._point_cone_programs:
             cls._point_cone_programs[key] = ShaderProgram(Shader(_VERT, 'vertex'), Shader(_build_frag_points_cones(max_points, max_cones), 'fragment'))
         return cls._point_cone_programs[key]
+
+    @classmethod
+    def clear_shader_cache(cls) -> None:
+        """Invalide tous les programmes de shader compilés"""
+        cls._tint_program = None
+        cls._ambient_only_program = None
+        cls._point_programs.clear()
+        cls._cone_programs.clear()
+        cls._point_cone_programs.clear()
 
     # ======================================== LUT ATLAS ========================================
     @staticmethod
