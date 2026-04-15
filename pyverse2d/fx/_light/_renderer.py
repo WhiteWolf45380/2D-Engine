@@ -1,4 +1,3 @@
-# ======================================== IMPORTS ========================================
 from __future__ import annotations
 
 from ..._rendering import Pipeline
@@ -10,7 +9,6 @@ import math
 import pyglet.gl as gl
 from pyglet.graphics.shader import Shader, ShaderProgram
 
-# ======================================== BUCKETS ========================================
 _BUCKETS = (8, 16, 32, 64, 128)
 _LUT_SIZE = 256
 
@@ -20,7 +18,6 @@ def _get_bucket(count: int) -> int:
             return bucket
     return count
 
-# ======================================== SHADERS ========================================
 _VERT = """
 #version 330 core
 layout(location = 0) in vec2 in_position;
@@ -57,7 +54,6 @@ void main() {
 }
 """
 
-# ======================================== SHADER BUILDERS ========================================
 def _build_frag_points(max_lights: int) -> str:
     return f"""
 #version 330 core
@@ -118,20 +114,15 @@ void main() {{
         vec2 to_frag = frag - u_positions[i];
         float dist = length(to_frag);
 
-        // Falloff radial via LUT
         float t = clamp(dist / u_radii[i], 0.0, 1.0);
         float row = (float(i) + 0.5) / float({max_lights});
         float radial_falloff = texture(u_lut_atlas, vec2(1.0 - t, row)).r;
 
-        // Falloff angulaire
-        // angle = 0 au centre du cone, croît vers l'extérieur
         float angle = acos(clamp(dot(normalize(to_frag), u_directions[i]), -1.0, 1.0));
         float angular_falloff;
         if (u_inner_angles[i] >= u_outer_angles[i]) {{
-            // softness=0 : cone net, pas de fondu
             angular_falloff = angle <= u_outer_angles[i] ? 1.0 : 0.0;
         }} else {{
-            // 1.0 dans le cone, décroît vers 0.0 sur le bord
             angular_falloff = 1.0 - smoothstep(u_inner_angles[i], u_outer_angles[i], angle);
         }}
 
@@ -206,6 +197,7 @@ void main() {{
 """
 
 # ======================================== RENDERER ========================================
+
 class LightRenderer:
     """Renderer de lumière"""
     __slots__ = ("_active_points", "_active_cones")
@@ -220,38 +212,32 @@ class LightRenderer:
         self._active_points: list[PointLight] = []
         self._active_cones: list[ConeLight] = []
 
-    # ======================================== PROGRAMS ========================================
     @classmethod
     def _get_tint_program(cls) -> ShaderProgram:
-        """Renvoie le programme de shader associé aux teintes"""
         if cls._tint_program is None:
             cls._tint_program = ShaderProgram(Shader(_VERT, 'vertex'), Shader(_FRAG_TINT, 'fragment'))
         return cls._tint_program
 
     @classmethod
     def _get_ambient_only_program(cls) -> ShaderProgram:
-        """Renvoie le programme de shader associé à l'ambiance"""
         if cls._ambient_only_program is None:
             cls._ambient_only_program = ShaderProgram(Shader(_VERT, 'vertex'), Shader(_FRAG_AMBIENT, 'fragment'))
         return cls._ambient_only_program
 
     @classmethod
     def _get_point_program(cls, max_lights: int) -> ShaderProgram:
-        """Renvoie le programme de shader associé aux points lumineux"""
         if max_lights not in cls._point_programs:
             cls._point_programs[max_lights] = ShaderProgram(Shader(_VERT, 'vertex'), Shader(_build_frag_points(max_lights), 'fragment'))
         return cls._point_programs[max_lights]
 
     @classmethod
     def _get_cone_program(cls, max_lights: int) -> ShaderProgram:
-        """Renvoie le programme de shader associé aux cones lumineux"""
         if max_lights not in cls._cone_programs:
             cls._cone_programs[max_lights] = ShaderProgram(Shader(_VERT, 'vertex'), Shader(_build_frag_cones(max_lights), 'fragment'))
         return cls._cone_programs[max_lights]
 
     @classmethod
     def _get_point_cone_program(cls, max_points: int, max_cones: int) -> ShaderProgram:
-        """Renvoie le programme de shader associé aux points et cones lumineux"""
         key = (max_points, max_cones)
         if key not in cls._point_cone_programs:
             cls._point_cone_programs[key] = ShaderProgram(Shader(_VERT, 'vertex'), Shader(_build_frag_points_cones(max_points, max_cones), 'fragment'))
@@ -259,21 +245,22 @@ class LightRenderer:
 
     @classmethod
     def clear_shader_cache(cls) -> None:
-        """Invalide tous les programmes de shader compilés"""
         cls._tint_program = None
         cls._ambient_only_program = None
         cls._point_programs.clear()
         cls._cone_programs.clear()
         cls._point_cone_programs.clear()
 
-    # ======================================== LUT ATLAS ========================================
     @staticmethod
     def _build_lut_atlas(lights: list, bucket: int) -> gl.GLuint:
-        """Construit une texture 2D atlas : une ligne par lumière, paddée jusqu'au bucket"""
         atlas = (ctypes.c_float * (_LUT_SIZE * bucket))()
         for i, light in enumerate(lights):
             for j in range(_LUT_SIZE):
-                atlas[i * _LUT_SIZE + j] = 1.0 if light.falloff is None else light.falloff(j / (_LUT_SIZE - 1))
+                t = j / (_LUT_SIZE - 1)
+                if light.falloff is None:                   
+                    atlas[i * _LUT_SIZE + j] = 1.0 - t
+                else:
+                    atlas[i * _LUT_SIZE + j] = light.falloff(t)
         tex = gl.GLuint()
         gl.glGenTextures(1, ctypes.byref(tex))
         gl.glBindTexture(gl.GL_TEXTURE_2D, tex)
@@ -287,14 +274,6 @@ class LightRenderer:
 
     # ======================================== RENDER AMBIENT ========================================
     def render_ambient(self, pipeline: Pipeline, ambient: float, points: list[PointLight], cones: list[ConeLight]) -> None:
-        """Applique la luminosité ambiante et les sources lumineuses
-
-        Args:
-            pipeline: pipeline de rendu
-            ambient: luminosité ambiante [0, 1]
-            points: points lumineux actifs
-            cones: cônes lumineux actifs
-        """
         has_points = bool(points)
         has_cones = bool(cones)
 
@@ -310,13 +289,14 @@ class LightRenderer:
         else:
             self._render_cones(pipeline, ambient, cones)
 
-    # ======================================== INTERNALS ========================================
+    # ======================================== POINTS ONLY ========================================
     def _render_points(self, pipeline: Pipeline, ambient: float, points: list[PointLight]) -> None:
         bucket = _get_bucket(len(points))
         program = self._get_point_program(bucket)
         fb_scale = pipeline.window.framebuffer_scale
 
         atlas_tex = self._build_lut_atlas(points, bucket)
+
         gl.glActiveTexture(gl.GL_TEXTURE1)
         gl.glBindTexture(gl.GL_TEXTURE_2D, atlas_tex)
 
@@ -333,22 +313,25 @@ class LightRenderer:
             intensities[i] = light.intensity
 
         pipeline.apply_shader(program,
-            u_ambient = ambient,
-            u_count = len(points),
-            u_positions = positions,
-            u_radii = radii,
-            u_colors = colors,
-            u_intensities = intensities,
-            u_lut_atlas = 1,
+            u_ambient=ambient,
+            u_count=len(points),
+            u_positions=positions,
+            u_radii=radii,
+            u_colors=colors,
+            u_intensities=intensities,
+            u_lut_atlas=1,
         )
+
         gl.glDeleteTextures(1, ctypes.byref(atlas_tex))
 
+    # ======================================== CONES ONLY ========================================
     def _render_cones(self, pipeline: Pipeline, ambient: float, cones: list[ConeLight]) -> None:
         bucket = _get_bucket(len(cones))
         program = self._get_cone_program(bucket)
         fb_scale = pipeline.window.framebuffer_scale
 
         atlas_tex = self._build_lut_atlas(cones, bucket)
+    
         gl.glActiveTexture(gl.GL_TEXTURE1)
         gl.glBindTexture(gl.GL_TEXTURE_2D, atlas_tex)
 
@@ -362,8 +345,9 @@ class LightRenderer:
 
         for i, light in enumerate(cones):
             fx, fy = pipeline.world_to_framebuffer(light.x, light.y)
+            dir_fb = pipeline.world_to_framebuffer_dir_normalized(light.direction.x, light.direction.y)
             positions[i] = (float(fx), float(fy))
-            directions[i] = pipeline.world_to_framebuffer_dir_normalized(light.direction.x, light.direction.y)
+            directions[i] = dir_fb
             radii[i] = light.radius * pipeline.ppu * fb_scale
             inner_angles[i] = math.radians(light.get_inner_angle())
             outer_angles[i] = math.radians(light.get_outer_angle())
@@ -371,19 +355,21 @@ class LightRenderer:
             intensities[i] = light.intensity
 
         pipeline.apply_shader(program,
-            u_ambient = ambient,
-            u_count = len(cones),
-            u_positions = positions,
-            u_directions = directions,
-            u_radii = radii,
-            u_inner_angles = inner_angles,
-            u_outer_angles = outer_angles,
-            u_colors = colors,
-            u_intensities = intensities,
-            u_lut_atlas = 1,
+            u_ambient=ambient,
+            u_count=len(cones),
+            u_positions=positions,
+            u_directions=directions,
+            u_radii=radii,
+            u_inner_angles=inner_angles,
+            u_outer_angles=outer_angles,
+            u_colors=colors,
+            u_intensities=intensities,
+            u_lut_atlas=1,
         )
+
         gl.glDeleteTextures(1, ctypes.byref(atlas_tex))
 
+    # ======================================== POINTS + CONES ========================================
     def _render_points_cones(self, pipeline: Pipeline, ambient: float, points: list[PointLight], cones: list[ConeLight]) -> None:
         bp = _get_bucket(len(points))
         bc = _get_bucket(len(cones))
@@ -391,12 +377,7 @@ class LightRenderer:
         fb_scale = pipeline.window.framebuffer_scale
 
         point_atlas = self._build_lut_atlas(points, bp)
-        gl.glActiveTexture(gl.GL_TEXTURE1)
-        gl.glBindTexture(gl.GL_TEXTURE_2D, point_atlas)
-
         cone_atlas = self._build_lut_atlas(cones, bc)
-        gl.glActiveTexture(gl.GL_TEXTURE2)
-        gl.glBindTexture(gl.GL_TEXTURE_2D, cone_atlas)
 
         # Points
         p_positions = [(0.0, 0.0)] * bp
@@ -422,42 +403,64 @@ class LightRenderer:
 
         for i, light in enumerate(cones):
             fx, fy = pipeline.world_to_framebuffer(light.x, light.y)
+            dir_fb = pipeline.world_to_framebuffer_dir_normalized(light.direction.x, light.direction.y)
             c_positions[i] = (float(fx), float(fy))
-            c_directions[i] = pipeline.world_to_framebuffer_dir_normalized(light.direction.x, light.direction.y)
+            c_directions[i] = dir_fb
             c_radii[i] = light.radius * pipeline.ppu * fb_scale
             c_inner_angles[i] = math.radians(light.get_inner_angle())
             c_outer_angles[i] = math.radians(light.get_outer_angle())
             c_colors[i] = light.color.rgb
             c_intensities[i] = light.intensity
 
-        pipeline.apply_shader(program,
-            u_ambient = ambient,
-            u_point_count = len(points),
-            u_point_positions = p_positions,
-            u_point_radii = p_radii,
-            u_point_colors = p_colors,
-            u_point_intensities= p_intensities,
-            u_point_lut = 1,
-            u_cone_count = len(cones),
-            u_cone_positions = c_positions,
-            u_cone_directions = c_directions,
-            u_cone_radii = c_radii,
-            u_cone_inner_angles= c_inner_angles,
-            u_cone_outer_angles= c_outer_angles,
-            u_cone_colors = c_colors,
-            u_cone_intensities = c_intensities,
-            u_cone_lut = 2,
-        )
+        scene_fbo = pipeline.fbo
+        temp_fbo = pipeline._get_temp_fbo(scene_fbo)
+
+        temp_fbo.bind()
+        temp_fbo.clear()
+        program.use()
+
+        # Uniforms scalaires
+        program['u_ambient'] = ambient
+        program['u_point_count'] = len(points)
+        program['u_cone_count'] = len(cones)
+        program['u_point_positions'] = p_positions
+        program['u_point_radii'] = p_radii
+        program['u_point_colors'] = p_colors
+        program['u_point_intensities'] = p_intensities
+        program['u_cone_positions'] = c_positions
+        program['u_cone_directions'] = c_directions
+        program['u_cone_radii'] = c_radii
+        program['u_cone_inner_angles'] = c_inner_angles
+        program['u_cone_outer_angles'] = c_outer_angles
+        program['u_cone_colors'] = c_colors
+        program['u_cone_intensities'] = c_intensities
+
+        # Texture 0 : scene FBO
+        program['u_texture'] = 0
+        gl.glActiveTexture(gl.GL_TEXTURE0)
+        gl.glBindTexture(gl.GL_TEXTURE_2D, scene_fbo.texture_id)
+
+        # Texture 1 : point LUT
+        program['u_point_lut'] = 1
+        gl.glActiveTexture(gl.GL_TEXTURE1)
+        gl.glBindTexture(gl.GL_TEXTURE_2D, point_atlas)
+
+        # Texture 2 : cone LUT
+        program['u_cone_lut'] = 2
+        gl.glActiveTexture(gl.GL_TEXTURE2)
+        gl.glBindTexture(gl.GL_TEXTURE_2D, cone_atlas)
+
+        pipeline.quad.draw_raw()
+
+        # Blit final
+        scene_fbo.bind()
+        scene_fbo.clear()
+        pipeline.quad.blit(temp_fbo.texture_id)
+        scene_fbo.bind()
+
         gl.glDeleteTextures(1, ctypes.byref(point_atlas))
         gl.glDeleteTextures(1, ctypes.byref(cone_atlas))
 
     # ======================================== TINT ========================================
     def render_tint(self, pipeline: Pipeline, tint: tuple[float, float, float], strength: float) -> None:
-        """Applique une teinte colorée
-
-        Args:
-            pipeline: pipeline de rendu
-            tint: couleur RGB normalisée [0.0, 1.0]
-            strength: force de la teinte [0, 1]
-        """
         pipeline.apply_shader(self._get_tint_program(), u_tint=tint, u_strength=strength)

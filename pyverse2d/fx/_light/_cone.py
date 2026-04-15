@@ -31,7 +31,7 @@ class ConeLight(LightSource):
             self,
             position: Point = (0.0, 0.0),
             direction: Vector = (1.0, 0.0),
-            radius: Real = 1.0,
+            radius: Real = 0.0,
             angle: Real = 30.0,
             softness: Real = 0.0,
             color: Color = (255, 255, 255),
@@ -50,7 +50,6 @@ class ConeLight(LightSource):
 
         if __debug__:
             if self._direction.is_null(): raise ValueError(f"direction cannot be null vector")
-            not_null(self._radius)
             not_null(self._angle)
             clamped(self._softness)
 
@@ -75,14 +74,14 @@ class ConeLight(LightSource):
     def radius(self) -> float:
         """Rayon du cone
 
-        Le rayon doit être un ``Réel`` non nul.
+        Le rayon doit être un ``Réel``.
+        Mettre cette propriété à 0.0 pour un cone infini.
         """
         return  self._radius
     
     @radius.setter
     def radius(self, value: Real) -> None:
         value = abs(float(value))
-        assert value != 0.0, f"radius ({value}) cannot be null"
         self._radius = value
 
     @property
