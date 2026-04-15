@@ -536,6 +536,19 @@ class Pipeline:
             return width * self._context.ppu_x
         return (width * self._context.ppu_x, height * self._context.ppu_y)
     
+    def scale_to_framebuffer(self, width: float = None, height: float = None) -> float | tuple[float, float]:
+        """Convertit une taille monde en taille framebuffer
+        
+        Args:
+            width: largeur monde
+            height: hauteur monde
+        """
+        if width is None:
+            return height * self._context.ppu_y
+        if height is None:
+            return width * self._context.ppu_x
+        return (width * self._context.ppu_x * self._window.framebuffer_scale, height * self._context.ppu_y * self._window.framebuffer_scale)
+    
     @contextmanager
     def scissor_world(self, wx: float, wy: float, ww: float, wh: float, viewport: Viewport = None, camera: Camera = None):
         """Context manager appliquant un scissor test en coordonnées monde
@@ -546,13 +559,14 @@ class Pipeline:
             ww: largeur monde
             wh: hauteur monde
         """
-        x0, y0 = self.world_to_framebuffer(wx, wy, viewport=viewport, camera=camera)
-        x1, y1 = self.world_to_framebuffer(wx + ww, wy + wh, viewport=viewport, camera=camera)
+        x, y = self.world_to_framebuffer(wx, wy, viewport=viewport, camera=camera)
+        width = self.scale_to_framebuffer(ww)
+        height = self.scale_to_framebuffer(wh)
 
-        left = min(x0, x1)
-        top = min(y0, y1)
-        width = abs(x0 - x1)
-        height = abs(y0 - y1)
+        left = min(x, x - width)
+        top = min(y, y - height)
+        width = abs(width)
+        height = abs(height)
 
         was_enabled = (gl.GLboolean * 1)()
         prev_box = (c_int * 4)()
