@@ -32,8 +32,7 @@ class LightSource(ABC):
     __slots__ = (
         "_position",
         "_color", "_intensity", "_falloff",
-        "_enabled",
-        "_attach",
+        "_enabled", "_attach", "_activity",
     )
 
     def __init__(
