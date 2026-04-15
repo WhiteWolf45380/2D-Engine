@@ -27,6 +27,7 @@ class Line(MathObject):
         super().__init__()
         self._origin: Point = Point(point)
         self._vector: Vector = Vector(vector)
+        
         if not self._vector:
             raise ValueError("Null vector cannot be direction vector")
 

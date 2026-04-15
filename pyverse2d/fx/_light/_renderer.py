@@ -341,8 +341,8 @@ class LightRenderer:
             positions[i] = (float(fx), float(fy))
             directions[i] = pipeline.world_to_framebuffer_dir_normalized(light.direction.x, light.direction.y)
             radii[i] = light.radius * pipeline.ppu * fb_scale
-            inner_angles[i] = math.radians(light.inner_angle)
-            outer_angles[i] = math.radians(light.outer_angle)
+            inner_angles[i] = math.radians(light.get_inner_angle())
+            outer_angles[i] = math.radians(light.get_outer_angle())
             colors[i] = light.color.rgb
             intensities[i] = light.intensity
 
