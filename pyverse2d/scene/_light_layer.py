@@ -150,7 +150,7 @@ class LightLayer(Layer):
 
     def _draw(self, pipeline: Pipeline) -> None:
         """Affichage"""
-        self._renderer.render_ambient(pipeline, self._ambient, self._active_points)
+        self._renderer.render_ambient(pipeline, self._ambient, self._active_points, self._active_cones)
         self._renderer.render_tint(pipeline, self._tint.rgb, self._tint_strength)
 
     # ======================================== LIFE CYCLE ========================================
