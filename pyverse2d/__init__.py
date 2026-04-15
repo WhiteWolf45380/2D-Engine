@@ -123,7 +123,7 @@ def run(on_update: Callable[[float], None] = None, on_draw: Callable[[], None] =
 
     # Lancement
     time.schedule(_update)
-    pyglet.app.run(time.target_dt)
+    pyglet.app.run(time.target_dt if time.target_dt is not None else 1 / 9999)
 
 def stop():
     """Arrête proprement le moteur"""
