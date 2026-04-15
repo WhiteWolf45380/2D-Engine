@@ -130,5 +130,5 @@ class ConeLight(LightSource):
         """
         theta = math.radians(angle)
         x, y = self._direction
-        self._position.x = x * math.cos(theta) - y * math.sin(theta)
-        self._position.y = x * math.sin(theta) + y * math.cos(theta)
+        self._direction.x = x * math.cos(theta) - y * math.sin(theta)
+        self._direction.y = x * math.sin(theta) + y * math.cos(theta)
