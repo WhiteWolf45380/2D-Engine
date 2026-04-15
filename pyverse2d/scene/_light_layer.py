@@ -116,7 +116,7 @@ class LightLayer(Layer):
             source: source à retirer
         """
         if source.is_enabled():
-            self._get_active_list(source)
+            self._get_active_list(source).remove(source)
         self._sources.discard(source)
 
     def get_sources(self) -> set[LightSource]:

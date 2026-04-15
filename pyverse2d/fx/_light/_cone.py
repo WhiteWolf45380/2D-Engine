@@ -83,6 +83,7 @@ class ConeLight(LightSource):
     def radius(self, value: Real) -> None:
         value = abs(float(value))
         assert value != 0.0, f"radius ({value}) cannot be null"
+        self._radius = value
 
     @property
     def angle(self) -> float:
@@ -97,6 +98,7 @@ class ConeLight(LightSource):
     def angle(self, value: Real) -> None:
         value = abs(float(value))
         assert  value != 0.0, f"angle ({value}) cannot be null"
+        self._angle = value
     
     @property
     def softness(self) -> float:
@@ -111,6 +113,7 @@ class ConeLight(LightSource):
     def softness(self, value: Real) -> None:
         value = float(value)
         assert 0.0 <= value <= 1.0, f"softness ({value}) must be within 0.0 and 1.0"
+        self._softness = value
 
     # ======================================== GETTERS ========================================
     def get_inner_angle(self) -> float:
