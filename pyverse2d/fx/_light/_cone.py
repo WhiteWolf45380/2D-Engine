@@ -8,6 +8,7 @@ from ...math.easing import EasingFunc
 from ...asset import Color
 
 from numbers import Real
+import math
 
 # ======================================== IMPORTS ========================================
 class ConeLight(LightSource):
@@ -121,3 +122,13 @@ class ConeLight(LightSource):
         return self._angle
     
     # ======================================== INTERFACE ========================================
+    def rotate(self, angle: Real) -> None:
+        """Applique une rotation dans le sens trigonométrique *(CCW)*
+
+        Args:
+            angle: angle de rotation *en degrés*
+        """
+        theta = math.radians(angle)
+        x, y = self._direction
+        self._position.x = x * math.cos(theta) - y * math.sin(theta)
+        self._position.y = x * math.sin(theta) + y * math.cos(theta)
