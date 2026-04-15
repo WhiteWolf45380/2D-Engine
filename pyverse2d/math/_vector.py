@@ -26,13 +26,13 @@ class Vector(MathObject):
         return super().__new__(cls)
 
     def __init__(self, x, y=None):
-        if isinstance(x, Vector) and y is None:
+        if y is None and isinstance(x, Vector):
             return
         super().__init__()
-        if isinstance(x, (tuple, list)) and y is None:
+        if y is None and isinstance(x, (tuple, list)):
             x, y = x[0], x[1]
-        self._x: float = round(float(expect(x, Real)), self.PRECISION)
-        self._y: float = round(float(expect(y, Real)), self.PRECISION)
+        self._x: float = round(float(x), self.PRECISION)
+        self._y: float = round(float(y), self.PRECISION)
 
     # ======================================== FACTORY INTERNE ========================================
     @classmethod
