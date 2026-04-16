@@ -430,52 +430,31 @@ class LightRenderer:
             c_colors[i] = light.color.rgb
             c_intensities[i] = light.intensity
 
-        scene_fbo = pipeline.fbo
-        temp_fbo = pipeline._get_temp_fbo(scene_fbo)
-
-        temp_fbo.bind()
-        temp_fbo.clear()
-        program.use()
-
-        # Uniforms scalaires
-        program['u_ambient'] = ambient
-        program['u_light_scale'] = light_scale
-        program['u_point_count'] = len(points)
-        program['u_cone_count'] = len(cones)
-        program['u_point_positions'] = p_positions
-        program['u_point_radii'] = p_radii
-        program['u_point_colors'] = p_colors
-        program['u_point_intensities'] = p_intensities
-        program['u_cone_positions'] = c_positions
-        program['u_cone_directions'] = c_directions
-        program['u_cone_radii'] = c_radii
-        program['u_cone_inner_angles'] = c_inner_angles
-        program['u_cone_outer_angles'] = c_outer_angles
-        program['u_cone_colors'] = c_colors
-        program['u_cone_intensities'] = c_intensities
-
-        # Texture 0 : scene FBO
-        program['u_texture'] = 0
-        gl.glActiveTexture(gl.GL_TEXTURE0)
-        gl.glBindTexture(gl.GL_TEXTURE_2D, scene_fbo.texture_id)
-
-        # Texture 1 : point LUT
-        program['u_point_lut'] = 1
+        # Binding des textures supplémentaires avant apply_shader
         gl.glActiveTexture(gl.GL_TEXTURE1)
         gl.glBindTexture(gl.GL_TEXTURE_2D, point_atlas)
-
-        # Texture 2 : cone LUT
-        program['u_cone_lut'] = 2
         gl.glActiveTexture(gl.GL_TEXTURE2)
         gl.glBindTexture(gl.GL_TEXTURE_2D, cone_atlas)
 
-        pipeline.quad.draw_raw()
-
-        # Blit final
-        scene_fbo.bind()
-        scene_fbo.clear()
-        pipeline.quad.blit(temp_fbo.texture_id)
-        scene_fbo.bind()
+        pipeline.apply_shader(program,
+            u_ambient=ambient,
+            u_light_scale=light_scale,
+            u_point_count=len(points),
+            u_cone_count=len(cones),
+            u_point_positions=p_positions,
+            u_point_radii=p_radii,
+            u_point_colors=p_colors,
+            u_point_intensities=p_intensities,
+            u_cone_positions=c_positions,
+            u_cone_directions=c_directions,
+            u_cone_radii=c_radii,
+            u_cone_inner_angles=c_inner_angles,
+            u_cone_outer_angles=c_outer_angles,
+            u_cone_colors=c_colors,
+            u_cone_intensities=c_intensities,
+            u_point_lut=1,
+            u_cone_lut=2,
+        )
 
         gl.glDeleteTextures(1, ctypes.byref(point_atlas))
         gl.glDeleteTextures(1, ctypes.byref(cone_atlas))
