@@ -99,6 +99,7 @@ class Border(Widget):
     def shape(self, value: Shape) -> None:
         """Fixe la forme de la surface"""
         self._shape = expect(value, Shape)
+        self._invalidate_scissor()
 
     @width.setter
     def width(self, value: int) -> None:
@@ -119,11 +120,13 @@ class Border(Widget):
     def scale(self, value: Real) -> None:
         """Fixe le facteur de redimensionnement"""
         self._scale = positive(not_null(float(expect(value, Real))))
+        self._invalidate_scissor()
     
     @rotation.setter
     def rotation(self, value: Real) -> None:
         """Fixe l'angle de rotation en degrés"""
         self._rotation = float(expect(value, Real))
+        self._invalidate_scissor()
 
     # ======================================== TRANSFORMATIONS ========================================
     def resize(self, scale: Real) -> None:
@@ -134,6 +137,7 @@ class Border(Widget):
             scale(Real): facteur de redimensionnement
         """
         self._scale *= positive(not_null(float(expect(scale, Real))))
+        self._invalidate_scissor()
     
     def rotate(self, angle: Real) -> None:
         """
@@ -143,6 +147,7 @@ class Border(Widget):
             angle(Real): angle de rotation en degrés
         """
         self._rotation += float(expect(angle, Real))
+        self._invalidate_scissor()
 
     # ======================================== LIFE CYCLE ========================================
     def _update(self, dt: float) -> None:

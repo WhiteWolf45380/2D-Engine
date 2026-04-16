@@ -67,6 +67,7 @@ class Sprite(Widget):
     @image.setter
     def image(self, value: Image) -> None:
         self._image = expect(value, Image)
+        self._invalidate_scissor()
 
     @property
     def scale(self) -> float:
@@ -79,6 +80,7 @@ class Sprite(Widget):
     @scale.setter
     def scale(self, value: Real) -> None:
         self._scale = positive(not_null(float(expect(value, Real))))
+        self._invalidate_scissor()
 
     @property
     def flip_x(self) -> bool:
@@ -91,6 +93,7 @@ class Sprite(Widget):
     @flip_x.setter
     def flip_x(self, value: bool) -> None:
         self._flip_x = expect(value, bool)
+        self._invalidate_scissor()
 
     @property
     def flip_y(self) -> bool:
@@ -103,6 +106,7 @@ class Sprite(Widget):
     @flip_y.setter
     def flip_y(self, value: bool) -> None:
         self._flip_y = expect(value, bool)
+        self._invalidate_scissor()
 
     @property
     def rotation(self) -> float:
@@ -114,6 +118,7 @@ class Sprite(Widget):
     @rotation.setter
     def rotation(self, value: Real) -> None:
         self._rotation = float(expect(value, Real))
+        self._invalidate_scissor()
 
     @property
     def color(self) -> Color:
@@ -149,6 +154,7 @@ class Sprite(Widget):
         Le facteur de redimensionnement doit être un réel positif non nul
         """
         self._scale *= positive(not_null(float(expect(factor, Real))))
+        self._invalidate_scissor()
 
     def rotate(self, angle: Real) -> None:
         """Applique une rotation à l'image
@@ -156,6 +162,7 @@ class Sprite(Widget):
         L'angle de rotation est en ``degrés`` et la rotation se fait dans le sens ``horaire``
         """
         self._rotation += float(expect(angle, Real))
+        self._invalidate_scissor()
 
     # ======================================== LIFE CYCLE ========================================
     def _update(self, dt: float) -> None:

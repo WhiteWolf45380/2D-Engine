@@ -9,6 +9,9 @@ from .._shape import Shape
 
 from ._behavior import Behavior
 
+import pyglet.gl as gl
+from pyglet.graphics import Group
+
 from abc import ABC, abstractmethod
 from bisect import insort
 from numbers import Real
@@ -25,6 +28,41 @@ if TYPE_CHECKING:
         FocusBehavior,
     )
 
+# ======================================== GROUP ========================================
+class WidgetGroup(Group):
+    """Groupe spécialisé des widgets"""
+    _cache: dict[tuple, WidgetGroup] = {}
+
+    def __init__(self, order=0, parent=None, scissor=None):
+        super().__init__(order=order, parent=parent)
+        self.scissor = scissor
+        self.resolved = (
+            intersect(parent.resolved, scissor) if scissor and isinstance(parent, WidgetGroup) and parent.resolved
+            else scissor if scissor
+            else parent.resolved if isinstance(parent, WidgetGroup)
+            else None
+        )
+
+    def set_state(self):
+        if self.resolved is not None:
+            gl.glEnable(gl.GL_SCISSOR_TEST)
+            gl.glScissor(*self.resolved)
+
+    def unset_state(self):
+        if self.resolved is not None:
+            gl.glDisable(gl.GL_SCISSOR_TEST)
+
+    @classmethod
+    def get_group(cls, order: int, parent: WidgetGroup | None, scissor: tuple | None) -> WidgetGroup:
+        key = (order, id(parent), scissor)
+        if key not in cls._cache:
+            cls._cache[key] = cls(order=order, parent=parent, scissor=scissor)
+        return cls._cache[key]
+
+    @classmethod
+    def invalidate(cls, parent_id: int) -> None:
+        cls._cache = {k: v for k, v in cls._cache.items() if k[1] != parent_id}
+
 # ======================================== ABSTRACT CLASS ========================================
 class Widget(ABC):
     """Classe abstraite des composants UI
@@ -37,28 +75,35 @@ class Widget(ABC):
     __slots__ = (
         "_layer", "_parent", "_children",
         "_position", "_anchor",
-        "_opacity", "_active", "_visible",
+        "_opacity", "_active", "_visible", "_clipping",
         "_activate_process", "_deactivate_process", "_show_process", "_hide_process",
         "_behaviors", "_click", "_hover", "_select", "_focus",
+        "_cached_scissor", "_scissor_dirty",
     )
 
     def __init__(
             self,
             position: Point = (0, 0),
             anchor: Point = (0.5, 0.5),
-            opacity: float = 1.0
+            opacity: float = 1.0,
+            clipping: bool = False,
         ):
-        # Arbre
-        self._layer: GuiLayer = None
-        self._parent: Widget = None
-        self._children: list[WidgetWrapper] = []
-
         # position
         self._position: Point = Point(position)
         self._anchor: Point = Point(anchor)
 
         # Design
-        self._opacity: float = clamped(float(expect(opacity, Real)))
+        self._opacity: float = float(opacity)
+        self._clipping: bool = clipping
+
+        if __debug__:
+            clamped(self._opacity)
+            if not isinstance(self._clipping, bool): raise ValueError(f"clipping ({self._clipping}) must be a boolean")
+            
+        # Arbre
+        self._layer: GuiLayer = None
+        self._parent: Widget = None
+        self._children: list[WidgetWrapper] = []
 
         # Etat
         self._active: bool = True
@@ -76,6 +121,10 @@ class Widget(ABC):
         self._hover: HoverBehavior = None
         self._select: SelectBehavior = None
         self._focus: FocusBehavior = None
+
+        # Scissor test
+        self._cached_scissor: tuple | None = None
+        self._scissor_dirty: bool = True
 
     # ======================================== PROPERTIES ========================================
     @property
@@ -110,7 +159,8 @@ class Widget(ABC):
     
     @position.setter
     def position(self, value: Point) -> None:
-        self._position = Point(value)
+        self._position.x, self._position.y = value
+        self._invalidate_scissor()
     
     @property
     def x(self) -> float:
@@ -123,6 +173,7 @@ class Widget(ABC):
     @x.setter
     def x(self, value: Real) -> None:
         self._position.x = value
+        self._invalidate_scissor()
     
     @property
     def y(self) -> float:
@@ -135,6 +186,7 @@ class Widget(ABC):
     @y.setter
     def y(self, value: Real) -> None:
         self._position.y = value
+        self._invalidate_scissor()
     
     @property
     def absolute_position(self) -> Point:
@@ -168,7 +220,8 @@ class Widget(ABC):
     
     @anchor.setter
     def anchor(self, value: Point) -> None:
-        self._anchor = Point(value)
+        self._anchor.x, self._anchor.y = value
+        self._invalidate_scissor()
     
     @property
     def anchor_x(self) -> float:
@@ -181,6 +234,7 @@ class Widget(ABC):
     @anchor_x.setter
     def anchor_x(self, value: Real) -> None:
         self._anchor.x = value
+        self._invalidate_scissor()
     
     @property
     def anchor_y(self) -> float:
@@ -193,6 +247,7 @@ class Widget(ABC):
     @anchor_y.setter
     def anchor_y(self, value: Real) -> None:
         self._anchor.y = value
+        self._invalidate_scissor()
     
     @property
     def opacity(self) -> float:
@@ -204,7 +259,24 @@ class Widget(ABC):
     
     @opacity.setter
     def opacity(self, value: Real) -> None:
-        self._opacity: float = clamped(float(expect(value, Real)))
+        value = float(value)
+        assert 0.0 <= value <= 1.0, f"opacity ({value}) must be within 0.0 and 1.0"
+        self._opacity: float = value
+
+    @property
+    def clipping(self) -> bool:
+        """Limitation du rendu
+
+        Lorsque cette propriété est activée, les widgets enfants sont rendus strictement dans la zone de ce widget.
+        """
+        return self._clipping
+    
+    @clipping.setter
+    def clipping(self, value: bool) -> None:
+        assert isinstance(value, bool), f"clipping ({value}) must be a boolean"
+        if value != self._clipping:
+            self._clipping = value
+            self._invalidate_scissor()
     
     @property
     @abstractmethod
@@ -518,6 +590,7 @@ class Widget(ABC):
         # Sauvegarde du contexte de rendu
         opacity = context.opacity
         origin = context.origin
+        group = context.group
 
         # Actualisation du contexte de rendu
         self._update_render_context(context)
@@ -532,6 +605,7 @@ class Widget(ABC):
         # Restauration du contexte de rendu
         context.opacity = opacity
         context.origin = origin
+        context.group = group
 
         return Super.NONE
     
@@ -554,7 +628,6 @@ class Widget(ABC):
         for child in self._children:
             child.widget._switch_layer(layer)
     
-    # ======================================== HELPERS ========================================
     def _get_wrapper(self, child: Widget) -> WidgetWrapper:
         """Récupère le wrapper d'un composant"""
         for wrapper in self._children:
@@ -567,6 +640,35 @@ class Widget(ABC):
         context.z += 1
         context.origin += self._position
         context.opacity *= self._opacity
+        context.group = WidgetGroup.get_group(order=context.z, parent=context.group, scissor=self._compute_scissor() if self._clipping else None)
+
+    def _compute_scissor(self) -> tuple | None:
+        """Calcule le scissor résolu en coordonnées framebuffer"""
+        if not self._scissor_dirty:
+            return self._cached_scissor
+        if not self._clipping:
+            result = self._parent._compute_scissor() if self._parent else None
+        else:
+            xmin, ymin, xmax, ymax = self.hitbox.world_bounding_box(
+                x=self.absolute_x, y=self.absolute_y,
+                anchor_x=self.anchor_x, anchor_y=self.anchor_y,
+                scale=getattr(self, "_scale", 1.0),
+                rotation=getattr(self, "_rotation", 0.0),
+            )
+            scissor = (int(xmin), int(ymin), int(xmax - xmin), int(ymax - ymin))
+            parent_scissor = self._parent._compute_scissor() if self._parent else None
+            result = intersect(parent_scissor, scissor) if parent_scissor else scissor
+        self._cached_scissor = result
+        self._scissor_dirty = False
+        return result
+
+    def _invalidate_scissor(self) -> None:
+        """Propage l'invalidation du scissor aux enfants"""
+        if not self._scissor_dirty:
+            self._scissor_dirty = True
+            WidgetGroup.invalidate(id(self))
+            for child in self._children:
+                child.widget._invalidate_scissor()
 
 # ======================================== WRAPPER ========================================
 class WidgetWrapper:
@@ -593,3 +695,13 @@ class WidgetWrapper:
     def __lt__(self, other: WidgetWrapper) -> bool:
         """Comparaison inférieure"""
         return self.z < other.z
+    
+# ======================================== HELPERS ========================================
+def intersect(a: tuple[int, int, int, int], b: tuple[int, int, int, int]) -> tuple[int, int, int, int]:
+    ax, ay, aw, ah = a
+    bx, by, bw, bh = b
+    x = max(ax, bx)
+    y = max(ay, by)
+    w = max(0, min(ax + aw, bx + bw) - x)
+    h = max(0, min(ay + ah, by + bh) - y)
+    return x, y, w, h

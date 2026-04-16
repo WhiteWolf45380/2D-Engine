@@ -1,5 +1,6 @@
 # ======================================== IMPORTS ========================================
 from ..math import Point
+from ..abc._gui._widget import WidgetGroup
 
 from dataclasses import dataclass
 
@@ -7,6 +8,7 @@ from dataclasses import dataclass
 @dataclass(slots=True)
 class RenderContext:
     """Contexte de rendu des widgets"""
+    z: int                  # z-order global
     origin: Point           # ancre globale
     opacity: float          # opacité cumulée
-    z: int                  # z-order global
+    group: WidgetGroup      # groupe courant

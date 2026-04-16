@@ -107,6 +107,7 @@ class Label(Widget):
     @text.setter
     def text(self, value: Text) -> None:
         self._text = expect(value, Text)
+        self._invalidate_scissor()
 
     @property
     def rotation(self) -> float:
@@ -119,6 +120,7 @@ class Label(Widget):
     @rotation.setter
     def rotation(self, value: Real) -> None:
         self._rotation = float(expect(value, Real))
+        self._invalidate_scissor()
 
     @property
     def weight(self) -> str:
@@ -181,6 +183,7 @@ class Label(Widget):
     @width.setter
     def width(self, value: int | None) -> None:
         self._width = positive(not_null(expect(value, int))) if value is not None else None
+        self._invalidate_scissor()
 
     @property
     def height(self) -> int | None:
@@ -194,6 +197,7 @@ class Label(Widget):
     @height.setter
     def height(self, value: int | None) -> None:
         self._height = positive(not_null(expect(value, int))) if value is not None else None
+        self._invalidate_scissor()
 
     @property
     def multiline(self) -> bool:
@@ -206,6 +210,7 @@ class Label(Widget):
     @multiline.setter
     def multiline(self, value: bool) -> None:
         self._multiline = expect(value, bool)
+        self._invalidate_scissor()
 
     @property
     def line_spacing(self) -> int | None:
@@ -218,6 +223,7 @@ class Label(Widget):
     @line_spacing.setter
     def line_spacing(self, value: int | None) -> None:
         self._line_spacing = expect(value, int) if value is not None else None
+        self._invalidate_scissor()
     
     @property
     def wrap_lines(self) -> bool:
@@ -231,6 +237,7 @@ class Label(Widget):
     @wrap_lines.setter
     def wrap_lines(self, value: bool) -> None:
         self._wrap_lines = expect(value, bool)
+        self._invalidate_scissor()
 
     @property
     def align(self) -> HorizontalAlign:
@@ -257,6 +264,7 @@ class Label(Widget):
     @margin.setter
     def margin(self, value: int) -> None:
         self._margin = positive(not_null(expect(value, int)))
+        self._invalidate_scissor()
 
     @property
     def hitbox(self):
