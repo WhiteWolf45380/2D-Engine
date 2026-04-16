@@ -59,6 +59,7 @@ def _build_frag_points(max_lights: int) -> str:
 #version 330 core
 uniform sampler2D u_texture;
 uniform float u_ambient;
+uniform float u_light_scale;
 uniform int u_count;
 uniform vec2 u_positions[{max_lights}];
 uniform float u_radii[{max_lights}];
@@ -93,6 +94,7 @@ def _build_frag_cones(max_lights: int) -> str:
 #version 330 core
 uniform sampler2D u_texture;
 uniform float u_ambient;
+uniform float u_light_scale;
 uniform int u_count;
 uniform vec2 u_positions[{max_lights}];
 uniform vec2 u_directions[{max_lights}];
@@ -146,6 +148,7 @@ def _build_frag_points_cones(max_points: int, max_cones: int) -> str:
 #version 330 core
 uniform sampler2D u_texture;
 uniform float u_ambient;
+uniform float u_light_scale;
 
 uniform int u_point_count;
 uniform vec2 u_point_positions[{max_points}];
