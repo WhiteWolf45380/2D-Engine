@@ -12,8 +12,7 @@ _UNSET = object()
 
 # ======================================== PUBLIC ========================================
 class PygletLabelRenderer:
-    """
-    Renderer pyglet unifié pour un label texte
+    """Renderer pyglet unifié pour un label texte
 
     Args:
         text: texte à rendre

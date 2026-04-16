@@ -6,6 +6,10 @@ from ...asset import Color, Image
 
 import pyglet
 import pyglet.sprite
+from pyglet.gl import (
+    glBindTexture, glTexParameteri,
+    GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE
+)
 
 import os
 
@@ -51,7 +55,6 @@ class PygletSpriteRenderer:
         "_z", "_pipeline",
         "_sprite",
     )
-    _cache: dict[str, pyglet.image.AbstractImage] = {}
 
     def __init__(
         self,
@@ -88,22 +91,20 @@ class PygletSpriteRenderer:
         self._sprite: pyglet.sprite.Sprite = None
         self._build()
 
-    # ======================================== CACHE ========================================
+    # ======================================== LOADING ========================================
     @classmethod
     def _load_image(cls, path: str) -> pyglet.image.AbstractImage | None:
-        """Charge et met en cache une texture depuis son chemin"""
-        if path in cls._cache:
-            return cls._cache[path]
-
+        """Charge  une texture depuis son chemin"""
         directory = os.path.dirname(os.path.abspath(path))
         if directory not in pyglet.resource.path:
             pyglet.resource.path.append(directory)
             pyglet.resource.reindex()
 
-        filename = os.path.basename(path)
         try:
-            raw = pyglet.resource.image(filename, atlas=False)
-            cls._cache[path] = raw
+            raw = pyglet.resource.image(os.path.basename(path), atlas=False)
+            glBindTexture(GL_TEXTURE_2D, raw.get_texture().id)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
             return raw
         except pyglet.resource.ResourceNotFoundException:
             print(f"[PygletSpriteRenderer] Cannot load image: {path}")
