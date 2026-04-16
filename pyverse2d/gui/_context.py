@@ -7,6 +7,6 @@ from dataclasses import dataclass
 @dataclass(slots=True)
 class RenderContext:
     """Contexte de rendu des widgets"""
-    origin: Point       # ancre globale
-    opacity: float      # opacité cumulée
-    z: int              # Zorder global
+    origin: Point           # ancre globale
+    opacity: float          # opacité cumulée
+    z: int                  # z-order global

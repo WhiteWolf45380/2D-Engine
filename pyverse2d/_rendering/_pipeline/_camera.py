@@ -1,10 +1,10 @@
 # ======================================== IMPORTS ========================================
 from __future__ import annotations
 
-from .._internal import expect, not_null, positive, clamped, not_in, over, Positionnal
-from ..math import Point, Vector
-from ..math.easing import EasingFunc, is_easing
-from ..abc import Request, Space
+from ..._internal import expect, not_null, positive, clamped, not_in, over, Positionnal
+from ...math import Point, Vector
+from ...math.easing import EasingFunc, is_easing
+from ...abc import Request, Space
 
 from numbers import Real
 from dataclasses import dataclass

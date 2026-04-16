@@ -1,12 +1,12 @@
 # ======================================== IMPORTS ========================================
 from __future__ import annotations
 
-from .._flag import CoordSpace
-from ..abc import Layer
+from ..._flag import CoordSpace
+from ...abc import Layer
+
+from .. import Framebuffer, ScreenQuad, StencilRenderer
 
 from . import Window, LogicalScreen, Viewport, Camera, CoordSpace, CoordContext
-from ._fbo import Framebuffer
-from ._quad import ScreenQuad
 
 import pyglet.gl as gl
 from pyglet.graphics import Batch, Group
@@ -20,7 +20,7 @@ from ctypes import c_int
 import math
 
 if TYPE_CHECKING: 
-    from ..scene import Scene
+    from ...scene import Scene
 
 # ======================================== DATA ========================================
 @dataclass(slots=True, frozen=True)
@@ -604,6 +604,35 @@ class Pipeline:
             gl.glScissor(*prev_box)
             if not was_enabled[0]:
                 gl.glDisable(gl.GL_SCISSOR_TEST)
+
+    @contextmanager
+    def stencil_push(self, stencil_renderer: StencilRenderer, depth: int):
+        """Ajoute un niveau de stencil"""
+        gl.glEnable(gl.GL_STENCIL_TEST)
+        gl.glStencilMask(0xFF)
+
+        gl.glStencilFunc(gl.GL_ALWAYS, depth, 0xFF)
+        gl.glStencilOp(gl.GL_KEEP, gl.GL_KEEP, gl.GL_INCR)
+        gl.glColorMask(False, False, False, False)
+        stencil_renderer.draw()
+        gl.glColorMask(True, True, True, True)
+
+        gl.glStencilFunc(gl.GL_EQUAL, depth, 0xFF)
+        gl.glStencilOp(gl.GL_KEEP, gl.GL_KEEP, gl.GL_KEEP)
+
+        try:
+            yield
+        finally:
+            # Décrément
+            gl.glStencilFunc(gl.GL_ALWAYS, depth - 1, 0xFF)
+            gl.glStencilOp(gl.GL_KEEP, gl.GL_KEEP, gl.GL_DECR)
+            gl.glColorMask(False, False, False, False)
+            stencil_renderer.draw()
+            gl.glColorMask(True, True, True, True)
+
+            if depth == 1:
+                gl.glDisable(gl.GL_STENCIL_TEST)
+                gl.glStencilMask(0xFF)
         
     # ======================================== INTERNALS ========================================
     def _get_temp_fbo(self, fbo: Framebuffer) -> Framebuffer:

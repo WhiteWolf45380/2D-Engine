@@ -1,8 +1,8 @@
 # ======================================== IMPORTS ========================================
 from __future__ import annotations
 
-from .._internal import expect
-from ..abc import Space
+from ..._internal import expect
+from ...abc import Space
 
 from ._screen import LogicalScreen
 

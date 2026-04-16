@@ -1,8 +1,14 @@
 # ======================================== IMPORTS ========================================
-from ._window import Window
-from ._screen import LogicalScreen
-from ._viewport import Viewport
-from ._camera import Camera
+from ._fbo import Framebuffer
+from ._quad import ScreenQuad
+
+from ._pipeline import (
+    Window,
+    LogicalScreen,
+    Viewport,
+    Camera,
+    Pipeline,
+)
 
 from ._coord import (
     CoordSpace,
@@ -23,8 +29,6 @@ from ._coord import (
     CoordContext,
 )
 
-from ._pipeline import Pipeline
-
 from ._pyglet_renderers import (
     PygletShapeRenderer,
     PygletSpriteRenderer,
@@ -33,10 +37,14 @@ from ._pyglet_renderers import (
 
 # ======================================== EXPORTS ========================================
 __all__ = [
+    "Framebuffer",
+    "ScreenQuad",
+
     "Window",
     "LogicalScreen",
     "Viewport",
     "Camera",
+    "Pipeline",
 
     "CoordSpace",
     "world_to_frustum",
@@ -55,11 +63,7 @@ __all__ = [
     "frustum_to_world",
     "CoordContext",
 
-    "Pipeline",
-
     "PygletShapeRenderer",
     "PygletSpriteRenderer",
     "PygletLabelRenderer",
-
-    "get_glsl_easing",
 ]

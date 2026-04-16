@@ -9,7 +9,7 @@ from ..._rendering import Pipeline, PygletShapeRenderer, PygletSpriteRenderer, P
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ..._rendering._pipeline import Pipeline
+    from ..._rendering import Pipeline
 
 # ======================================== RENDER ORDER ========================================
 _ORDER_SHAPE = 0

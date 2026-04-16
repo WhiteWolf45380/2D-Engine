@@ -5,7 +5,7 @@ from ...typing import BorderAlign
 from ...asset import Color
 from ...abc import Shape
 
-from .._pipeline import Pipeline
+from .. import Pipeline
 
 import pyglet
 import pyglet.gl

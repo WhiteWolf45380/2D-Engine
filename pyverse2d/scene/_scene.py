@@ -2,12 +2,9 @@
 from __future__ import annotations
 
 from .._internal import expect
-from .._rendering._pipeline import Pipeline
 from .._flag import StackMode, SceneState
+from .._rendering import Pipeline, Camera, Viewport
 from ..abc import Layer
-
-from .._rendering._camera import Camera
-from .._rendering._viewport import Viewport
 
 from typing import Callable
 import bisect
