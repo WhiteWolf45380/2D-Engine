@@ -1,12 +1,13 @@
 # ======================================== IMPORTS ========================================
 from __future__ import annotations
 
-from ..._flag import CoordSpace
-from ...abc import Layer
+from .._flag import CoordSpace
+from ..abc import Layer
 
-from .. import Framebuffer, ScreenQuad
-
-from . import Window, LogicalScreen, Viewport, Camera, CoordSpace, CoordContext
+from ._quad import ScreenQuad
+from ._fbo import Framebuffer
+from ._spaces import Window, LogicalScreen, Viewport, Camera
+from ._coord import CoordSpace, CoordContext
 
 import pyglet.gl as gl
 from pyglet.graphics import Batch, Group
@@ -20,7 +21,7 @@ from ctypes import c_int
 import math
 
 if TYPE_CHECKING: 
-    from ...scene import Scene
+    from ..scene import Scene
 
 # ======================================== DATA ========================================
 @dataclass(slots=True, frozen=True)

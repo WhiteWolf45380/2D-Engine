@@ -2,12 +2,11 @@
 from ._fbo import Framebuffer
 from ._quad import ScreenQuad
 
-from ._pipeline import (
+from ._spaces import (
     Window,
     LogicalScreen,
     Viewport,
     Camera,
-    Pipeline,
 )
 
 from ._coord import (
@@ -29,6 +28,8 @@ from ._coord import (
     CoordContext,
 )
 
+from ._pipeline import Pipeline
+
 from ._pyglet_renderers import (
     PygletShapeRenderer,
     PygletSpriteRenderer,
@@ -44,7 +45,6 @@ __all__ = [
     "LogicalScreen",
     "Viewport",
     "Camera",
-    "Pipeline",
 
     "CoordSpace",
     "world_to_frustum",
@@ -62,6 +62,8 @@ __all__ = [
     "ndc_to_frustum",
     "frustum_to_world",
     "CoordContext",
+
+    "Pipeline",
 
     "PygletShapeRenderer",
     "PygletSpriteRenderer",
