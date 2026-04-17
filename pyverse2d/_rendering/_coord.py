@@ -1,13 +1,12 @@
 # ======================================== IMPORTS ========================================
 from .._flag import CoordSpace
 
+from ._spaces import Window, LogicalScreen, Viewport, Camera
+
+
 import math
-from typing import Callable, TYPE_CHECKING
+from typing import Callable
 from dataclasses import dataclass
-
-if TYPE_CHECKING:
-    from . import Window, LogicalScreen, Viewport, Camera
-
 # ======================================== CONSTANTS ========================================
 _PIPELINE = [
     CoordSpace.WORLD,
