@@ -223,8 +223,12 @@ class Pipeline:
         lx, ly, lw, lh, _, _ = self._context.viewport_resolve
 
         # Calcul du viewport OpenGl
-        self._context.gl_viewport = (lx, ly, lw, lh)
-        gl.glViewport(lx, ly, lw, lh)
+        gl_x = int(lx)
+        gl_y = int(ly)
+        gl_w = int(lw)
+        gl_h = int(lh)
+        self._context.gl_viewport = (gl_x, gl_y, gl_w, gl_h)
+        gl.glViewport(gl_x, gl_y, gl_w, gl_h)
 
         # Assignation du FrameBuffer
         self._context.fbo.bind()
