@@ -526,19 +526,6 @@ class Pipeline:
             return width * self._context.ppu_x
         return (width * self._context.ppu_x, height * self._context.ppu_y)
     
-    def scale_to_framebuffer(self, width: float = None, height: float = None) -> float | tuple[float, float]:
-        """Convertit une taille monde en taille framebuffer
-        
-        Args:
-            width: largeur monde
-            height: hauteur monde
-        """
-        if width is None:
-            return height * self._context.ppu_y
-        if height is None:
-            return width * self._context.ppu_x
-        return (width * self._context.ppu_x * self._window.framebuffer_scale, height * self._context.ppu_y * self._window.framebuffer_scale)
-    
     @contextmanager
     def scissor_world(self, wx: float, wy: float, ww: float, wh: float, viewport: Viewport = None, camera: Camera = None):
         """Context manager appliquant un scissor test en coordonnées monde
