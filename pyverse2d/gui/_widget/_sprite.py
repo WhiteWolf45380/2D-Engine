@@ -189,7 +189,8 @@ class Sprite(Widget):
                 color = self._color,
                 opacity = context.opacity,
                 z = context.z,
-                pipeline = pipeline
+                pipeline = pipeline,
+                parent=context.group,
             )
         
         # Mise à jour du renderer
@@ -208,7 +209,8 @@ class Sprite(Widget):
                 color = self._color,
                 opacity = context.opacity,
                 z = context.z,
-                pipeline = pipeline
+                pipeline = pipeline,
+                parent=context.group,
             )
     
     def _destroy(self):

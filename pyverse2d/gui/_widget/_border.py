@@ -174,6 +174,7 @@ class Border(Widget):
                 opacity = context.opacity,
                 pipeline = pipeline,
                 z = context.z,
+                parent=context.group,
             )
 
         # Mise à jour du renderer
@@ -192,6 +193,7 @@ class Border(Widget):
                 opacity = context.opacity,
                 pipeline=pipeline,
                 z=context.z,
+                parent=context.group,
             )
  
     def _destroy(self) -> None:

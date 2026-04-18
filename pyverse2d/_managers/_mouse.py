@@ -150,6 +150,11 @@ class MouseManager(Manager):
     # ======================================== BUTTONS ========================================
     @staticmethod
     def name(button: Button) -> str:
+        """Renvoie le ``str`` d'un bouton
+        
+        Args:
+            button: bouton à transformer
+        """
         return _NAMES.get(button, "Unknown")
 
     # ======================================== PROPERTIES ========================================

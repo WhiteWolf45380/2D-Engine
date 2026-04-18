@@ -9,7 +9,7 @@ from .. import Pipeline
 
 import pyglet
 import pyglet.gl
-from pyglet.graphics import ShaderGroup
+from pyglet.graphics import ShaderGroup, Group
 from pyglet.graphics.shader import ShaderProgram
 
 import numpy as np
@@ -38,6 +38,7 @@ class PygletShapeRenderer:
         opacity: opacité globale [0.0, 1.0]
         z: z-order
         pipeline: pipeline de rendu
+        parent: groupe parent
     """
     __slots__ = (
         "_shape",
@@ -45,7 +46,7 @@ class PygletShapeRenderer:
         "_scale", "_rotation",
         "_filling", "_color",
         "_border_width", "_border_align", "_border_color",
-        "_opacity", "_z", "_pipeline",
+        "_opacity", "_z", "_pipeline", "_parent",
         "_fill", "_border",
     )
 
@@ -61,11 +62,11 @@ class PygletShapeRenderer:
         return cls._PROGRAM
 
     @classmethod
-    def get_group(cls, pipeline: Pipeline, z: int = 0, order: int = 0) -> ShaderGroup:
+    def get_group(cls, pipeline: Pipeline, z: int = 0, order: int = 0, parent: Group = None) -> ShaderGroup:
         """Renvoie le groupe correspondant avec mise en cache"""
-        key = (z, order)
+        key = (z, order, parent)
         if key not in cls._GROUPS:
-            cls._GROUPS[key] = ShaderGroup(cls.get_program(), order=order, parent=pipeline.get_group(z=z))
+            cls._GROUPS[key] = ShaderGroup(cls.get_program(), order=order, parent=pipeline.get_group(z=z) if parent is None else parent)
         return cls._GROUPS[key]
 
     def __init__(
@@ -85,6 +86,7 @@ class PygletShapeRenderer:
         opacity: float = 1.0,
         z: int = 0,
         pipeline: Pipeline = None,
+        parent: Group = None,
     ):
         self._shape = shape
         self._x = x
@@ -101,6 +103,7 @@ class PygletShapeRenderer:
         self._opacity = opacity
         self._z = z
         self._pipeline = pipeline
+        self._parent = parent
 
         self._fill: _FillRenderer = None
         self._border: _BorderRenderer = None
@@ -147,6 +150,8 @@ class PygletShapeRenderer:
     def z(self) -> int: return self._z
     @property
     def pipeline(self) -> Pipeline: return self._pipeline
+    @property
+    def parent(self) -> Group: return self._parent
     
     # ======================================== VISIBILITY ========================================
     @property
@@ -184,6 +189,7 @@ class PygletShapeRenderer:
             border_color: couleur de bordure
             opacity: opacité
             z: z-order
+            parent: groupe parent
         """
         changes: set[str] = set()
         for key, value in kwargs.items():
@@ -225,7 +231,6 @@ class PygletShapeRenderer:
             self._border.delete()
             self._border = None
 
-
 # ======================================== FILL RENDERER ========================================
 class _FillRenderer:
     """Remplissage mesh-based"""
@@ -256,7 +261,7 @@ class _FillRenderer:
             mode = pyglet.gl.GL_TRIANGLES,
             indices = indexes.flatten().tolist(),
             batch = psr.pipeline.batch,
-            group = psr.get_group(pipeline=psr.pipeline, z=psr.z, order=0),
+            group = psr.get_group(pipeline=psr.pipeline, z=psr.z, order=0, parent=psr.parent),
             position = ('f', vertices.flatten().tolist()),
             colors = ('Bn', (r, g, b, a) * self._n),
         )
@@ -283,7 +288,7 @@ class _FillRenderer:
     def update(self, psr: PygletShapeRenderer, changes: set[str]) -> None:
         """Actualisation"""
         # Changement de z-order
-        if "z" in changes:
+        if "z" in changes or "parent" in changes:
             self._build(psr)
             return
         
@@ -303,7 +308,6 @@ class _FillRenderer:
         if self._vlist is not None:
             self._vlist.delete()
             self._vlist = None
-
 
 # ======================================== BORDER RENDERER ========================================
 class _BorderRenderer:
@@ -365,7 +369,7 @@ class _BorderRenderer:
     def update(self, psr: PygletShapeRenderer, changes: set[str]) -> None:
         """Actualisation"""
         # Changement de z-order
-        if "z" in changes:
+        if "z" in changes or "parent" in changes:
             self._build(psr)
             return
 
@@ -384,7 +388,6 @@ class _BorderRenderer:
         if self._vlist is not None:
             self._vlist.delete()
             self._vlist = None
-
 
 # ======================================== HELPERS ========================================
 def _world_strip(psr: PygletShapeRenderer) -> np.ndarray:

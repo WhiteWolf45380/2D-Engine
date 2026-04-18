@@ -7,6 +7,7 @@ from .. import Pipeline
 
 import pyglet
 import pyglet.text
+from pyglet.graphics import Group
 
 # ======================================== CONSTANTS ========================================
 _UNSET = object()
@@ -36,6 +37,7 @@ class PygletLabelRenderer:
         margin: marge intérieure uniforme en pixels
         z: z-order
         pipeline: pipeline de rendu
+        parent: groupe parent
     """
     __slots__ = (
         "_text",
@@ -45,7 +47,7 @@ class PygletLabelRenderer:
         "_color", "_opacity",
         "_width", "_height", "_multiline", "_wrap_lines", "_align",
         "_margin", "_line_spacing",
-        "_z", "_pipeline",
+        "_z", "_pipeline", "_parent",
         "_label",
     )
 
@@ -71,6 +73,7 @@ class PygletLabelRenderer:
         line_spacing: float = None,
         z: int = 0,
         pipeline: Pipeline = None,
+        parent: Group = None,
     ):
         # Paramètres publics
         self._text: Text = text
@@ -93,6 +96,7 @@ class PygletLabelRenderer:
         self._line_spacing: float = line_spacing
         self._z: int = z
         self._pipeline: Pipeline = pipeline
+        self._parent: Group = parent
 
         # Construction
         self._label: pyglet.text.Label = None
@@ -125,8 +129,8 @@ class PygletLabelRenderer:
             height=height,
             multiline=self._multiline,
             rotation=-self._rotation,
-            batch=self._pipeline.batch if self._pipeline else None,
-            group=self._pipeline.get_group(z=self._z) if self._pipeline else None,
+            batch=self._pipeline,
+            group=self._pipeline.get_group(z=self._z) if self._parent is None else self._parent,
         )
         self._apply_styles()
         self._refresh_position()
@@ -251,6 +255,11 @@ class PygletLabelRenderer:
     def pipeline(self) -> Pipeline:
         """Renvoie la pipeline de rendu"""
         return self._pipeline
+    
+    @property
+    def parent(self) -> Group:
+        """Renvoie le groupe parent"""
+        return self._parent
 
     @property
     def content_width(self) -> int:
@@ -305,6 +314,7 @@ class PygletLabelRenderer:
             margin: marge intérieure uniforme en pixels
             z: z-order
             pipeline: pipeline de rendu
+            parent: groupe parent
         """
         rebuild: bool = False
         changes: list[str] = set()
@@ -432,8 +442,11 @@ class PygletLabelRenderer:
 
     def _handle_z(self) -> None:
         """Actualisation du z-order"""
-        if self._pipeline:
-            self._label.group = self._pipeline.get_group(z=self._z)
+        self._label.group = self._pipeline.get_group(z=self._z) if self._parent is None else self._parent
+
+    def handle_parent(self) -> None:
+        """Actualisation du groupe parent"""
+        self._label.group = self._pipeline.get_group(z=self._z) if self._parent is None else self._parent
 
     # ======================================== HELPERS ========================================
     def _refresh_position(self) -> None:

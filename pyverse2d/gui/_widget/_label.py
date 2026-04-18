@@ -302,6 +302,7 @@ class Label(Widget):
                 line_spacing = self._line_spacing,
                 z = context.z,
                 pipeline = pipeline,
+                parent=context.group,
             )
     
         # Mise à jour du renderer
@@ -327,6 +328,7 @@ class Label(Widget):
                 line_spacing = self._line_spacing,
                 z = context.z,
                 pipeline = pipeline,
+                parent=context.group,
             )
 
     def _destroy(self) -> None:

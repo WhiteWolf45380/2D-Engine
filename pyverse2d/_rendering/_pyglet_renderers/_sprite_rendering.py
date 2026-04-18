@@ -10,6 +10,7 @@ from pyglet.gl import (
     glBindTexture, glTexParameteri,
     GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE
 )
+from pyglet.graphics import Group
 
 import os
 
@@ -45,13 +46,14 @@ class PygletSpriteRenderer:
         opacity: opacité [0.0 ; 1.0]
         z: z-order
         pipeline: pipeline de rendu
+        parent: groupe parent
     """
     __slots__ = (
         "_image",
         "_x", "_y", "_anchor_x", "_anchor_y",
         "_scale_x", "_scale_y", "_flip_x", "_flip_y", "_rotation",
         "_color", "_opacity",
-        "_z", "_pipeline",
+        "_z", "_pipeline", "_parent",
         "_sprite",
     )
 
@@ -71,6 +73,7 @@ class PygletSpriteRenderer:
         opacity: float = 1.0,
         z: int = 0,
         pipeline: Pipeline = None,
+        parent: Group = None,
     ):
         self._image: Image = image
         self._x: float = x
@@ -86,6 +89,7 @@ class PygletSpriteRenderer:
         self._color: Color = color
         self._z: int = z
         self._pipeline: Pipeline = pipeline
+        self._parent: Group = parent
 
         self._sprite: pyglet.sprite.Sprite = None
         self._build()
@@ -134,8 +138,8 @@ class PygletSpriteRenderer:
             region,
             x=self._x,
             y=self._y,
-            batch=self._pipeline.batch if self._pipeline else None,
-            group=self._pipeline.get_group(z=self._z) if self._pipeline else None,
+            batch=self._pipeline.batch,
+            group=self._pipeline.get_group(z=self._z) if self._parent is None else self._parent,
         )
         self._sprite.scale_x = eff_sx
         self._sprite.scale_y = eff_sy
@@ -236,6 +240,11 @@ class PygletSpriteRenderer:
         return self._pipeline
     
     @property
+    def parent(self) -> Group:
+        """Renvoie le groupe parent"""
+        return self._parent
+    
+    @property
     def width(self) -> int:
         """Renvoie la largeur de la texture"""
         return self._sprite.width
@@ -282,6 +291,7 @@ class PygletSpriteRenderer:
             color: teinte multiplicative
             z: z-order
             pipeline: pipeline de rendu
+            parent: groupe parent
         """
         changes: list[str] = set()
         for key, value in kwargs.items():
@@ -339,8 +349,11 @@ class PygletSpriteRenderer:
 
     def _handle_z(self) -> None:
         """Actualisation du z-order"""
-        if self._pipeline:
-            self._sprite.group = self._pipeline.get_group(z=self._z)
+        self._sprite.group = self._pipeline.get_group(z=self._z) if self._parent is None else self._parent
+
+    def _handle_parent(self) -> None:
+        """Actualisation du groupe parent"""
+        self._sprite.group = self._pipeline.get_group(z=self._z) if self._parent is None else self._parent
 
     # ======================================== HELPERS ========================================
     def _rebuild(self) -> None:
