@@ -548,7 +548,6 @@ class LightRenderer:
         """
         bucket   = _get_bucket(len(points))
         program  = self._get_point_program(bucket)
-        fb_scale = pipeline.window.framebuffer_scale
 
         pos_buf = self._vec2(bucket, 0)
         col_buf = self._vec3(bucket, 0)
@@ -559,7 +558,7 @@ class LightRenderer:
             fx, fy = pipeline.world_to_framebuffer(light.x, light.y)
             pos_buf[i] = (float(fx), float(fy))
             col_buf[i] = light.color.rgb
-            rad_buf[i] = light.radius * pipeline.ppu * fb_scale
+            rad_buf[i] = light.radius * pipeline.ppu
             int_buf[i] = light.intensity
 
         atlas_tex = self._get_lut_atlas(points, bucket)
@@ -602,7 +601,6 @@ class LightRenderer:
         """
         bucket   = _get_bucket(len(cones))
         program  = self._get_cone_program(bucket)
-        fb_scale = pipeline.window.framebuffer_scale
 
         pos_buf = self._vec2(bucket, 1)
         dir_buf = self._vec2(bucket, 2)
@@ -618,7 +616,7 @@ class LightRenderer:
             pos_buf[i] = (float(fx), float(fy))
             dir_buf[i] = (dfx, dfy)
             col_buf[i] = light.color.rgb
-            rad_buf[i] = light.radius * pipeline.ppu * fb_scale
+            rad_buf[i] = light.radius * pipeline.ppu
             int_buf[i] = light.intensity
             inn_buf[i] = math.radians(light.get_inner_angle())
             out_buf[i] = math.radians(light.get_outer_angle())
@@ -669,7 +667,6 @@ class LightRenderer:
         bp       = _get_bucket(len(points))
         bc       = _get_bucket(len(cones))
         program  = self._get_point_cone_program(bp, bc)
-        fb_scale = pipeline.window.framebuffer_scale
 
         p_pos = self._vec2(bp, 0)
         p_col = self._vec3(bp, 0)
@@ -680,7 +677,7 @@ class LightRenderer:
             fx, fy = pipeline.world_to_framebuffer(light.x, light.y)
             p_pos[i] = (float(fx), float(fy))
             p_col[i] = light.color.rgb
-            p_rad[i] = light.radius * pipeline.ppu * fb_scale
+            p_rad[i] = light.radius * pipeline.ppu
             p_int[i] = light.intensity
 
         c_pos = self._vec2(bc, 1)
@@ -697,7 +694,7 @@ class LightRenderer:
             c_pos[i] = (float(fx), float(fy))
             c_dir[i] = (dfx, dfy)
             c_col[i] = light.color.rgb
-            c_rad[i] = light.radius * pipeline.ppu * fb_scale
+            c_rad[i] = light.radius * pipeline.ppu
             c_int[i] = light.intensity
             c_inn[i] = math.radians(light.get_inner_angle())
             c_out[i] = math.radians(light.get_outer_angle())
