@@ -156,17 +156,17 @@ class MouseManager(Manager):
     @property
     def raw_position(self) -> tuple[float, float]:
         """Position de la souris dans la fenêtre OS"""
-        return self._mouse_x  * self._window.framebuffer_scale, self._mouse_y * self._window.framebuffer_scale
+        return self._mouse_x  * self._window.physical_scale, self._mouse_y * self._window.physical_scale
     
     @property
     def raw_x(self) -> float:
         """Position horizontale de la souris dans la fenêtre OS"""
-        return self._mouse_x * self._window.framebuffer_scale
+        return self._mouse_x * self._window.physical_scale
     
     @property
     def raw_y(self) -> float:
         """Position verticale de la souris dans la fenêtre OS"""
-        return self._mouse_y * self._window.framebuffer_scale
+        return self._mouse_y * self._window.physical_scale
 
     @property
     def position(self) -> tuple[float, float]:
