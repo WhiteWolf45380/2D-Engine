@@ -5,7 +5,7 @@ from .._rendering import Pipeline, Camera
 from .._flag import Activity
 from ..asset import Color
 from ..abc import Layer, LightSource
-from ..fx import LightRenderer, PointLight, ConeLight, AreaLight
+from ..fx import LightRenderer, PointLight, ConeLight
 
 from numbers import Real
 
