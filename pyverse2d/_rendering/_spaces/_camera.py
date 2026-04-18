@@ -432,13 +432,13 @@ class Camera(Space):
             height = width * (viewport_height / viewport_width)
         else:
             viewport_ratio = viewport_width / viewport_height
-            view_ratio     = self._view_width / self._view_height
+            view_ratio = self._view_width / self._view_height
             if viewport_ratio < view_ratio:
-                width  = self._view_width
-                height = width / viewport_ratio
-            else:
                 height = self._view_height
                 width  = height * viewport_ratio
+            else:
+                width  = self._view_width
+                height = width / viewport_ratio
 
         # Ancre
         ax = (self._anchor.x - 0.5) * (width  / self._zoom)

@@ -588,7 +588,6 @@ class Widget(ABC):
             return Super.STOP
         
         # Sauvegarde du contexte de rendu
-        z = context.z + 1
         opacity = context.opacity
         origin = context.origin
         group = context.group
@@ -600,6 +599,7 @@ class Widget(ABC):
         self._draw(pipeline, context)
 
         # Passage au z relatif
+        z = context.z
         context.z = 0
 
         # Affichage des enfants
