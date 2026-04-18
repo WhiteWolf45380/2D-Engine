@@ -17,11 +17,12 @@ class Surface(Widget):
     Composant GUI simple: Surface
 
     Args:
-        shape(Shape): forme de la surface
-        position(Point, optional): position
-        anchor(Point, optional): ancre locale relative
-        color(Color, optional): couleur de remplissage
-        opacité(Real, optional): opacité [0; 1]
+        shape: forme de la surface
+        position: position
+        anchor: ancre locale relative
+        color: couleur de remplissage
+        opacité: opacité [0; 1]
+        clipping: rendu des widgets enfants strictement dans le AABB de la hitbox
     """
     __slots__ = (
         "_shape", "_shape_renderer",
@@ -36,9 +37,10 @@ class Surface(Widget):
             anchor: Point = (0.5, 0.5),
             color: Color = (125, 125, 125),
             opacity: Real = 1.0,
+            clipping: bool = False,
         ):
         # Initialisation du widget
-        super().__init__(position, anchor, opacity)
+        super().__init__(position, anchor, opacity, clipping=clipping)
 
         # Forme
         self._shape: Shape = expect(shape, Shape)

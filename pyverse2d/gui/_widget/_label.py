@@ -18,26 +18,26 @@ HorizontalAlign = Literal["left", "center", "right"]
 
 # ======================================== WIDGET ========================================
 class Label(Widget):
-    """
-    Composant UI simple: Texte
+    """Composant UI simple: Texte
 
     Args:
-        text(Text): texte à rendre
-        position(Point, Point): position
-        anchor(Point, optional): ancre relative locale
-        rotation(Real, optional): rotation en degrés
-        weight(str, optional): graisse ('bold', 'thin', '100'…'900', ou int pyglet)
-        italic(bool, optional): italique
-        underline(Color, optional): couleur du soulignement
-        color(Color, optional): couleur du texte (Color)
-        opacity(Real, optional): opacité globale [0.0 ; 1.0]
-        width(int, optional): largeur de la boîte en pixels (None = pas de boîte)
-        height(int, optional): hauteur de la boîte en pixels (None = pas de boîte)
-        multiline(bool, optional): autorise les \\n explicites
-        line_spacing(int, optional): espacement entre les lignes en pixels (None = défaut)
-        wrap_lines(bool, optional): word-wrap automatique (nécessite width)
-        align(HorizontalAlign, optional): alignement horizontal
-        margin(int, optional): marge intérieure uniforme en pixels
+        text: texte à rendre
+        position: position
+        anchor: ancre relative locale
+        rotation: rotation en degrés
+        weight: graisse ('bold', 'thin', '100'…'900', ou int pyglet)
+        italic: italique
+        underline: couleur du soulignement
+        color: couleur du texte (Color)
+        opacity: opacité globale [0.0 ; 1.0]
+        width: largeur de la boîte en pixels (None = pas de boîte)
+        height: hauteur de la boîte en pixels (None = pas de boîte)
+        multiline: autorise les \\n explicites
+        line_spacing: espacement entre les lignes en pixels (None = défaut)
+        wrap_lines: word-wrap automatique (nécessite width)
+        align: alignement horizontal
+        margin: marge intérieure uniforme en pixels
+        clipping: rendu des widgets enfants strictement dans le AABB de la hitbox
     """
     __slots__ = (
         "_text", "_text_renderer",
@@ -67,9 +67,10 @@ class Label(Widget):
             wrap_lines: bool = False,
             align: HorizontalAlign = "left",
             margin: int = 0,
+            clipping: bool = False
         ):
         # Initialisation du widget
-        super().__init__(position, anchor, opacity)
+        super().__init__(position, anchor, opacity, clipping=clipping)
 
         # Texte
         self._text: Text = expect(text, Text)

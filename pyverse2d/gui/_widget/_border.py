@@ -14,17 +14,17 @@ from numbers import Real
 
 # ======================================== WIDGET ========================================
 class Border(Widget):
-    """
-    Composant GUI simple: Bordure
+    """Composant GUI simple: Bordure
 
     Args:
-        shape(Shape): forme de la bordure
-        position(Point, optional): position
-        anchor(Point, optional): ancre locale relative
-        width(bool, optional): largeur de la bodure
-        align(BorderAlign, optional): alignement de la bordure
-        color(Color, optional): couleur de la bordure
-        opacité(Real, optional): opacité [0; 1]
+        shape: forme de la bordure
+        position: position
+        anchor: ancre locale relative
+        width: largeur de la bodure
+        align: alignement de la bordure
+        color: couleur de la bordure
+        opacité: opacité [0; 1]
+        clipping: rendu des widgets enfants strictement dans le AABB de la hitbox
     """
     __slots__ = (
         "_shape", "_shape_renderer",
@@ -41,9 +41,10 @@ class Border(Widget):
             align: BorderAlign = "center",
             color: Color = (0, 0, 0),
             opacity: Real = 1.0,
+            clipping: bool = False
         ):
         # Initialisation du widget
-        super().__init__(position, anchor, opacity)
+        super().__init__(position, anchor, opacity, clipping=clipping)
 
         # Forme
         self._shape: Shape = expect(shape, Shape)

@@ -22,4 +22,5 @@ class Button:
         border_align: alignement de la bordure
         border_color: couleur de la bordure
         opacity: opacité [0, 1]
+        clipping: rendu des widgets enfants strictement dans le AABB de la hitbox
     """

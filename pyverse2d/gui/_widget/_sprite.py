@@ -24,6 +24,7 @@ class Sprite(Widget):
         rotation: angle de rotation en degrés
         color: asset ``Color`` de teinte
         opacity: opacité
+        clipping: rendu des widgets enfants strictement dans le AABB de la hitbox
     """
 
 
@@ -38,9 +39,10 @@ class Sprite(Widget):
             rotation: Real = 0.0,
             color: Color = None,
             opacity: Real = 1.0,
+            clipping: bool = False
         ):
         # Initialisation du widget
-        super().__init__(position, anchor, opacity)
+        super().__init__(position, anchor, opacity, clipping=clipping)
 
         # Image
         self._image: Image = expect(image, Image)
