@@ -397,7 +397,7 @@ class Widget(ABC):
         behavior.attach(self, _from_widget=True)
         setattr(self, f"_{behavior._ID}", behavior)
         for i in range(len(self._behaviors)):
-            if behavior._PRIORITY > self._behaviors[i]:
+            if behavior._PRIORITY > getattr(self, self._behaviors[i])._PRIORITY:
                 self._behaviors.insert(i, behavior._ID)
                 return
         self._behaviors.append(behavior._ID)
