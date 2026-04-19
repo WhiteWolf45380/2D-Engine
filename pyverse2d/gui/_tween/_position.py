@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from ...abc import Tween
 from ...math import Point
-from ...math.easing import EasingFunc
+from ...math.easing import EasingFunc, linear
 
 from numbers import Real
 
@@ -12,7 +12,7 @@ class PositionTween(Tween):
     """Interpolation positionnelle"""
     __slots__ = ()
 
-    def __init__(self, target_value: Point, duration: Real, easing: EasingFunc):
+    def __init__(self, target_value: Point, duration: Real = 0.0, easing: EasingFunc = linear):
         target_value = Point(target_value)
         
         super().__init__("position", target_value, duration, easing)

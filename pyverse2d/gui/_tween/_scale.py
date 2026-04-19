@@ -3,8 +3,7 @@ from __future__ import annotations
 
 from ..._internal import over
 from ...abc import Tween
-from ...math import Point
-from ...math.easing import EasingFunc
+from ...math.easing import EasingFunc, linear
 
 from numbers import Real
 
@@ -13,7 +12,7 @@ class ScaleTween(Tween):
     """Interpolation de la taille"""
     __slots__ = ()
 
-    def __init__(self, target_value: Real, duration: Real, easing: EasingFunc):
+    def __init__(self, target_value: Real, duration: Real = 0.0, easing: EasingFunc = linear):
         target_value = float(target_value)
         if __debug__:
             over(target_value, 0.0, include=False)

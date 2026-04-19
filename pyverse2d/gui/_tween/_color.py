@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from ...abc import Tween
 from ...asset import Color
-from ...math.easing import EasingFunc
+from ...math.easing import EasingFunc, linear
 
 from numbers import Real
 
@@ -12,7 +12,7 @@ class ColorTween(Tween):
     """Interpolation des couleurs"""
     __slots__ = ()
 
-    def __init__(self, target_value: Color, duration: Real, easing: EasingFunc):
+    def __init__(self, target_value: Color, duration: Real = 0.0, easing: EasingFunc = linear):
         target_value = Color(target_value)
         super().__init__("color", target_value, duration, easing)
 
