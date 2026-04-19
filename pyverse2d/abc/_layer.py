@@ -114,5 +114,6 @@ class Layer(ABC):
     # ======================================== INTERNALS ========================================
     def _apply_context(self) -> None:
         """Applique le contexte du layer"""
-        from pyverse2d import coordinates
+        from pyverse2d import coordinates, mouse
         coordinates.bind_temporary_camera(self._camera)
+        mouse._refresh_world_position()
