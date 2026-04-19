@@ -84,9 +84,6 @@ class Behavior(ABC):
     def add_tween(self, tween: Tween) -> None:
         """Ajoute une interpolation au behavior
 
-        Un seul tween par type est autorisé — ajouter un tween du même type remplace l'existant.
-        Le tween est automatiquement lié au widget possesseur si celui-ci est déjà assigné.
-
         Args:
             tween: interpolation à associer
         """
