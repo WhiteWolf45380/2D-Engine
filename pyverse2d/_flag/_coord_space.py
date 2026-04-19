@@ -10,4 +10,4 @@ class CoordSpace(IntEnum):
     VIEWPORT = 4
     LOGICAL = 5
     CANVAS = 6
-    FRAMEBUFFER = 7
+    WINDOW = 7

@@ -144,5 +144,6 @@ class Behavior(ABC):
 
     def update(self, dt: float) -> None:
         """Actualisation"""
+        self._update(dt)
         for tween in self._tweens.values():
             tween.update(dt)

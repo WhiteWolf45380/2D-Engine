@@ -1,6 +1,7 @@
 # ======================================== IMPORTS ========================================
 from ._context import ContextManager
 from ._time import TimeManager
+from ._coordinates import CoordinatesManager
 from ._event import EventManager
 from ._key import KeyManager
 from ._mouse import MouseManager
@@ -11,6 +12,7 @@ from ._ui import UiManager
 __all__ = [
     "ContextManager",
     "TimeManager",
+    "CoordinatesManager",
     "EventManager",
     "KeyManager",
     "MouseManager",

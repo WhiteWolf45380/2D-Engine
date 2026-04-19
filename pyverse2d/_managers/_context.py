@@ -3,6 +3,7 @@ from typing import Iterator, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ._time import TimeManager
+    from ._coordinates import CoordinatesManager
     from ._event import EventManager
     from ._key import KeyManager
     from ._mouse import MouseManager
@@ -14,6 +15,7 @@ class ContextManager:
     """Contexte des managers"""
     __slots__ = (
         "time",
+        "coordinates",
         "event",
         "key",
         "mouse",
@@ -23,6 +25,7 @@ class ContextManager:
 
     def __init__(self):
         self.time: TimeManager = None
+        self._coordinates: CoordinatesManager = None
         self.event: EventManager = None
         self.key: KeyManager = None
         self.mouse: MouseManager = None

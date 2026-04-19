@@ -11,23 +11,23 @@ from . import typing, abc, math, shape, asset
 # ======================================== STATE ========================================
 from ._rendering import (
     Window, LogicalScreen, Viewport, Camera,
-    CoordSpace,
-    world_to_frustum, frustum_to_ndc, ndc_to_nvc, nvc_to_viewport, viewport_to_logical, logical_to_canvas, canvas_to_framebuffer,
-    framebuffer_to_canvas, canvas_to_logical, logical_to_viewport, viewport_to_nvc, nvc_to_ndc, ndc_to_frustum, frustum_to_world,
-    CoordContext,
     Pipeline,
 )
 
 _pipeline: Pipeline | None = None
 
 # ======================================== MANAGERS ========================================
-from ._managers import ContextManager, TimeManager, EventManager, KeyManager, MouseManager, InputsManager, UiManager
+from ._managers import ContextManager, TimeManager, CoordinatesManager, EventManager, KeyManager, MouseManager, InputsManager, UiManager
 
 _context_manager: ContextManager = ContextManager()
 
 # Time
 time: TimeManager = TimeManager(_context_manager)
 _context_manager.time = time
+
+# Coordinates
+coordinates: CoordinatesManager = CoordinatesManager(_context_manager)
+_context_manager.coordinates = coordinates
 
 # Event
 event: EventManager = EventManager(_context_manager)
@@ -157,12 +157,12 @@ __all__ = [
     "frustum_to_ndc",
     "ndc_to_nvc",
     "nvc_to_viewport",
-    "viewport_to_logical",
-    "logical_to_canvas",
-    "canvas_to_framebuffer",
+    "viewport_to_framebuffer",
     "framebuffer_to_canvas",
-    "canvas_to_logical",
-    "logical_to_viewport",
+    "canvas_to_window",
+    "window_to_canvas",
+    "canvas_to_framebuffer",
+    "framebuffer_to_viewport",
     "viewport_to_nvc",
     "nvc_to_ndc",
     "ndc_to_frustum",

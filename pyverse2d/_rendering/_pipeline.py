@@ -7,7 +7,6 @@ from ..abc import Layer
 from ._quad import ScreenQuad
 from ._fbo import Framebuffer
 from ._spaces import Window, LogicalScreen, Viewport, Camera
-from ._coord import CoordSpace, CoordContext
 
 import pyglet.gl as gl
 from pyglet.graphics import Batch, Group
@@ -21,6 +20,7 @@ from ctypes import c_int
 import math
 
 if TYPE_CHECKING: 
+    from .._managers import CoordinatesManager
     from ..scene import Scene
 
 # ======================================== DATA ========================================
@@ -45,8 +45,18 @@ class Pipeline:
         "_window", "_quad", "_temp_fbo",
         "_data", "_projection_cache", "_view_cache",
         "_view_buffer", "_default_view",
-        "_context", "_coord_context",
+        "_context",
     )
+
+    _COORD: CoordinatesManager = None
+
+    @classmethod
+    def get_coord(cls) -> CoordinatesManager:
+        """Renvoie le gestionnaire des coordonnées"""
+        if cls._COORD is None:
+            from pyverse2d import coordinates
+            cls._COORD = coordinates
+        return cls._COORD
 
     def __init__(self, window: Window):
         # Binding
@@ -67,7 +77,6 @@ class Pipeline:
 
         # Contexte
         self._context: _PipelineContext = _PipelineContext()
-        self._coord_context: CoordContext = CoordContext(self._window, self._window.screen)
 
     # ======================================== GETTERS ========================================
     # OpenGl
@@ -409,22 +418,7 @@ class Pipeline:
         viewport: viewport à utiliser (par défaut le viewport courant)
         camera: camera à utiliser (par défaut la camera courante)
         """
-        # Viewport
-        if viewport is None:
-            viewport = self.viewport
-            viewport_resolve = self._context.viewport_resolve
-        else:
-            viewport_resolve = viewport.resolve(self._window.screen.width, self._window.screen.height)
-
-        # Camera
-        if camera is None:
-            camera = self.camera
-            camera_resolve = self._context.camera_resolve
-        else:
-            camera_resolve = camera.resolve(viewport_resolve[2], viewport_resolve[3])
-
-        # Conversion
-        return self._coord_context.convert(x, y, from_space, to_space, viewport=viewport, camera=camera, viewport_resolve=viewport_resolve, camera_resolve=camera_resolve)
+        self.get_coord().convert(x, y, from_space, to_space, viewport=viewport, camera=camera)
 
     def world_to_framebuffer(self, x: float, y: float, viewport: Viewport = None, camera: Camera = None) -> tuple[int, int]:
         """Convertit un point monde en pixel framebuffer
@@ -435,27 +429,7 @@ class Pipeline:
             viewport: Viewport à utiliser (par défaut le viewport courant)
             camera: Camera à utiliser (par défaut la caméra courante)
         """
-        # Resolutions
-        lx, ly, lw, lh, (ox, oy), (dx, dy) = self._context.viewport_resolve if viewport is None else viewport.resolve(self._window.screen.width, self._window.screen.height)
-        cx, cy, vw, vh, zoom, rotation = self._context.camera_resolve if camera is None else camera.resolve(lw, lh)
-
-        # World to Frustum
-        tx, ty = x - cx, y - cy
-        if rotation != 0.0:
-            rad = math.radians(rotation)
-            cos_r, sin_r = math.cos(rad), math.sin(rad)
-            tx, ty = tx * cos_r + ty * sin_r, -tx * sin_r + ty * cos_r
-
-        # Frustum to NDC
-        half_w, half_h = vw / (zoom * dx * 2), vh / (zoom * dy * 2)
-        ndc_x = (tx / half_w + 1) / 2
-        ndc_y = (ty / half_h + 1) / 2
-
-        # NDC to LogicalScreen
-        fb_x = int((lx + ox + ndc_x * lw))
-        fb_y = int((ly + oy + ndc_y * lh))
-
-        return fb_x, fb_y
+        self.get_coord().world_to_logical(x, y, viewport=viewport, camera=camera)
 
     def framebuffer_to_world(self, x: int, y: int, viewport: Viewport =  None, camera: Camera = None) -> tuple[float, float]:
         """Convertit un pixel framebuffer en point monde
@@ -466,29 +440,10 @@ class Pipeline:
             viewport: Viewport à utiliser (par défaut le viewport courant)
             camera: Camera à utiliser (par défaut la caméra courante)
         """
-        # Resolutions
-        lx, ly, lw, lh, (ox, oy), (dx, dy) = self._context.viewport_resolve if viewport is None else viewport.resolve(self._window.screen.width, self._window.screen.height)
-        cx, cy, vw, vh, zoom, rotation = self._context.camera_resolve if camera is None else camera.resolve(lw, lh)
-
-        # LogicalScreen to NDC
-        ndc_x = (x - lx - ox) / lw
-        ndc_y = (y - ly - oy) / lh
-
-        # NDC to Frustum
-        half_w, half_h = vw / (zoom * dx * 2), vh / (zoom * dy * 2)
-        fr_x = (ndc_x * 2 - 1) * half_w
-        fr_y = (ndc_y * 2 - 1) * half_h
-
-        # Frustum to World
-        if rotation != 0.0:
-            rad = math.radians(rotation)
-            cos_r, sin_r = math.cos(rad), math.sin(rad)
-            fr_x, fr_y = fr_x * cos_r - fr_y * sin_r, fr_x * sin_r + fr_y * cos_r
-
-        return fr_x + cx, fr_y + cy
+        self.get_coord().logical_to_world(x, y, viewport=viewport, camera=camera)
     
     def world_to_framebuffer_dir(self, dx: float, dy: float) -> tuple[float, float]:
-        """Convertit un vecteur directionnel monde en vecteur framebuffer (sans translation)
+        """Convertit un vecteur directionnel monde en vecteur framebuffer
 
         Args:
             dx: composante horizontale monde
