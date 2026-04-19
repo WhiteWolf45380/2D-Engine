@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 # ======================================== IMPORTS ========================================
 class Behavior(ABC):
     """Class abstraite des comportements UI"""
-    __slots__ = ("_owner", "_enabled")
+    __slots__ = ("_owner", "_enabled", "_tweens")
     _ID: str = "default"
     _PRIORITY: int = 0
 

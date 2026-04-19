@@ -77,7 +77,7 @@ class Widget(ABC):
         "_position", "_anchor",
         "_opacity", "_active", "_visible", "_clipping",
         "_activate_process", "_deactivate_process", "_show_process", "_hide_process",
-        "_behaviors", "_click", "_hover", "_select", "_focus",
+        "_attr_locks", "_behaviors", "_click", "_hover", "_select", "_focus",
         "_cached_scissor", "_scissor_dirty",
     )
 
