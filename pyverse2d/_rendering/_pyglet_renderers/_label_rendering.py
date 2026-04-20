@@ -458,7 +458,7 @@ class PygletLabelRenderer:
         """Actualisation du z-order"""
         self._label.group = self._pipeline.get_group(z=self._z) if self._parent is None else self._parent
 
-    def handle_parent(self) -> None:
+    def _handle_parent(self) -> None:
         """Actualisation du groupe parent"""
         self._label.group = self._pipeline.get_group(z=self._z) if self._parent is None else self._parent
 
