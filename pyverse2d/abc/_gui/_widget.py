@@ -327,9 +327,7 @@ class Widget(ABC):
     
     def collidespoint(self, point: Point) -> bool:
         """Vérifie la collision avec un point"""
-        scale = getattr(self, "scale", 1.0)
-        rotation = getattr(self, "rotation", 0.0)
-        return self.hitbox.world_contains(point, self.absolute_x, self.absolute_y, anchor_x=self.anchor_x, anchor_y=self.anchor_y, scale=scale, rotation=rotation)
+        return self.hitbox.world_contains(point, self.absolute_x, self.absolute_y, anchor_x=self.anchor_x, anchor_y=self.anchor_y, scale=self._scale, rotation=self._rotation)
     
     # ========================================  TRANSFORMATIONS ========================================
     def resize(self, factor: Real) -> None:
@@ -736,8 +734,8 @@ class Widget(ABC):
             xmin, ymin, xmax, ymax = self.hitbox.world_bounding_box(
                 x=self.absolute_x, y=self.absolute_y,
                 anchor_x=self.anchor_x, anchor_y=self.anchor_y,
-                scale=getattr(self, "_scale", 1.0),
-                rotation=getattr(self, "_rotation", 0.0),
+                scale=self._scale,
+                rotation=self._rotation,
             )
             x, y = context.pipeline.world_to_framebuffer(xmin, ymin)
             width, height = context.pipeline.scale_to_framebuffer(xmax - xmin, ymax - ymin)

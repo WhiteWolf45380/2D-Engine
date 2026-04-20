@@ -37,7 +37,7 @@ class Surface(Widget):
             position: Point = (0.0, 0.0),
             anchor: Point = (0.5, 0.5),
             scale: Real = 1.0,
-            rotation: Real = 1.0,
+            rotation: Real = 0.0,
             color: Color = (125, 125, 125),
             opacity: Real = 1.0,
             clipping: bool = False,
