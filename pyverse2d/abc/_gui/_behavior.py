@@ -52,7 +52,8 @@ class Behavior(ABC):
             raise ValueError("This behavior is already attached")
         self._owner = widget
         for tween in self._tweens.values():
-            tween.bind(widget)
+            if tween.widget is None:
+                tween.bind(widget)
         self._on_attach()
 
     def detach(self, _from_widget: bool = False) -> None:
@@ -81,14 +82,16 @@ class Behavior(ABC):
         self._on_disable()
 
     # ======================================== TWEENS ========================================
-    def add_tween(self, tween: Tween) -> None:
+    def add_tween(self, tween: Tween, target: Widget = None) -> None:
         """Ajoute une interpolation au behavior
 
         Args:
             tween: interpolation à associer
+            target: widget cible (par défaut le possesseur)
         """
-        if self._owner is not None:
-            tween.bind(self._owner)
+        widget = target or self._owner
+        if widget is not None:
+            tween.bind(widget)
         self._tweens[type(tween)] = tween
 
     def remove_tween(self, tween_type: Type[Tween]) -> None:
@@ -99,7 +102,9 @@ class Behavior(ABC):
         """
         if tween_type not in self._tweens:
             raise ValueError(f"This behavior has no tween of type {tween_type.__name__}")
-        del self._tweens[tween_type]
+        tween = self._tweens[tween_type]
+        tween.unbind()
+        del tween
 
     def get_tween(self, tween_type: Type[Tween]) -> Tween | None:
         """Renvoie une interpolation par type, ou ``None`` si absente
