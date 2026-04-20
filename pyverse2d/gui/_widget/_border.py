@@ -45,7 +45,7 @@ class Border(Widget):
             clipping: bool = False
         ):
         # Initialisation du widget
-        super().__init__(position, scale, rotation, anchor, opacity, clipping=clipping)
+        super().__init__(position, anchor, scale, rotation, opacity, clipping=clipping)
 
         # Forme
         self._shape: Shape = expect(shape, Shape)

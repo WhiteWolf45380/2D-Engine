@@ -679,7 +679,7 @@ class Widget(ABC):
 
         # Affichage des enfants
         for child in self._children:
-            child.widget.draw(pipeline, context, share_scale=child._share_scale, share_rotation=child._share_rotation)
+            child.widget.draw(pipeline, context, share_scale=child.share_scale, share_rotation=child.share_rotation)
 
         # Restauration du contexte de rendu
         context.origin = origin
@@ -759,14 +759,14 @@ class Widget(ABC):
 # ======================================== WRAPPER ========================================
 class WidgetWrapper:
     """Wrapper des composants UI"""
-    __slots__ = ("_widget", "name", "z")
+    __slots__ = ("_widget", "name", "z", "share_scale", "share_rotation")
 
     def __init__(self, widget: Widget, name: str, z: int, share_scale: bool, share_rotation: bool):
         self._widget: Widget = widget
         self.name: str = name
         self.z: int = z
-        self._share_scale: bool = share_scale
-        self._share_rotation: bool = share_rotation
+        self.share_scale: bool = share_scale
+        self.share_rotation: bool = share_rotation
     
     @property
     def widget(self) -> Widget:
