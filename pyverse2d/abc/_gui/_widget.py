@@ -738,10 +738,10 @@ class Widget(ABC):
             result = self._parent._compute_scissor() if self._parent else None
         else:
             xmin, ymin, xmax, ymax = self.hitbox.world_bounding_box(
-                x=self.absolute_x, y=self.absolute_y,
+                x=context.origin.x, y=context.origin.y,
                 anchor_x=self.anchor_x, anchor_y=self.anchor_y,
-                scale=self._scale,
-                rotation=self._rotation,
+                scale=context.scale,
+                rotation=context.rotation,
             )
             x, y = context.pipeline.world_to_framebuffer(xmin, ymin)
             width, height = context.pipeline.scale_to_framebuffer(xmax - xmin, ymax - ymin)
