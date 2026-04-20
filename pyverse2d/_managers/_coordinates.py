@@ -91,14 +91,14 @@ class CoordinatesManager(Manager):
         if rotation != 0.0:
             rad = math.radians(rotation)
             c, s = math.cos(rad), math.sin(rad)
-            fx, fy = fx * c + fy * s, -fx * s + fy * c
+            fx, fy = fx * c - fy * s, fx * s + fy * c
 
         # Frustum to NDC to NVC
-        nvc_x = ((fx / (vw * zoom * 2)) + 1) / 2
-        nvc_y = ((fy / (vh * zoom * 2)) + 1) / 2
+        nvc_x = ((fx * zoom * 2 / vw) + 1) / 2
+        nvc_y = ((fy * zoom * 2 / vh) + 1) / 2
 
         # NVC to Viewport to Logical
-        return int(lx + ox + nvc_x * lw * dx), int(ly + oy + nvc_y * lh * dy)
+        return lx + ox + nvc_x * lw * dx, ly + oy + nvc_y * lh * dy
 
     def logical_to_world(self, x: float, y: float, viewport: Viewport = None, camera: Camera = None) -> tuple[float, float]:
         """Conversion directe Logical to World"""
@@ -112,14 +112,14 @@ class CoordinatesManager(Manager):
         nvc_y = (y - ly - oy) / (dy * lh)
 
         # NVC to NDC to Frustum
-        fr_x = (nvc_x * 2 - 1) * (vw * zoom * 2)
-        fr_y = (nvc_y * 2 - 1) * (vh * zoom * 2)
+        fr_x = (nvc_x * 2 - 1) * vw / (zoom * 2)
+        fr_y = (nvc_y * 2 - 1) * vh / (zoom * 2)
 
         # Frustum to World
         if rotation != 0.0:
             rad = math.radians(rotation)
             c, s = math.cos(rad), math.sin(rad)
-            fr_x, fr_y = fr_x * c + fr_y * s, fr_x * s - fr_y * c
+            fr_x, fr_y = fr_x * c + fr_y * s, -fr_x * s + fr_y * c
         return fr_x + cx, fr_y + cy
 
     def window_to_logical(self, x: float, y: float) -> tuple[float, float]:
@@ -229,7 +229,7 @@ class CoordinatesManager(Manager):
     @staticmethod
     def frustum_to_ndc(fr_x: float, fr_y: float, vw: float, vh: float, zoom: float) -> tuple[float, float]:
         """Frustum to NDC : normalisation par le demi-frustum"""
-        return fr_x / ((vw / zoom) / 2), fr_y / ((vh / zoom) / 2)
+        return fr_x * zoom * 2 / vw, fr_y * zoom * 2 / vh
 
     @staticmethod
     def ndc_to_nvc(ndc_x: float, ndc_y: float) -> tuple[float, float]:
@@ -247,9 +247,9 @@ class CoordinatesManager(Manager):
         return lx + vp_x, ly + vp_y
 
     @staticmethod
-    def logical_to_canvas(log_x: float, log_y: float, logical_scale: float) -> tuple[int, int]:
+    def logical_to_canvas(logic_x: float, logic_y: float, logical_scale: float) -> tuple[int, int]:
         """Logical to Canvas : mise à l'échelle vers les pixels physiques"""
-        return int(log_x * logical_scale), int(log_y * logical_scale)
+        return int(logic_x * logical_scale), int(logic_y * logical_scale)
 
     @staticmethod
     def canvas_to_window(cnv_x: float, cnv_y: float, cnv_ox: float, cnv_oy: float) -> tuple[float, float]:
@@ -268,9 +268,9 @@ class CoordinatesManager(Manager):
         return cnv_x / logical_scale, cnv_y / logical_scale
 
     @staticmethod
-    def logical_to_viewport(log_x: float, log_y: float, lx: float, ly: float) -> tuple[float, float]:
+    def logical_to_viewport(logic_x: float, logic_y: float, lx: float, ly: float) -> tuple[float, float]:
         """Logical (absolu) to Viewport (relatif)"""
-        return log_x - lx, log_y - ly
+        return logic_x - lx, logic_y - ly
 
     @staticmethod
     def viewport_to_nvc(vp_x: float, vp_y: float, lw: float, lh: float, ox: float, oy: float, dx: float, dy: float) -> tuple[float, float]:
@@ -285,7 +285,7 @@ class CoordinatesManager(Manager):
     @staticmethod
     def ndc_to_frustum(ndc_x: float, ndc_y: float, vw: float, vh: float, zoom: float) -> tuple[float, float]:
         """NDC to Frustum"""
-        return ndc_x * (vw / zoom) / 2, ndc_y * (vh / zoom) / 2
+        return ndc_x * vw / (zoom * 2), ndc_y * vh / (zoom * 2)
 
     @staticmethod
     def frustum_to_world(fr_x: float, fr_y: float, cx: float = 0.0, cy: float = 0.0, rotation: float = 0.0) -> tuple[float, float]:
