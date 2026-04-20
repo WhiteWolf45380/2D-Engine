@@ -664,8 +664,8 @@ class LightRenderer:
             ambient_color: Teinte RGB de l'ambient
             gamma: Correction gamma de sortie
         """
-        bp       = _get_bucket(len(points))
-        bc       = _get_bucket(len(cones))
+        bp = _get_bucket(len(points))
+        bc = _get_bucket(len(cones))
         program  = self._get_point_cone_program(bp, bc)
 
         p_pos = self._vec2(bp, 0)
@@ -689,7 +689,7 @@ class LightRenderer:
         c_out = self._floats(bc, 5)
 
         for i, light in enumerate(cones):
-            fx, fy   = pipeline.world_to_framebuffer(light.x, light.y)
+            fx, fy = pipeline.world_to_framebuffer(light.x, light.y)
             dfx, dfy = pipeline.world_to_framebuffer_dir_normalized(light.direction.x, light.direction.y)
             c_pos[i] = (float(fx), float(fy))
             c_dir[i] = (dfx, dfy)
