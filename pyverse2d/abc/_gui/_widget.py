@@ -728,7 +728,7 @@ class Widget(ABC):
         context.rotation = (context.rotation if share_rotation else 0.0) + self._rotation
         context.opacity *= self._opacity
         context.z += 1
-        context.group = WidgetGroup.get_group(order=context.z, parent=context.group, scissor=self._compute_scissor(context) if self._clipping else None)
+        context.group = WidgetGroup.get_group(order=context.z, parent=context.group, scissor=self._compute_scissor(context))
 
     def _compute_scissor(self, context: RenderContext = None) -> tuple | None:
         """Calcule le scissor résolu en coordonnées framebuffer"""
