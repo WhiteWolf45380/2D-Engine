@@ -26,7 +26,6 @@ class Surface(Widget):
     """
     __slots__ = (
         "_shape", "_shape_renderer",
-        "_scale", "_rotation",
         "_color",
     )
 
@@ -46,10 +45,6 @@ class Surface(Widget):
         self._shape: Shape = expect(shape, Shape)
         self._shape_renderer: PygletShapeRenderer = None
 
-        # Transformation
-        self._scale: float = 1.0
-        self._rotation: float = 0.0
-
         # Affichage
         self._color: Color = Color(color)
 
@@ -63,16 +58,6 @@ class Surface(Widget):
     def color(self) -> Color:
         """Renvoie la couleur de remplissage"""
         return self._color
-    
-    @property
-    def scale(self) -> float:
-        """Renvoie le facteur de redimensionnement"""
-        return self._scale
-    
-    @property
-    def rotation(self) -> float:
-        """Renvoie l'angle de rotation en degrés"""
-        return self._rotation
     
     @property
     def hitbox(self) -> Shape:
@@ -91,39 +76,6 @@ class Surface(Widget):
         """Fixe la couleur de remplissage"""
         self._color = Color(value)
 
-    @scale.setter
-    def scale(self, value: Real) -> None:
-        """Fixe le facteur de redimensionnement"""
-        self._scale = positive(not_null(float(expect(value, Real))))
-        self._invalidate_scissor()
-    
-    @rotation.setter
-    def rotation(self, value: Real) -> None:
-        """Fixe l'angle de rotation en degrés"""
-        self._rotation = float(expect(value, Real))
-        self._invalidate_scissor()
-
-    # ======================================== TRANSFORMATIONS ========================================
-    def resize(self, scale: Real) -> None:
-        """
-        Redimensionne la forme de la surface
-
-        Args:
-            scale(Real): facteur de redimensionnement
-        """
-        self._scale *= positive(not_null(float(expect(scale, Real))))
-        self._invalidate_scissor()
-    
-    def rotate(self, angle: Real) -> None:
-        """
-        Tourne la forme de la surface
-
-        Args:
-            angle(Real): angle de rotation en degrés
-        """
-        self._rotation += float(expect(angle, Real))
-        self._invalidate_scissor()
-
     # ======================================== LIFE CYCLE ========================================
     def _update(self, dt: float) -> None:
         """Actualisation"""
@@ -139,8 +91,8 @@ class Surface(Widget):
                 y = context.origin.y,
                 anchor_x = self.anchor_x,
                 anchor_y = self.anchor_y,
-                scale = self._scale,
-                rotation = self._rotation,
+                scale = context.scale,
+                rotation = context.rotation,
                 color = self._color,
                 opacity = context.opacity,
                 pipeline = pipeline,
@@ -155,8 +107,8 @@ class Surface(Widget):
                 y = context.origin.y,
                 anchor_x = self.anchor_x,
                 anchor_y = self.anchor_y,
-                scale = self._scale,
-                rotation = self._rotation,
+                scale = context.scale,
+                rotation = context.rotation,
                 color = self._color,
                 opacity = context.opacity,
                 pipeline=pipeline,

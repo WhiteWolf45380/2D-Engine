@@ -26,7 +26,11 @@ class Sprite(Widget):
         opacity: opacité
         clipping: rendu des widgets enfants strictement dans le AABB de la hitbox
     """
-
+    __slots__ = (
+        "_image",  "_image_renderer",
+        "_flip_x", "_flip_y",
+        "_color",
+    )
 
     def __init__(
             self,
@@ -37,12 +41,12 @@ class Sprite(Widget):
             flip_x: bool = False,
             flip_y: bool = False,
             rotation: Real = 0.0,
-            color: Color = None,
+            color: Color = (255, 255, 255),
             opacity: Real = 1.0,
             clipping: bool = False
         ):
         # Initialisation du widget
-        super().__init__(position, anchor, opacity, clipping=clipping)
+        super().__init__(position, anchor, scale, rotation, opacity, clipping=clipping)
 
         # Image
         self._image: Image = expect(image, Image)
@@ -51,11 +55,9 @@ class Sprite(Widget):
         # Transform
         self._flip_x: bool = expect(flip_x, bool)
         self._flip_y: bool = expect(flip_y, bool)
-        self._scale: float = positive(not_null(float(expect(scale, Real))))
-        self._rotation: float = float(expect(rotation, Real))
 
         # Affichage
-        self._color: Color = Color(color) if color is not None else None
+        self._color: Color = Color(color)
 
     # ======================================== PROPERTIES ========================================
     @property
@@ -69,19 +71,6 @@ class Sprite(Widget):
     @image.setter
     def image(self, value: Image) -> None:
         self._image = expect(value, Image)
-        self._invalidate_scissor()
-
-    @property
-    def scale(self) -> float:
-        """Facteur de redimensionnement
-
-        Ce facteur doit être un ``réel`` positif non nul
-        """
-        return self._scale
-    
-    @scale.setter
-    def scale(self, value: Real) -> None:
-        self._scale = positive(not_null(float(expect(value, Real))))
         self._invalidate_scissor()
 
     @property
@@ -111,18 +100,6 @@ class Sprite(Widget):
         self._invalidate_scissor()
 
     @property
-    def rotation(self) -> float:
-        """Angle de rotation
-
-        La rotation se fait en ``degrés``, dans le sens ``horaire``
-        """
-
-    @rotation.setter
-    def rotation(self, value: Real) -> None:
-        self._rotation = float(expect(value, Real))
-        self._invalidate_scissor()
-
-    @property
     def color(self) -> Color:
         """Couleur de teinte
 
@@ -132,7 +109,7 @@ class Sprite(Widget):
     
     @color.setter
     def color(self, value: Color) -> None:
-        self._color = Color(value) if value is not None else None
+        self._color = Color(value)
 
     @property
     def hitbox(self):
@@ -150,22 +127,6 @@ class Sprite(Widget):
         self._flip_x ^= horizontal
         self._flip_y ^= vertical
 
-    def resize(self, factor: Real) -> None:
-        """Redimensionne l'image par un facteur
-
-        Le facteur de redimensionnement doit être un réel positif non nul
-        """
-        self._scale *= positive(not_null(float(expect(factor, Real))))
-        self._invalidate_scissor()
-
-    def rotate(self, angle: Real) -> None:
-        """Applique une rotation à l'image
-
-        L'angle de rotation est en ``degrés`` et la rotation se fait dans le sens ``horaire``
-        """
-        self._rotation += float(expect(angle, Real))
-        self._invalidate_scissor()
-
     # ======================================== LIFE CYCLE ========================================
     def _update(self, dt: float) -> None:
         """Actualisation"""
@@ -181,11 +142,11 @@ class Sprite(Widget):
                 y = context.origin.y,
                 anchor_x = self.anchor_x,
                 anchor_y = self.anchor_y,
-                scale_x = self._scale,
-                scale_y = self._scale,
+                scale_x = context.scale,
+                scale_y = context.scale,
                 flip_x = self._flip_x,
                 flip_y = self._flip_y,
-                rotation = self._rotation,
+                rotation = context.rotation,
                 color = self._color,
                 opacity = context.opacity,
                 z = context.z,

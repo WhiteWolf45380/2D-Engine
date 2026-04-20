@@ -42,7 +42,6 @@ class Label(Widget):
     """
     __slots__ = (
         "_text", "_text_renderer",
-        "_position", "_anchor", "_scale", "_rotation",
         "_weight", "_italic", "_underline",
         "_color", "_opacity",
         "_width", "_height",
@@ -72,15 +71,11 @@ class Label(Widget):
             clipping: bool = False
         ):
         # Initialisation du widget
-        super().__init__(position, anchor, opacity, clipping=clipping)
+        super().__init__(position, anchor, scale, rotation, opacity, clipping=clipping)
 
         # Texte
         self._text: Text = expect(text, Text)
         self._text_renderer: PygletLabelRenderer = None
-
-        # Transform
-        self._scale: float = float(scale)
-        self._rotation: float = float(rotation)
 
         # Style
         self._weight: str = expect(weight, str)
@@ -111,34 +106,6 @@ class Label(Widget):
     @text.setter
     def text(self, value: Text) -> None:
         self._text = expect(value, Text)
-        self._invalidate_scissor()
-
-    @property
-    def rotation(self) -> float:
-        """Rotation en degrés
-
-        La rotation doit être un Réel
-        """
-        return self._rotation
-    
-    @rotation.setter
-    def rotation(self, value: Real) -> None:
-        self._rotation = float(expect(value, Real))
-        self._invalidate_scissor()
-
-    @property
-    def scale(self) -> float:
-        """Facteur de redimensionnement du texte
-
-        Le facteur doit être un ``Réel`` positif non nul
-        """
-        return self._scale
-    
-    @scale.setter
-    def scale(self, value: Real) -> None:
-        value = float(value)
-        assert value > 0.0, f"scale ({value}) must be over 0.0"
-        self._scale = value
         self._invalidate_scissor()
 
     @property

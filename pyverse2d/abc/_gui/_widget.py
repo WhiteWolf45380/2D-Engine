@@ -1,7 +1,7 @@
 # ======================================== IMPORTS ========================================
 from __future__ import annotations
 
-from ..._internal import expect, clamped
+from ..._internal import expect, clamped, over
 from ..._flag import Super
 from ...math import Point
 
@@ -68,13 +68,15 @@ class Widget(ABC):
     """Classe abstraite des composants UI
 
     Args:
-        position(Point, optional): position
-        anchor(Point, optional): ancre locale
-        opacity(float, optional): opacité
+        position: position
+        anchor: ancre locale
+        scale: facteur de redimensionnement
+        rotation: angle de rotation
+        opacity: opacité
     """
     __slots__ = (
         "_layer", "_parent", "_children",
-        "_position", "_anchor",
+        "_position", "_anchor", "_scale", "_rotation",
         "_opacity", "_active", "_visible", "_clipping",
         "_activate_process", "_deactivate_process", "_show_process", "_hide_process",
         "_attr_locks", "_behaviors", "_click", "_hover", "_select", "_focus",
@@ -85,18 +87,23 @@ class Widget(ABC):
             self,
             position: Point = (0, 0),
             anchor: Point = (0.5, 0.5),
+            scale: Real = 1.0,
+            rotation: Real = 0.0,
             opacity: float = 1.0,
             clipping: bool = False,
         ):
         # position
         self._position: Point = Point(position)
         self._anchor: Point = Point(anchor)
+        self._scale: float = float(scale)
+        self._rotation: float = float(rotation)
 
         # Design
         self._opacity: float = float(opacity)
         self._clipping: bool = clipping
 
         if __debug__:
+            over(self._scale, 0.0, include=False)
             clamped(self._opacity)
             if not isinstance(self._clipping, bool): raise ValueError(f"clipping ({self._clipping}) must be a boolean")
             
@@ -249,6 +256,32 @@ class Widget(ABC):
     def anchor_y(self, value: Real) -> None:
         self._anchor.y = value
         self._invalidate_scissor()
+
+    @property
+    def scale(self) -> float:
+        """Facteur de redimensionnement
+
+        Ce facteur doit être un ``réel`` positif non nul
+        """
+        return self._scale
+    
+    @scale.setter
+    def scale(self, value: Real) -> None:
+        self._scale = over(float(value), 0.0, include=False)
+        self._invalidate_scissor()
+
+    @property
+    def rotation(self) -> float:
+        """Angle de rotation
+
+        La rotation se fait *en degrés*, dans le sens trigonométrique *(CCW)*.
+        """
+        return self._rotation
+
+    @rotation.setter
+    def rotation(self, value: Real) -> None:
+        self._rotation = float(value, Real)
+        self._invalidate_scissor()
     
     @property
     def opacity(self) -> float:
@@ -297,6 +330,23 @@ class Widget(ABC):
         scale = getattr(self, "scale", 1.0)
         rotation = getattr(self, "rotation", 0.0)
         return self.hitbox.world_contains(point, self.absolute_x, self.absolute_y, anchor_x=self.anchor_x, anchor_y=self.anchor_y, scale=scale, rotation=rotation)
+    
+    # ========================================  TRANSFORMATIONS ========================================
+    def resize(self, factor: Real) -> None:
+        """Redimensionne le widget par un facteur
+
+        Le facteur de redimensionnement doit être un réel positif non nul.
+        """
+        self._scale *= over(float(factor, Real), 0.0, include=False)
+        self._invalidate_scissor()
+
+    def rotate(self, angle: Real) -> None:
+        """Applique une rotation au widget
+
+        La rotation est *en degrés* et se fait dans le sens trigonométrique *(CCW)*.
+        """
+        self._rotation += float(angle, Real)
+        self._invalidate_scissor()
 
     # ========================================  STATE ========================================
     def activate(self, propagate: bool = True) -> None:
@@ -609,8 +659,10 @@ class Widget(ABC):
             return Super.STOP
         
         # Sauvegarde du contexte de rendu
-        opacity = context.opacity
         origin = context.origin
+        scale = context.scale
+        rotation = context.rotation
+        opacity = context.opacity
         group = context.group
 
         # Actualisation du contexte de rendu
@@ -628,10 +680,12 @@ class Widget(ABC):
             child.widget.draw(pipeline, context)
 
         # Restauration du contexte de rendu
-        context.z = z
-        context.opacity = opacity
         context.origin = origin
+        context.scale = scale
+        context.rotation = rotation
+        context.opacity = opacity
         context.group = group
+        context.z = z
 
         return Super.NONE
     
@@ -663,9 +717,11 @@ class Widget(ABC):
     
     def _update_render_context(self, context: RenderContext) -> None:
         """Actualise le contexte de rendu avec les paramètres courants"""
-        context.z += 1
         context.origin += self._position
+        context.scale *= self._scale
+        context.rotation += self._rotation
         context.opacity *= self._opacity
+        context.z += 1
         context.group = WidgetGroup.get_group(order=context.z, parent=context.group, scissor=self._compute_scissor(context) if self._clipping else None)
 
     def _compute_scissor(self, context: RenderContext) -> tuple | None:

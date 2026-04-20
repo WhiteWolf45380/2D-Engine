@@ -140,6 +140,8 @@ class GuiLayer(Layer):
         return RenderContext(
             pipeline=pipeline,
             origin=Point(0.0, 0.0),
+            scale=1.0,
+            rotation=0.0,
             opacity=self._opacity,
             z=0,
             group=None,

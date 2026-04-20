@@ -28,7 +28,6 @@ class Border(Widget):
     """
     __slots__ = (
         "_shape", "_shape_renderer",
-        "_scale", "_rotation",
         "_width", "_align", "_color",
     )
 
@@ -37,6 +36,8 @@ class Border(Widget):
             shape: Shape,
             position: Point = (0.0, 0.0),
             anchor: Point = (0.5, 0.5),
+            scale: Real = 1.0,
+            rotation: Real = 0.0,
             width: int = 1,
             align: BorderAlign = "center",
             color: Color = (0, 0, 0),
@@ -44,15 +45,11 @@ class Border(Widget):
             clipping: bool = False
         ):
         # Initialisation du widget
-        super().__init__(position, anchor, opacity, clipping=clipping)
+        super().__init__(position, scale, rotation, anchor, opacity, clipping=clipping)
 
         # Forme
         self._shape: Shape = expect(shape, Shape)
         self._shape_renderer: PygletShapeRenderer = None
-
-        # Transformation
-        self._scale: float = 1.0
-        self._rotation: float = 0.0
 
         # Affichage
         self._width: int = expect(width, int)
@@ -62,93 +59,45 @@ class Border(Widget):
     # ======================================== GETTERS ========================================
     @property
     def shape(self) -> Shape:
-        """Renvoie la forme de la surface"""
+        """Forme de la bordure"""
         return self._shape
+    
+    @shape.setter
+    def shape(self, value: Shape) -> None:
+        self._shape = expect(value, Shape)
+        self._invalidate_scissor()
     
     @property
     def width(self) -> int:
-        """Renvoie la largeur de la bordure"""
+        """Largeur de la bordure"""
         return self._width
+    
+    @width.setter
+    def width(self, value: int) -> None:
+        self._width = expect(value, int)
     
     @property
     def align(self) -> BorderAlign:
-        """Renvoie l'alignement de la bordure"""
+        """Alignement de la bordure"""
         return self._align
+    
+    @align.setter
+    def align(self, value: BorderAlign) -> None:
+        self._align = value
     
     @property
     def color(self) -> Color:
-        """Renvoie la couleur de remplissage"""
+        """Couleur de la bordure"""
         return self._color
-    
-    @property
-    def scale(self) -> float:
-        """Renvoie le facteur de redimensionnement"""
-        return self._scale
-    
-    @property
-    def rotation(self) -> float:
-        """Renvoie l'angle de rotation en degrés"""
-        return self._rotation
-    
-    @property
-    def hitbox(self) -> Shape:
-        """Renvoie la hitbox de la surface"""
-        return self._shape
-    
-    # ======================================== SETTERS ========================================
-    @shape.setter
-    def shape(self, value: Shape) -> None:
-        """Fixe la forme de la surface"""
-        self._shape = expect(value, Shape)
-        self._invalidate_scissor()
-
-    @width.setter
-    def width(self, value: int) -> None:
-        """Fixe la largeur de la bordure"""
-        self._width = expect(value, int)
-
-    @align.setter
-    def align(self, value: BorderAlign) -> None:
-        """Fixe l'alignement de la bordure"""
-        self._align = expect(value, str)
     
     @color.setter
     def color(self, value: Color) -> None:
-        """Fixe la couleur de remplissage"""
         self._color = Color(value)
-
-    @scale.setter
-    def scale(self, value: Real) -> None:
-        """Fixe le facteur de redimensionnement"""
-        self._scale = positive(not_null(float(expect(value, Real))))
-        self._invalidate_scissor()
     
-    @rotation.setter
-    def rotation(self, value: Real) -> None:
-        """Fixe l'angle de rotation en degrés"""
-        self._rotation = float(expect(value, Real))
-        self._invalidate_scissor()
-
-    # ======================================== TRANSFORMATIONS ========================================
-    def resize(self, scale: Real) -> None:
-        """
-        Redimensionne la forme de la surface
-
-        Args:
-            scale(Real): facteur de redimensionnement
-        """
-        self._scale *= positive(not_null(float(expect(scale, Real))))
-        self._invalidate_scissor()
-    
-    def rotate(self, angle: Real) -> None:
-        """
-        Tourne la forme de la surface
-
-        Args:
-            angle(Real): angle de rotation en degrés
-        """
-        self._rotation += float(expect(angle, Real))
-        self._invalidate_scissor()
+    @property
+    def hitbox(self) -> Shape:
+        """Renvoie la hitbox de la forme"""
+        return self._shape
 
     # ======================================== LIFE CYCLE ========================================
     def _update(self, dt: float) -> None:
@@ -165,8 +114,8 @@ class Border(Widget):
                 y = context.origin.y,
                 anchor_x = self.anchor_x,
                 anchor_y = self.anchor_y,
-                scale = self._scale,
-                rotation = self._rotation,
+                scale = context.scale,
+                rotation = context.rotation,
                 filling = False,
                 border_width = self._width,
                 border_align = self._align,
@@ -184,8 +133,8 @@ class Border(Widget):
                 y = context.origin.y,
                 anchor_x = self.anchor_x,
                 anchor_y = self.anchor_y,
-                scale = self._scale,
-                rotation = self._rotation,
+                scale = context.scale,
+                rotation = context.rotation,
                 filling = False,
                 border_width = self._width,
                 border_align = self._align,
