@@ -152,8 +152,13 @@ class Tween(ABC):
         """Actualisation"""
         if self._direction == 0:
             return
-        self._t = max(0.0, min(self._t + self._direction * dt, self._duration))
-        p = self._easing(self._t / self._duration)
-        setattr(self._widget, self._attribut, self.interpolate(self._base_value, self._target_value, p) if self._duration != 0.0 else self._target_value)
-        if self._t <= 0.0 or self._t >= self._duration:
+        if self._duration <= 0.0:
+            value = self.target_value if self._direction == 1 else self._base_value
             self._direction = 0
+        else:
+            self._t = max(0.0, min(self._t + self._direction * dt, self._duration))
+            p = self._easing(self._t / self._duration)
+            value = self.interpolate(self._base_value, self._target_value, p)
+            if self._t >= self._duration:
+                self._direction = 0
+        setattr(self._widget, self._attribut, value)
