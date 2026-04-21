@@ -39,7 +39,7 @@ class Text(Asset):
         """Renvoie la police"""
         return self._font
 
-    # ======================================== PUBLIC METHODS ========================================
+    # ======================================== INTERFACE ========================================
     def __copy__(self) -> Text:
         """Renvoie une copie du texte"""
         t = Text(self._original_text, self._font)
@@ -67,6 +67,10 @@ class Text(Asset):
             font(Font): nouvelle font
         """
         return Text(self._original_text, expect(font, Font))
+    
+    def get_width(self) -> int:
+        """Renvoie la largeur théorique du texte"""
+        return self._font.text_width(self._text)
     
     def clip(self, width: Real = 0.0, suffix: str = ""):
         """

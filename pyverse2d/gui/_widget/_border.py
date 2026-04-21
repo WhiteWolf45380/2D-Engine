@@ -1,7 +1,7 @@
 # ======================================== IMPORTS ========================================
 from __future__ import annotations
 
-from ..._internal import expect, positive, not_null
+from ..._internal import expect
 from ..._rendering import Pipeline, PygletShapeRenderer
 from ...typing import BorderAlign
 from ...asset import Color
