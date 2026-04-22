@@ -140,6 +140,17 @@ class Widget(ABC):
         self._cached_scissor: tuple | None = None
         self._scissor_dirty: bool = True
 
+        # Contexte courant
+        self._context: RenderContext = RenderContext(
+            pipeline = None,
+            x = self._position.x,
+            y = self._position.y,
+            rotation = self._rotation,
+            opacity = self._opacity,
+            group = None,
+            z = 0,
+        )
+
     # ======================================== PROPERTIES ========================================
     @property
     def layer(self) -> GuiLayer | None:
@@ -333,7 +344,8 @@ class Widget(ABC):
     
     def collidespoint(self, point: Point) -> bool:
         """Vérifie la collision avec un point"""
-        return self.hitbox.world_contains(point, self.absolute_x, self.absolute_y, anchor_x=self.anchor_x, anchor_y=self.anchor_y, scale=self._scale, rotation=self._rotation)
+        self_context = self._context
+        return self.hitbox.world_contains(point, self_context.x, self_context.y, anchor_x=self.anchor_x, anchor_y=self.anchor_y, scale=self_context.scale, rotation=self_context.rotation)
     
     # ======================================== INTERFACE ========================================
     @abstractmethod
@@ -345,7 +357,7 @@ class Widget(ABC):
 
         Le facteur de redimensionnement doit être un réel positif non nul.
         """
-        self._scale *= over(float(factor, Real), 0.0, include=False)
+        self._scale *= over(float(factor), 0.0, include=False)
         self._invalidate_scissor()
 
     def rotate(self, angle: Real) -> None:
@@ -353,7 +365,7 @@ class Widget(ABC):
 
         La rotation est *en degrés* et se fait dans le sens trigonométrique *(CCW)*.
         """
-        self._rotation += float(angle, Real)
+        self._rotation += float(angle)
         self._invalidate_scissor()
 
     # ========================================  STATE ========================================
@@ -365,7 +377,6 @@ class Widget(ABC):
             propagate(bool, optional): propage l'état aux enfants
         """
         self._active = True
-
         for behavior in self._behaviors:
             getattr(self, f"_{behavior}").enable()
         for fn in self._activate_process:
@@ -675,13 +686,7 @@ class Widget(ABC):
         """Affichage"""
         if not self._visible:
             return Super.STOP
-        
-        # Sauvegarde du contexte de rendu
-        origin = context.origin
-        scale = context.scale
-        rotation = context.rotation
-        opacity = context.opacity
-        group = context.group
+        self_context = self._context
 
         # Actualisation du contexte de rendu
         self._update_render_context(context, share_scale, share_rotation)
@@ -689,21 +694,16 @@ class Widget(ABC):
         # Affichage personnel
         self._draw(pipeline, context)
 
-        # Passage au z relatif
-        z = context.z
-        context.z = 0
+        # Passage au zorder des enfants
+        z = self._context.z
+        self_context.z = 0
 
         # Affichage des enfants
         for child in self._children:
-            child.widget.draw(pipeline, context, share_scale=child.share_scale, share_rotation=child.share_rotation)
+            child.widget.draw(pipeline, self_context, share_scale=child.share_scale, share_rotation=child.share_rotation)
 
-        # Restauration du contexte de rendu
-        context.origin = origin
-        context.scale = scale
-        context.rotation = rotation
-        context.opacity = opacity
-        context.group = group
-        context.z = z
+        # Restauration du zorder
+        self_context.z = z
 
         return Super.NONE
     
@@ -735,30 +735,34 @@ class Widget(ABC):
                 return wrapper
         raise ValueError(f"{child} is not a child of this widget")
     
-    def _update_render_context(self, context: RenderContext, share_scale: bool = True, share_rotation: bool = True) -> None:
+    def _update_render_context(self, context: RenderContext, share_scale: bool = True, share_rotation: bool = True) -> RenderContext:
         """Actualise le contexte de rendu avec les paramètres courants"""
-        context.origin += self._position
-        context.scale = (context.scale if share_scale else 1.0) * self._scale
-        context.rotation = (context.rotation if share_rotation else 0.0) + self._rotation
-        context.opacity *= self._opacity
-        context.z += 1
-        context.group = WidgetGroup.get_group(order=context.z, parent=context.group, scissor=self._compute_scissor(context))
+        self_context = self._context
+        self_context.x = self._position.x + context.x
+        self_context.y = self._position.y + context.y
+        self_context.scale = self._scale * (context.scale if share_scale else 1.0)
+        self_context.rotation = self._rotation + (context.rotation if share_rotation else 0.0)
+        self_context.opacity = self._opacity * context.opacity
+        self_context.z = context.z + 1
+        self_context.group = WidgetGroup.get_group(order=context.z, parent=context.group, scissor=self._compute_scissor())
+        return self_context
 
-    def _compute_scissor(self, context: RenderContext = None) -> tuple | None:
+    def _compute_scissor(self) -> tuple | None:
         """Calcule le scissor résolu en coordonnées framebuffer"""
         if not self._scissor_dirty:
             return self._cached_scissor
         if not self._clipping:
             result = self._parent._compute_scissor() if self._parent else None
         else:
+            self_context = self._context
             xmin, ymin, xmax, ymax = self.hitbox.world_bounding_box(
-                x=context.origin.x, y=context.origin.y,
+                x=self_context.x, y=self_context.y,
                 anchor_x=self.anchor_x, anchor_y=self.anchor_y,
-                scale=context.scale,
-                rotation=context.rotation,
+                scale=self_context.scale,
+                rotation=self_context.rotation,
             )
-            x, y = context.pipeline.world_to_framebuffer(xmin, ymin)
-            width, height = context.pipeline.scale_to_framebuffer(xmax - xmin, ymax - ymin)
+            x, y = self_context.pipeline.world_to_framebuffer(xmin, ymin)
+            width, height = self_context.pipeline.scale_to_framebuffer(xmax - xmin, ymax - ymin)
             scissor = (int(x), int(y), int(width), int(height))
             parent_scissor = self._parent._compute_scissor() if self._parent else None
             result = intersect(parent_scissor, scissor) if parent_scissor else scissor
