@@ -10,7 +10,8 @@ from pyglet.graphics import Group
 class RenderContext:
     """Contexte de rendu des widgets"""
     pipeline: Pipeline      # pipeline de rendu
-    origin: Point           # ancre globale
+    x: float                # ancre horizontale
+    y: float                # ancre verticale
     scale: float            # facteur de redimensionnement cumulée
     rotation: float         # rotation cumulée
     opacity: float          # opacité cumulée
