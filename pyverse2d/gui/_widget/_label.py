@@ -292,8 +292,8 @@ class Label(Widget):
         if self._text_renderer is None:
             self._text_renderer = PygletLabelRenderer(
                 text = self._text,
-                x = context.origin.x,
-                y = context.origin.y,
+                x = context.x,
+                y = context.y,
                 anchor_x = self.anchor_x,
                 anchor_y = self.anchor_y,
                 scale= context.scale,
@@ -319,8 +319,8 @@ class Label(Widget):
         else:
             self._text_renderer.update(
                 text = self._text,
-                x = context.origin.x,
-                y = context.origin.y,
+                x = context.x,
+                y = context.y,
                 anchor_x = self.anchor_x,
                 anchor_y = self.anchor_y,
                 scale= context.scale,

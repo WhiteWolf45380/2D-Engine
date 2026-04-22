@@ -153,8 +153,8 @@ class Sprite(Widget):
         if self._image_renderer is None:
             self._image_renderer = PygletSpriteRenderer(
                 image = self._image,
-                x = context.origin.x,
-                y = context.origin.y,
+                x = context.x,
+                y = context.y,
                 anchor_x = self.anchor_x,
                 anchor_y = self.anchor_y,
                 scale_x = context.scale,
@@ -173,8 +173,8 @@ class Sprite(Widget):
         else:
             self._image_renderer.update(
                 image = self._image,
-                x = context.origin.x,
-                y = context.origin.y,
+                x = context.x,
+                y = context.y,
                 anchor_x = self.anchor_x,
                 anchor_y = self.anchor_y,
                 scale_x = context.scale,

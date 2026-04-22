@@ -104,8 +104,8 @@ class Surface(Widget):
         if self._shape_renderer is None:
             self._shape_renderer = PygletShapeRenderer(
                 shape = self._shape,
-                x = context.origin.x,
-                y = context.origin.y,
+                x = context.x,
+                y = context.y,
                 anchor_x = self.anchor_x,
                 anchor_y = self.anchor_y,
                 scale = context.scale,
@@ -120,8 +120,8 @@ class Surface(Widget):
         # Mise à jour du renderer
         else:
             self._shape_renderer.update(
-                x = context.origin.x,
-                y = context.origin.y,
+                x = context.x,
+                y = context.y,
                 anchor_x = self.anchor_x,
                 anchor_y = self.anchor_y,
                 scale = context.scale,

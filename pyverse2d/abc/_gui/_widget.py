@@ -87,6 +87,7 @@ class Widget(ABC):
         "_activate_process", "_deactivate_process", "_show_process", "_hide_process",
         "_attr_locks", "_behaviors", "_click", "_hover", "_select", "_focus",
         "_cached_scissor", "_scissor_dirty",
+        "_context",
     )
 
     _RENDER_CONTEXT_CLS: RenderContext = None
@@ -155,6 +156,7 @@ class Widget(ABC):
             pipeline = None,
             x = self._position.x,
             y = self._position.y,
+            scale = self._scale,
             rotation = self._rotation,
             opacity = self._opacity,
             group = None,
