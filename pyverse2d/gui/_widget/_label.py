@@ -256,6 +256,30 @@ class Label(Widget):
     def hitbox(self):
         """Hitbox du label"""
         return Rect(self._text_renderer.content_width, self._text_renderer.content_height)
+    
+    # ======================================== INTERFACE ========================================
+    def copy(self) -> Label:
+        """Renvoie une copie du widget"""
+        return Label(
+            text = self._text.copy(),
+            position = self._position.copy(),
+            anchor = self._anchor.copy(),
+            scale = self._scale,
+            rotation = self._rotation,
+            weight = self._weight,
+            italic = self._italic,
+            underline = self._underline,
+            color = self._color,
+            opacity = self._opacity,
+            width = self._width,
+            height = self._height,
+            multiline = self._multiline,
+            line_spacing = self._line_spacing,
+            wrap_lines = self._wrap_lines,
+            align = self._align,
+            margin = self._margin,
+            clipping = self._clipping,
+        )
         
     # ======================================== LIFE CYCLE ========================================
     def _update(self, dt: float) -> None:

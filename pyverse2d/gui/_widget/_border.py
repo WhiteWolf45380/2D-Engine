@@ -98,6 +98,22 @@ class Border(Widget):
     def hitbox(self) -> Shape:
         """Renvoie la hitbox de la forme"""
         return self._shape
+    
+    # ======================================== INTERFACE ========================================
+    def copy(self) -> Border:
+        """Renvoie une copie du widget"""
+        return Border(
+            shape = self._shape.copy(),
+            position = self._position.copy(),
+            anchor = self._anchor.copy(),
+            scale = self._scale,
+            rotation = self._rotation,
+            width = self._width,
+            align = self._align,
+            color = self._color,
+            opacity = self._opacity,
+            clipping = self._clipping,
+        )
 
     # ======================================== LIFE CYCLE ========================================
     def _update(self, dt: float) -> None:

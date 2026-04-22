@@ -335,6 +335,10 @@ class Widget(ABC):
         """Vérifie la collision avec un point"""
         return self.hitbox.world_contains(point, self.absolute_x, self.absolute_y, anchor_x=self.anchor_x, anchor_y=self.anchor_y, scale=self._scale, rotation=self._rotation)
     
+    # ======================================== INTERFACE ========================================
+    @abstractmethod
+    def copy(self) -> Widget: ...
+    
     # ========================================  TRANSFORMATIONS ========================================
     def resize(self, factor: Real) -> None:
         """Redimensionne le widget par un facteur

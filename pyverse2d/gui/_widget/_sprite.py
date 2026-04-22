@@ -1,5 +1,7 @@
 # ======================================== IMPORTS ========================================
-from ..._internal import expect, positive, not_null
+from __future__ import annotations
+
+from ..._internal import expect
 from ..._rendering import Pipeline, PygletSpriteRenderer
 from ...abc import Widget
 from ...asset import Image, Color
@@ -118,7 +120,20 @@ class Sprite(Widget):
             return Rect(1, 1)
         return Rect(self._image_renderer.width, self._image_renderer.height)
     
-    # ======================================== TRANSFORMATIONS ========================================
+    # ======================================== INTERFACE ========================================
+    def copy(self) -> Sprite:
+        """Renvoie une copie du widget"""
+        return Sprite(
+            image = self._image.copy(),
+            position = self._position.copy(),
+            anchor = self._anchor.copy(),
+            scale = self._scale,
+            rotation = self._rotation,
+            color = self._color,
+            opacity = self._opacity,
+            clipping = self._clipping,
+        )
+
     def flip(self, horizontal: bool = False, vertical: bool = False) -> None:
         """Applique un mirroir
 

@@ -31,9 +31,13 @@ class Button(Widget):
         rotation: angle de rotation        
         opacity: opacité [0, 1]
         clipping: rendu des widgets enfants strictement dans le AABB de la hitbox
+        callback: action au clique
+        condition: condition d'action
+        id: identifiant du bouton
+        give_id: passe l'identifiant à l'action
     """
     __slots__ = (
-        "_background", "_label", "_border"
+        "_background", "_label", "_border",
         "_callback", "_condition", "_id", "_give_id",
     )
 
@@ -209,7 +213,21 @@ class Button(Widget):
     # ======================================== INTERFACE ========================================
     def copy(self) -> Button:
         """Renvoie une copie du widget"""
-        pass
+        return Button(
+            background = self._background.copy(),
+            label = self._label.copy() if self._label is not None else None,
+            border = self._border.copy() if self._border is not None else None,
+            position = self._position.copy(),
+            anchor = self._anchor.copy(),
+            scale = self._scale,
+            rotation = self._rotation,
+            opacity = self._opacity,
+            clipping = self._clipping,
+            callback = self._callback,
+            condition = self._condition,
+            id = self._id,
+            give_id = self._give_id,
+        )
     
     # ======================================== LIFE CYCLE ========================================
     def _update(self, dt: float):

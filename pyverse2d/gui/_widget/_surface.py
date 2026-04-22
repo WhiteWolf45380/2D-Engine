@@ -80,6 +80,19 @@ class Surface(Widget):
         """Fixe la couleur de remplissage"""
         self._color = Color(value)
 
+    # ======================================== INTERFACE ========================================
+    def copy(self) -> Surface:
+        """Renvoie une copie du widget"""
+        return Surface(
+            shape = self._shape.copy(),
+            position = self._position.copy(),
+            anchor = self._anchor.copy(),
+            scale = self._scale,
+            rotation = self._rotation,
+            opacity = self._opacity,
+            clipping = self._clipping,
+        )
+
     # ======================================== LIFE CYCLE ========================================
     def _update(self, dt: float) -> None:
         """Actualisation"""
