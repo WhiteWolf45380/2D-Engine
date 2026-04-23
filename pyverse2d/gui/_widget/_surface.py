@@ -89,6 +89,7 @@ class Surface(Widget):
             anchor = self._anchor,
             scale = self._scale,
             rotation = self._rotation,
+            color=self._color,
             opacity = self._opacity,
             clipping = self._clipping,
         )
