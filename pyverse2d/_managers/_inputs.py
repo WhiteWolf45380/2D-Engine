@@ -20,6 +20,7 @@ class InputsManager(Manager):
     Input: TypeAlias = int
 
     def __init__(self, context_manager: ContextManager):
+        # Initialisation du gestionnaire
         super().__init__(context_manager)
 
         # Listeners

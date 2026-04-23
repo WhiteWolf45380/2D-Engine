@@ -7,6 +7,7 @@ from ._key import KeyManager
 from ._mouse import MouseManager
 from ._inputs import InputsManager
 from ._ui import UiManager
+from ._audio import AudioManager
 
 # ======================================== EXPORTS ========================================
 __all__ = [
@@ -17,5 +18,6 @@ __all__ = [
     "KeyManager",
     "MouseManager",
     "InputsManager",
-    "UiManager"
+    "UiManager",
+    "AudioManager",
 ]

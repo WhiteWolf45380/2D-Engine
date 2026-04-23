@@ -17,7 +17,7 @@ from ._rendering import (
 _pipeline: Pipeline | None = None
 
 # ======================================== MANAGERS ========================================
-from ._managers import ContextManager, TimeManager, CoordinatesManager, EventManager, KeyManager, MouseManager, InputsManager, UiManager
+from ._managers import ContextManager, TimeManager, CoordinatesManager, EventManager, KeyManager, MouseManager, InputsManager, UiManager, AudioManager
 
 _context_manager: ContextManager = ContextManager()
 
@@ -48,6 +48,10 @@ _context_manager.inputs = inputs
 # Ui
 ui: UiManager = UiManager(_context_manager)
 _context_manager.ui = ui
+
+# Audio
+audio: AudioManager = AudioManager(_context_manager)
+_context_manager.audio = audio
 
 # ======================================== NODES ========================================
 from . import world, tile, gui, fx, scene
@@ -177,11 +181,13 @@ __all__ = [
     "UiManager",
 
     "time",
+    "coordinates",
     "event",
     "key",
     "mouse",
     "inputs",
     "ui",
+    "audio",
 
     "typing",
     "abc",

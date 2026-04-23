@@ -2,8 +2,10 @@
 from __future__ import annotations
 
 from .._flag import CoordSpace
-from .._rendering import Window, Viewport, Camera
+from .._rendering import Viewport, Camera
 from ..abc import Manager
+
+from ._context import ContextManager
 
 from typing import Callable
 import math
@@ -32,8 +34,10 @@ class CoordinatesManager(Manager):
 
     _ID: str = "coordinates"
 
-    def __init__(self, window: Window) -> None:
-        self._window: Window = window
+    def __init__(self, context_manager: ContextManager) -> None:
+        # Initialisation du gestionnaire
+        super().__init__(context_manager)
+
         self._viewport: Viewport = None
         self._viewport_resolve: tuple = None
         self._camera: Camera = None

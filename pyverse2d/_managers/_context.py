@@ -9,6 +9,7 @@ if TYPE_CHECKING:
     from ._mouse import MouseManager
     from ._inputs import InputsManager
     from ._ui import UIManager
+    from ._audio import AudioManager
 
 # ======================================== CONTEXT ========================================
 class ContextManager:
@@ -21,6 +22,7 @@ class ContextManager:
         "mouse",
         "inputs",
         "ui",
+        "audio",
     )
 
     def __init__(self):
@@ -31,6 +33,7 @@ class ContextManager:
         self.mouse: MouseManager = None
         self.inputs: InputsManager = None
         self.ui: UIManager = None
+        self._audio: AudioManager = None
 
     def __iter__(self) -> Iterator:
         """Itère sur les itérateurs"""
