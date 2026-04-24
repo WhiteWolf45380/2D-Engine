@@ -43,7 +43,7 @@ class Sound(Asset):
         """Renvoie le gestionnaire audio"""
         if cls._AUDIO_MANAGER is None:
             from .._managers._audio import AudioManager
-            cls._AUDIO_MANAGER = AudioManager
+            cls._AUDIO_MANAGER = AudioManager.get_instance()
         return cls._AUDIO_MANAGER
 
     def __init__(
