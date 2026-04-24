@@ -545,7 +545,7 @@ class AudioManager(Manager):
         while cf.elapsed >= cf.step_dt and cf.step < cf.steps:
             cf.step += 1
             cf.elapsed -= cf.step_dt
-            t = cf.easing(cf.step / cf.steps)
+            t = max(0.0, min(cf.easing(cf.step / cf.steps), 1.0))
             if cf.music_out is not None:
                 cf.music_out._set_volume(cf.vol_out * (1.0 - t))
             if cf.music_in is not None:
