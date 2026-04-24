@@ -1,7 +1,7 @@
 # ======================================== IMPORTS ========================================
 from __future__ import annotations
 
-from ..._internal import CallbackList
+from ..._internal import CallbackList, positive
 from ...abc import Component
 from ...asset import Sound
 from ...math.easing import EasingFunc, is_easing, linear
@@ -26,32 +26,65 @@ class SoundEmitter(Component):
 
     def __init__(
             self,
-            range_min: Real = 0.0,
-            range_max: Real = 0.0,
+            volume: Real = 1.0,
+            inner_radius: Real = 0.0,
+            outer_radius: Real = 0.0,
             falloff: EasingFunc = linear,
         ):
         # Attributs publiques
-        self._inner_radius: float = abs(float(range_min))
-        self._outer_radius: float = abs(float(range_max))
+        self._volume: float = float(volume)
+        self._inner_radius: float = abs(float(inner_radius))
+        self._outer_radius: float = abs(float(outer_radius))
         self._falloff: EasingFunc = falloff
 
         if __debug__:
+            positive(self._volume)
             if not is_easing(self._falloff): raise ValueError(f"falloff ({self._falloff}) must be an EasingFunc from math module")
 
-        # Attributs internes
+        # Hooks
         self._on_start: CallbackList = CallbackList()
         self._on_end: CallbackList = CallbackList()
 
-    # ======================================== CONVERSIONS ========================================
+        # Buffer
+        self._to_play: list[Sound] = []
+        self._playing: set[Sound] = set()
+
+    # ======================================== CONTRACT ========================================
     def __repr__(self) -> str:
         """Renvoie une représentation du composant"""
-        return f"SoundEmitter(inner_radius={self._inner_radius}, outer_radius={self._outer_radius})"
+        return f"SoundEmitter(volume={self._volume}, inner_radius={self._inner_radius}, outer_radius={self._outer_radius})"
     
     def get_attributes(self) -> tuple:
         """Renvoie les attributs du composant"""
-        return (self._shape, self._offset, self._filling, self._filling_color, self._border_width, self._border_align, self._border_color, self._opacity, self._z)
+        return (self._volume, self._inner_radius, self._outer_radius, self._falloff)
+    
+    def copy(self) -> SoundEmitter:
+        """Renvoie une copie du composant"""
+        component = SoundEmitter(
+            volume = self._volume,
+            inner_radius = self._inner_radius,
+            outer_radius = self._outer_radius,
+            falloff = self._falloff,
+        )
+        component.on_start._inject(self._on_start._exctract())
+        component.on_end._inject(self._on_end._exctract())
+        return component
 
     # ======================================== PROPERTIES ========================================
+    @property
+    def volume(self) -> float:
+        """Volume propre du comosant
+
+        Le volume doit être un ``Réel`` positif.
+        """
+        return self._volume
+    
+    @volume.setter
+    def volume(self, value: Real) -> None:
+        value = float(value)
+        assert value >= 0.0, f"volume ({value}) must be positive"
+        self._volume = value
+
     @property
     def inner_radius(self) -> float:
         """Portée du son à plein volume

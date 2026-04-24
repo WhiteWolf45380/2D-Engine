@@ -161,6 +161,15 @@ class Sound(Asset):
         self._sources.append(_media.load(path, streaming=False))
 
     # ======================================== INTERFACE ========================================
+    def copy(self) -> Sound:
+        """Renvoie une copie du son"""
+        return Sound(
+            path = self._path,
+            volume = self._volume,
+            cooldown = self._cooldown,
+            group = self._group,
+        )
+
     def play(self) -> None:
         """Joue le son si disponible"""
         self._get_audio_manager().play_sound(self)

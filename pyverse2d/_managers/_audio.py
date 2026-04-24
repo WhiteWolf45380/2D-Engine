@@ -26,24 +26,28 @@ class SoundGroup:
     Args:
         pool_max: nombre de lectures simultanées maximum
         volume: volume du groupe [0, 1]
+        parent: groupe parent (hérite du volume)
     """
     __slots__ = (
-        "_volume", "_pool_max",
+        "_volume", "_pool_max", "_parent",
         "_players",
     )
 
-    def __init__(self, volume: Real = 1.0, pool_max: int = None):
+    def __init__(self, volume: Real = 1.0, pool_max: int = None, parent: SoundGroup = None):
         # Attributs publiques
         self._volume: float = float(volume)
         self._pool_max: int | None = pool_max
+        self._parent: SoundGroup | None = parent
 
         if __debug__:
             positive(self._volume)
             expect(self._pool_max, (int, None))
+            expect(self._parent, (SoundGroup, None))
         
         # Attributs internes
         self._players: set[_media.Player] = set()
 
+    # ======================================== PROPERTIES ========================================
     @property
     def volume(self) -> float:
         """Volume du groupe
@@ -72,20 +76,37 @@ class SoundGroup:
         assert value is None or isinstance(value, int), f"pool_max ({value}) must be an integer or None"
         self._pool_max = value
 
-    def _get_free_player(self) -> _media.Player | None:
-        """Renvoie un cannal libre si possible"""
-        self._players = {p for p in self._players if p.playing}
-        if self._pool_max is not None and len(self._players) >= self.pool_max:
-            return None
-        player = _media.Player()
-        self._players.add(player)
-        return player
+    @property
+    def parent(self) -> SoundGroup:
+        """Groupe parent
 
+        Le ``SoundGroup`` hérite du volume du parent.
+        Le parent est fixe après initialisation du groupe.
+        """
+        return self._parent
+    
+    # ======================================== INTERFACE ========================================
+    def get_absolute_volume(self) -> float:
+        """Renvoie le volume absolu du groupe"""
+        if self._parent is None:
+            return self._volume
+        return self._volume * self._parent.get_absolute_volume()
+    
     def stop_all(self) -> None:
         """Arrête tous les sons du groupe"""
         for p in self._players:
             p.pause()
         self._players.clear()
+
+    # ======================================== INTERNALS ========================================
+    def _get_free_player(self) -> _media.Player | None:
+        """Renvoie un cannal libre si possible"""
+        self._players = {p for p in self._players if p.playing}
+        if self._pool_max is not None and len(self._players) >= self._pool_max:
+            return None
+        player = _media.Player()
+        self._players.add(player)
+        return player    
 
 # ======================================== REQUESTS ========================================
 @dataclass(slots=True)
@@ -266,11 +287,12 @@ class AudioManager(Manager):
         return result
 
     # ======================================== SOUNDS ========================================
-    def play_sound(self, sound: Sound) -> None:
+    def play_sound(self, sound: Sound, volume: Real = 1.0) -> None:
         """Joue un ``Sound`` asset
 
         Args:
             sound: son à jouer
+            volume: volume ponctuel
         """
         if not sound.is_ready():
             return
@@ -287,8 +309,8 @@ class AudioManager(Manager):
         player.queue(source)
         player.play()
 
-        group_vol = group.volume if group is not None else 1.0
-        player.volume = self._master_volume * group_vol * sound.volume
+        group_vol = group.get_absolute_volume() if group is not None else 1.0
+        player.volume = self._master_volume * group_vol * sound.volume * volume
 
         def _on_eos() -> None:
             sound._remove_player(player)
@@ -384,11 +406,12 @@ class AudioManager(Manager):
         return self._active_sounds
 
     # ======================================== MUSICS ========================================
-    def play_music(self, music: Music, loop: bool = True, fade_s: float = 0.0, fade_easing: EasingFunc = linear) -> None:
+    def play_music(self, music: Music, volume: Real = 1.0, loop: bool = True, fade_s: float = 0.0, fade_easing: EasingFunc = linear) -> None:
         """Joue un ``Music`` asset en remplaçant l'éventuel en cours.
 
         Args:
             music: musique à jouer
+            volume: volume ponctuel
             loop: boucle si True
             fade_s: fade-in en secondes
             fade_easing: fonction d'atténuation du fade-in
@@ -416,14 +439,14 @@ class AudioManager(Manager):
                 step=0,
                 elapsed=0.0,
                 vol_out=0.0,
-                vol_in=self._master_volume * self._music_volume * music.volume,
+                vol_in=self._master_volume * self._music_volume * music.volume * volume,
                 easing=fade_easing,
                 master=self._master_volume,
                 music_vol=self._music_volume,
             )
         else:
             player.play()
-            player.volume = self._master_volume * self._music_volume * music.volume
+            player.volume = self._master_volume * self._music_volume * music.volume * volume
             music._set_player(player)
             music._loop = loop
             music._set_playing(True)
@@ -476,7 +499,7 @@ class AudioManager(Manager):
                 music_vol=self._music_volume,
             )
 
-    def switch_music(self, music: Music, fade_s: float = 1.0, fade_easing: EasingFunc = linear, loop: bool = True) -> None:
+    def switch_music(self, music: Music, volume: Real = 1.0, fade_s: float = 1.0, fade_easing: EasingFunc = linear, loop: bool = True) -> None:
         """Crossfade vers une nouvelle musique
 
         Args:
@@ -511,8 +534,8 @@ class AudioManager(Manager):
             step_dt=fade_s / _CROSSFADE_STEPS,
             step=0,
             elapsed=0.0,
-            vol_out=self._master_volume * self._music_volume * music_out.volume if music_out else 0.0,
-            vol_in=self._master_volume * self._music_volume * music.volume,
+            vol_out=self._master_volume * self._music_volume * (music_out.volume if music_out else 0.0),
+            vol_in=self._master_volume * self._music_volume * music.volume * volume,
             easing=fade_easing,
             master=self._master_volume,
             music_vol=self._music_volume,

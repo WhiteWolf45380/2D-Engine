@@ -1,4 +1,6 @@
 # ======================================== IMPORTS ========================================
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from typing import Iterator
 
@@ -26,6 +28,9 @@ class Component(ABC):
 
     @abstractmethod
     def get_attributes(self) -> tuple: ...
+
+    @abstractmethod
+    def copy(self) -> Component: ...
 
     # ======================================== COMPARATORS ========================================
     def __eq__(self, other: object) -> bool:

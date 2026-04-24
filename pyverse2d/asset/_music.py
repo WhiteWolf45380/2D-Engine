@@ -97,6 +97,13 @@ class Music(Asset):
         return self._paused
 
     # ======================================== INTERFACE ========================================
+    def copy(self) -> Music:
+        """Renvoie une copie de la musique"""
+        return Music(
+            path = self._path,
+            volume = self._volume,
+        )
+
     def play(self, loop: bool = True, fade_s: Real = 0.0) -> None:
         """Joue la musique
 

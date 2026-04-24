@@ -14,6 +14,7 @@ class CallbackList:
     def __init__(self):
         self._callbacks: list[Callable] = []
 
+    # ======================================== INTERFACE ========================================
     def __call__(self, callback: Callable) -> Callable:
         """Ajoute une fonction"""
         self._callbacks.append(callback)
@@ -27,3 +28,12 @@ class CallbackList:
         """Appelle les fonctions"""
         for func in self._callbacks:
             func(*args, **kwargs)
+    
+    # ======================================== INTERNALS ========================================
+    def _inject(self, callbacks: list[Callable]) -> None:
+        """Injecte une liste de callbacks"""
+        self._callbacks += callbacks
+
+    def _exctract(self) -> list[Callable]:
+        """Extrait les callbacks"""
+        return self._callbacks
