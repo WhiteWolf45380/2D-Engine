@@ -62,7 +62,7 @@ class Sound(Asset):
         if __debug__:
             positive(self._volume)
             positive(self._cooldown)
-            expect(self._group, self._get_group_class())
+            expect(self._group, (self._get_group_class(), None))
 
         # Attributs internes
         self._sources: list[_media.Source] = [_media.load(path, streaming=False)]
