@@ -3,6 +3,7 @@ from ._math_object import MathObject
 from ._render_object import RenderObject
 from ._shape import Shape
 from ._asset import Asset
+from ._bundle import Bundle
 from ._request import Request
 from ._space import Space
 from ._manager import Manager
@@ -18,6 +19,7 @@ __all__ = [
     "RenderObject",
     "Shape",
     "Asset",
+    "Bundle",
     "Request",
     "Space",
     "Manager",

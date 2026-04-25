@@ -256,6 +256,16 @@ class AudioManager(Manager):
     SoundHandle: ClassVar[Type[SoundHandle]] = SoundHandle
     MusicHandle: ClassVar[Type[MusicHandle]] = MusicHandle
 
+    # Groupes par défaut
+    _DEFAULT_SOUN_GROUP: SoundGroup = None
+
+    @classmethod
+    def get_default_sound_group(cls) -> SoundGroup:
+        """Renvoie le groupe de sons par défaut"""
+        if cls._DEFAULT_SOUN_GROUP is None:
+            cls._DEFAULT_SOUN_GROUP = SoundGroup()
+        return cls._DEFAULT_SOUN_GROUP
+
     def __init__(self, context_manager: ContextManager):
         # Initialisation du gestionnaire
         super().__init__(context_manager)
@@ -430,13 +440,10 @@ class AudioManager(Manager):
             return None
 
         # Récupération d'un player
-        group = sound._group
-        if group is not None:
-            handle = group._get_free_handle(sound)
-            if handle is None:
-                return None
-        else:
-            handle = SoundHandle(sound, _media.Player())
+        group = sound._group or self.get_default_sound_group()
+        handle = group._get_free_handle(sound)
+        if handle is None:
+            return None
         handle.on_stop = lambda h: self._active_sounds.discard(h.sound)
 
         # Lecture du son

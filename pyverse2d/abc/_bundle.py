@@ -4,7 +4,11 @@ from __future__ import annotations
 from ..typing import DictKeys, DictValues
 
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, TypeAlias
+import os
+
+# ======================================== ALIASES ========================================
+CacheKey: TypeAlias = tuple | str
 
 # ======================================== ABSTRACT CLASS ========================================
 class Bundle(ABC):
@@ -13,7 +17,7 @@ class Bundle(ABC):
 
     def __init__(self, paths: dict[str, str]):
         self._paths: dict[str, str] = paths
-        self._cache: dict[str, Any] = {}
+        self._cache: dict[CacheKey, Any] = {}
 
     # ======================================== PROPERTIES ========================================
     @property
@@ -23,8 +27,29 @@ class Bundle(ABC):
 
     # ======================================== FACTORY ========================================
     @classmethod
-    @abstractmethod
-    def from_folder(cls, folder_path: str, prefix: str  ="", extensions: list[str] = None, remove_prefix: bool = False, **kwargs) -> Bundle: ...
+    def from_folder(cls, folder_path: str, prefix: str  ="", extensions: list[str] = None, remove_prefix: bool = False, **kwargs) -> Bundle:
+        """Crée un bundle à partir d'un dossier
+
+        Args:
+            folder_path: chemin d'accès au dossier contenant les sons
+            prefix: préfixe à ajouter à la clé de chaque son du bundle
+            extensions: extensions de fichiers à inclure dans le bundle
+            remove_prefix: si ``True``, supprime le préfixe du nom
+            **kwargs: arguments supplémentaires à passer au constructeur du bundle
+        """
+        paths: dict[str, str] = {}
+        for filename in sorted(os.listdir(folder_path)):
+            name, ext = os.path.splitext(filename)
+            if extensions is not None and ext.lower() not in extensions:
+                continue
+            key = name
+            if prefix != "":
+                if not key.startswith(prefix):
+                    continue
+                if remove_prefix:
+                    key = key[len(prefix):]
+            paths[key] = os.path.join(folder_path, filename)
+        return cls(paths, **kwargs)
 
     def preload(self) -> None:
         """Précharge tous les éléments du bundle"""
@@ -32,6 +57,9 @@ class Bundle(ABC):
             self.get(key, cache=True)
 
     # ======================================== INTERFACE ========================================
+    @abstractmethod
+    def generate(self, key: str) -> Any: ...
+
     @abstractmethod
     def get(self, key: str, cache: bool = False) -> Any: ...
 
