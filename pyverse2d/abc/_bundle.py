@@ -58,10 +58,11 @@ class Bundle(ABC):
 
     # ======================================== INTERFACE ========================================
     @abstractmethod
-    def generate(self, key: str) -> Any: ...
+    def get(self, key: str, **kwargs) -> Any: ...
 
-    @abstractmethod
-    def get(self, key: str, cache: bool = False) -> Any: ...
+    def __getitem__(self, key):
+        """Renvoie l'élément associé à la clé"""
+        return self.get(key)
 
     def keys(self) -> DictKeys[str]:
         """Renvoie une vue des clés du bundle"""
@@ -75,17 +76,17 @@ class Bundle(ABC):
         """Itère sur les entrées du bundle"""
         return iter(self._paths)
 
-    def __contains__(self, key: str) -> bool:
-        """Vérifie qu'une clé est présente dans le bundle"""
-        return key in self._paths
-
     def has(self, key: str) -> bool:
         """Vérifie qu'une clé est présente dans le bundle
 
         Args:
             key: clé à vérifier
         """
-        return self.__contains__(key)
+        return key in self._paths
+    
+    def __contains__(self, key: str) -> bool:
+        """Vérifie qu'une clé est présente dans le bundle"""
+        return self.has(key)
     
     def __len__(self) -> int:
         """Renvoie le nombre d'entrées du bundle"""

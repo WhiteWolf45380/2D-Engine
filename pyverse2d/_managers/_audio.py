@@ -4,7 +4,7 @@ from __future__ import annotations
 from .._internal import expect, positive
 from .._flag import AudioState
 from ..abc import Manager, Request
-from ..asset import Sound, Music
+from ..asset import Sound, Music, SoundBundle, MusicBundle
 from ..math.easing import EasingFunc, linear
 
 from ._context import ContextManager
@@ -351,7 +351,7 @@ class AudioManager(Manager):
         volume: Real = 1.0,
         cooldown: Real = 0.0,
         group: SoundGroup = None,
-    ) -> dict[str, Sound]:
+    ) -> SoundBundle:
         """Charge un ensemble de sons
 
         Args:
@@ -363,24 +363,15 @@ class AudioManager(Manager):
             cooldown: cooldown appliqué à tous les sons
             group: groupe SFX à assigner
         """
-        if extensions is None:
-            extensions = [".wav", ".ogg", ".mp3", ".flac"]
-
-        result: dict[str, Sound] = {}
-        for filename in sorted(os.listdir(folder_path)):
-            name, ext = os.path.splitext(filename)
-            if ext.lower() not in extensions:
-                continue
-            key = name
-            if prefix != "":
-                if not key.startswith(prefix):
-                    continue
-                if remove_prefix:
-                    key = key[len(prefix):]
-            path = os.path.join(folder_path, filename)
-            result[key] = Sound(path, volume=volume, cooldown=cooldown, group=group)
-
-        return result
+        return SoundBundle.from_folder(
+            folder_path = folder_path,
+            prefix = prefix,
+            extensions = extensions,
+            remove_prefix = remove_prefix,
+            volume = volume,
+            cooldown = cooldown,
+            group = group,
+        )
     
     @staticmethod
     def load_musics(
@@ -389,7 +380,7 @@ class AudioManager(Manager):
         extensions: list[str] = None,
         remove_prefix: bool = False,
         volume: Real = 1.0,
-    ) -> dict[str, Music]:
+    ) -> MusicBundle:
         """Charge un ensemble de musiques
 
         Args:
@@ -399,24 +390,13 @@ class AudioManager(Manager):
             remove_prefix: retirer le préfixe au chargement            
             volume: volume appliqué à toutes les musiques
         """
-        if extensions is None:
-            extensions = [".wav", ".ogg", ".mp3", ".flac"]
-
-        result: dict[str, Music] = {}
-        for filename in sorted(os.listdir(folder_path)):
-            name, ext = os.path.splitext(filename)
-            if ext.lower() not in extensions:
-                continue
-            key = name
-            if prefix != "":
-                if not key.startswith(prefix):
-                    continue
-                if remove_prefix:
-                    key = key[len(prefix):]
-            path = os.path.join(folder_path, filename)
-            result[key] = Music(path, volume=volume)
-
-        return result
+        return MusicBundle.from_folder(
+            folder_path = folder_path,
+            prefix = prefix,
+            extensions = extensions,
+            remove_prefix = remove_prefix,
+            volume = volume,
+        )
     
     # ======================================== INTERFACE ========================================
     def clear(self) -> None:
