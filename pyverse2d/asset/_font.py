@@ -19,29 +19,16 @@ class Font(Asset):
     Descripteur de police
 
     Args:
-        font(str): nom ou path de la police
+        name(str): nom ou path de la police
         size(int, optional): taille de la police
     """
-    __slots__ = ("_name", "_size", "_glyph_cache", "_pyglet_font", "_initialized")
-    _font_cache: dict[tuple[str, int], Font] = {}
+    __slots__ = ("_name", "_size", "_glyph_cache", "_pyglet_font")
 
-    def __new__(cls, name: str = None, size: int=16):
-        key = (name, size)
-        if key in cls._font_cache:
-            return cls._font_cache[key]
-        obj = super().__new__(cls)
-        cls._font_cache[key] = obj
-        return obj
-
-    def __init__(self, name: str = None, size=16):
-        # Déjà initialisé
-        if hasattr(self, "_initialized") and self._initialized:
-            return
-        
+    def __init__(self, name: str = None, size: int = 16):
         # Paramètres
         self._size: int = expect(size, int)
         self._glyph_cache: dict[str, Glyph] = {}
-        
+
         # Chargement de la police
         if name and name.lower().endswith((".ttf", ".otf")):
             # Path
@@ -50,57 +37,54 @@ class Font(Asset):
                 loaded_font = pyglet.font.load(os.path.splitext(os.path.basename(name))[0], self._size)
                 self._name: str = loaded_font.name
                 self._pyglet_font: PygletFont = loaded_font
-            
+
             # Fallback
             except Exception:
                 self._name: str | None = None
                 self._pyglet_font: PygletFont = self._load_default_font()
-        
+
         # SysFont
         elif name:
             loaded_font = pyglet.font.load(name, self._size)
-            self._name = loaded_font.name
-            self._pyglet_font = loaded_font
-        
+            self._name: str = loaded_font.name
+            self._pyglet_font: PygletFont = loaded_font
+
         # Default Font
         else:
-            self._pyglet_font = self._load_default_font()
-            self._name = self._pyglet_font.name
+            self._pyglet_font: PygletFont = self._load_default_font()
+            self._name: str = self._pyglet_font.name
 
-        # Initialisation terminée
-        self._initialized: bool = True
-    
     # ======================================== CONVERSION ========================================
     def __repr__(self) -> str:
         """Renvoie une représentation de la police"""
         return f"Font(name={self._name}, size={self._size})"
-    
+
     # ======================================== GETTERS ========================================
     @property
     def name(self) -> str:
         """Renvoie le nom de la police"""
         return self._name
-    
+
     @property
     def size(self) -> int:
         """Renvoie la taille de la police"""
         return self._size
-    
+
     @property
     def ascent(self) -> int:
         """Renvoie le dépassement haut de la police"""
         return self._pyglet_font.ascent
-    
+
     @property
     def descent(self) -> int:
         """Renvoie le dépassement bas de la police"""
         return self._pyglet_font.descent
-    
+
     @property
     def native(self) -> PygletFont:
         """Renvoie la font pyglet"""
         return self._pyglet_font
-    
+
     @classmethod
     def get_fonts(cls) -> list[str]:
         """Retourne la liste des polices disponibles sur le système"""
@@ -114,7 +98,7 @@ class Font(Asset):
                         name = os.path.splitext(f)[0]
                         found[name.lower().replace(" ", "")] = name
 
-        if sys.platform == "win32":            
+        if sys.platform == "win32":
             try:
                 key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts")
                 i = 0
@@ -153,33 +137,33 @@ class Font(Asset):
     # ======================================== PUBLIC METHODS ========================================
     def text_width(self, text: str) -> int:
         """
-        Renvoie la largeur théorique d'un text
+        Renvoie la largeur théorique d'un texte
 
         Args:
             text(str): texte à vérifier
         """
         return sum(self._get_glyph(c).advance for c in text)
-    
-    def text_height(font: Font, text: str) -> int:
+
+    def text_height(self, text: str) -> int:
         """
         Renvoie la hauteur théorique d'un texte
 
         Args:
             text(str): texte à vérifier
         """
-        return max(font._get_glyph(c).height for c in text)
+        return max(self._get_glyph(c).height for c in text)
 
     def clip_text(self, text: str, max_width: Real, suffix: str = "") -> str:
         """
         Retourne le texte tronqué pour rentrer dans max_width
-        
+
         Args:
-            text(str): text à tronquer
+            text(str): texte à tronquer
             max_width(Real): largeur maximale du texte (en px)
             suffix(str, optional): suffixe de tronquage
         """
         if not text: return ""
-    
+
         suffix_width = self.text_width(suffix) if suffix else 0
         effective_width = max_width - suffix_width
         if effective_width <= 0:
@@ -200,12 +184,13 @@ class Font(Asset):
 
     # ======================================== INTERNALS ========================================
     def _load_default_font(self) -> PygletFont:
+        """Charge la police par défaut (FreeSans)"""
         with resources.path("pyverse2d._assets", "freesansbold.ttf") as path:
             pyglet.font.add_file(str(path))
             return pyglet.font.load("FreeSans", self._size)
 
     def _get_glyph(self, char: str) -> Glyph:
-        """Renvoie un _Glyph"""
+        """Renvoie un Glyph"""
         if char not in self._glyph_cache:
             pyglet_glyph = self._pyglet_font.get_glyphs(char)[0]
             self._glyph_cache[char] = Glyph(

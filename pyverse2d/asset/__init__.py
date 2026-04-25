@@ -5,7 +5,14 @@ from ._text import Text
 from ._image import Image
 from._animation import Animation
 from ._sound import Sound
-from ._music import Music 
+from ._music import Music
+
+from ._bundles import (
+    FontBundle,
+    ImageBundle,
+    SoundBundle,
+    MusicBundle,
+)
 
 # ======================================== EXPORTS ========================================
 __all__ = [
@@ -16,4 +23,9 @@ __all__ = [
     "Animation",
     "Sound",
     "Music",
+
+    "FontBundle",
+    "ImageBundle",
+    "SoundBundle",
+    "MusicBundle",
 ]

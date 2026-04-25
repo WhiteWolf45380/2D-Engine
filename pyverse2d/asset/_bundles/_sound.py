@@ -67,12 +67,14 @@ class SoundBundle(Bundle):
         self._group = value
 
     # ======================================== INTERFACE ========================================
-    def get(self, key: str, volume: Real = None, cooldown: Real = None, group: SoundGroup = None) -> str:
+    def get(self, key: str, volume: Real = None, cooldown: Real = None, group: SoundGroup = None) -> Sound:
         """Renvoie le chemin d'accès à un son du bundle
 
         Args:
             key: clé du son à récupérer
-            cache: si ``True``, met en cache le chemin d'accès du son pour une récupération plus rapide lors des prochaines requêtes
+            volume: volume (volume du Bundle si ``None``)
+            cooldown: délai (délai du Bundle si ``None``)
+            group: groupe de sons (groupe du Bundle si ``None``)
         """
         # Choix des paramètres du son
         volume = volume if volume is not None else self._volume
