@@ -149,7 +149,7 @@ class TimeManager(Manager):
         """
         return self._clock - origin
     
-    def after(self, callback: Callable, interval: float) -> None:
+    def after(self, interval: float, callback: Callable) -> None:
         """Appel une fonction en différé
 
         Args:
@@ -158,7 +158,7 @@ class TimeManager(Manager):
         """
         self._timers.append(_TimerRequest(callback=callback, elapsed=0, interval=interval, remaining=1))
 
-    def every(self, callback: Callable, interval: float, limit: int = None) -> None:
+    def every(self, interval: float, callback: Callable, limit: int = None) -> None:
         """Appel une fonction à un intervalle donné
 
         Args:
