@@ -61,13 +61,18 @@ class SoundHandle:
     def stop(self) -> None:
         """Arrête le son"""
         if self._active:
-            self.player.pause()
-            self.player.delete()
+            self.delete()
             self.sound._remove_handle(self)
             if not self.sound._handles:
                 self.sound._set_state(AudioState.SLEEPING)
             if self.on_stop:
                 self.on_stop(self)
+
+    def delete(self) -> None:
+        """Supprime le player sans déclencher les événements d'arrêt"""
+        if self._active:
+            self.player.pause()
+            self.player.delete()
             self._active = False
 
 
@@ -114,12 +119,17 @@ class MusicHandle:
     def stop(self) -> None:
         """Arrête la musique"""
         if self._active:
-            self.player.pause()
-            self.player.delete()
+            self.delete()
             self.music._set_state(AudioState.SLEEPING)
             self.music._set_handle(None)
             if self.on_stop:
                 self.on_stop(self)
+    
+    def delete(self) -> None:
+        """Supprime le player sans déclencher les événements d'arrêt"""
+        if self._active:
+            self.player.pause()
+            self.player.delete()
             self._active = False
 
     def _set_volume(self, value: float) -> None:
@@ -693,7 +703,10 @@ class AudioManager(Manager):
         if cf.step >= cf.steps:
             if cf.handle_out is not None:
                 cf.handle_out._set_volume(0.0)
-                cf.handle_out.stop()
+                if cf.handle_in.music == cf.handle_out.music:
+                    cf.handle_out.delete()
+                else:
+                    cf.handle_out.stop()
             if cf.handle_in is not None:
                 cf.handle_in._set_volume(cf.vol_in)
             self._crossfade = None
