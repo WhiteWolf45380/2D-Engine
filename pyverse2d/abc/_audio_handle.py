@@ -6,7 +6,7 @@ from pyglet import media as _media
 from typing import Callable, Any
 from abc import ABC, abstractmethod
 
-# ======================================== OBJET ========================================
+# ======================================== ABSTRACT CLASS ========================================
 class AudioHandle(ABC):
     """Classe abstraite des tokens audio"""
     __slots__ = (
@@ -16,7 +16,7 @@ class AudioHandle(ABC):
         "__weakref__",
     )
 
-    def __init__(self,source: _media.StaticSource, player: _media.Player, on_stop: Callable[[AudioHandle], Any] = None):
+    def __init__(self, source: _media.StaticSource, player: _media.Player, on_stop: Callable[[AudioHandle], Any] = None):
         # Attributs publiques
         self.source: _media.StreamingSource = source
         self.player: _media.Player = player
@@ -30,6 +30,12 @@ class AudioHandle(ABC):
         # Configuration du player
         self.player.push_handlers(on_player_eos=self.on_eos)
 
+    # ======================================== GETTERS ========================================
+    def get_play_volume(self) -> float:
+        """Renvoie le volume ponctuel"""
+        return (self.player.volume / self.base_volume) if self.base_volume > 0.0 else 0.0
+
+    # ======================================== SETTERS ========================================
     def set_play_volume(self, value: float) -> None:
         """Fixe le volume ponctuel"""
         if self._active:
@@ -38,6 +44,7 @@ class AudioHandle(ABC):
                 return
             self.player.volume = new_volume
     
+    # ======================================== PREDICATES ========================================
     def is_active(self) -> bool:
         """Vérifie que le handle soit actif"""
         return self._active
@@ -46,9 +53,11 @@ class AudioHandle(ABC):
         """Vérifie que le handle soit en cours de lecture"""
         return self._active and self.player.playing
     
+    # ======================================== HOOKS ========================================
     @abstractmethod
     def on_eos(self) -> None: ...
 
+    # ======================================== INTERFACE ========================================
     @abstractmethod
     def resume(self) -> None: ...
 
@@ -64,3 +73,9 @@ class AudioHandle(ABC):
             self.player.pause()
             self.player.delete()
             self._active = False
+    
+    # ======================================== INTERNALS ========================================
+    def _set_volume(self, value: float) -> None:
+        """Fixe le volum brute"""
+        if self._active:
+            self.player.volume = value
