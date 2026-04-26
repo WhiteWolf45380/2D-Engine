@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from .._internal import expect, positive
 from .._flag import AudioState
-from ..abc import Manager, Request
+from ..abc import Manager, Request, AudioHandle
 from ..asset import Sound, Music, SoundBundle, MusicBundle
 from ..math.easing import EasingFunc, linear
 
@@ -20,48 +20,22 @@ from typing import ClassVar, Type, Callable, Any
 _CROSSFADE_STEPS = 20
 
 # ======================================== HANDLES ========================================
-class SoundHandle:
+class SoundHandle(AudioHandle):
     """Handle de son en cours de lecture"""
     __slots__ = (
-        "sound", "source", "player", "on_stop",
-        "iterations_left",
-        "_active",
-        "__weakref__",
+        "sound",
+        "repeat", "iterations_left",
     )
 
     def __init__(self, sound: Sound, source: _media.StaticSource, player: _media.Player, on_stop: Callable[[SoundHandle], Any] = None):
         # Attributs publiques
         self.sound: Sound = sound
-        self.source: _media.StreamingSource = source
-        self.player: _media.Player = player
-        self.on_stop: Callable[[SoundHandle], Any] = on_stop
         
         self.repeat: bool = False
         self.iterations_left = None
 
-        # Attributs internes
-        self._active: bool = True
-
-        # Configuration du player
-        self.player.push_handlers(on_player_eos=self.on_eos)
-    
-    def is_active(self) -> bool:
-        """Vérifie que le handle soit actif"""
-        return self._active
-
-    def is_playing(self) -> bool:
-        """Vérifie que le son est en cours de lecture"""
-        return self._active and self.player.playing
-
-    def resume(self) -> None:
-        """Reprend le son"""
-        if self._active:
-            self.player.play()
-
-    def pause(self) -> None:
-        """Met le son en pause"""
-        if self._active:
-            self.player.pause()
+        # Configuration du token
+        super().__init__(source, player, on_stop=on_stop)
 
     def on_eos(self) -> None:
         """Fin de lecture avec boûcle si repeat activé"""
@@ -78,12 +52,15 @@ class SoundHandle:
         else:
             self.stop()
 
-    def delete(self) -> None:
-        """Supprime le player sans déclencher les événements d'arrêt"""
+    def resume(self) -> None:
+        """Reprend le son"""
+        if self._active:
+            self.player.play()
+
+    def pause(self) -> None:
+        """Met le son en pause"""
         if self._active:
             self.player.pause()
-            self.player.delete()
-            self._active = False
 
     def stop(self) -> None:
         """Arrête le son"""
@@ -96,34 +73,22 @@ class SoundHandle:
                 self.on_stop(self)
 
 
-class MusicHandle:
+class MusicHandle(AudioHandle):
     """Handle de musique en cours de lecture"""
     __slots__ = (
-        "music", "source", "player", "on_stop",
-        "_active",
-        "__weakref__",
+        "music",
     )
 
     def __init__(self, music: Music, source: _media.StreamingSource, player: _media.Player, on_stop: Callable[[MusicHandle], Any] = None):
         # Attributs publiques
         self.music: Music = music
-        self.source: _media.StreamingSource = source
-        self.player: _media.Player = player
-        self.on_stop: Callable[[MusicHandle], Any] = on_stop
 
-        # Attributs internes
-        self._active: bool = True
+        # Configuration du token
+        super().__init__(source, player, on_stop=on_stop)
 
-        # Configuration du player
-        self.player.push_handlers(on_player_eos=self.stop)
-
-    def is_active(self) -> bool:
-        """Vérifie que le handle soit actif"""
-        return self._active
-
-    def is_playing(self) -> bool:
-        """Vérifie que la musique est en cours de lecture"""
-        return self._active and self.player.playing
+    def on_eos(self):
+        """Fin de lecture"""
+        self.stop()
 
     def resume(self) -> None:
         """Reprend la musique"""
@@ -145,18 +110,6 @@ class MusicHandle:
             self.music._set_handle(None)
             if self.on_stop:
                 self.on_stop(self)
-    
-    def delete(self) -> None:
-        """Supprime le player sans déclencher les événements d'arrêt"""
-        if self._active:
-            self.player.pause()
-            self.player.delete()
-            self._active = False
-
-    def _set_volume(self, value: float) -> None:
-        """Fixe le volume brut"""
-        if self._active:
-            self.player.volume = value
 
 # ======================================== GROUPS ========================================
 class SoundGroup:
@@ -466,15 +419,16 @@ class AudioManager(Manager):
             return None
         handle.on_stop = on_end
 
+        # Calcul du volume
+        group_vol = group.get_absolute_volume() if group is not None else 1.0
+        handle.base_volume = self._master_volume * group_vol * sound.volume
+        handle.set_volume(float(volume))
+
         # Lecture du son
         handle.repeat = repeat
         handle.iterations_left = limit
         handle.player.queue(source)
         handle.player.play()
-
-        # Actualisation du volume
-        group_vol = group.get_absolute_volume() if group is not None else 1.0
-        handle.player.volume = self._master_volume * group_vol * sound.volume * float(volume)
 
         # Actualisation de l'état du son
         sound._add_handle(handle)

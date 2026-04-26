@@ -4,15 +4,12 @@ from __future__ import annotations
 from pyverse2d._managers._audio import SoundHandle
 
 from ..._internal import CallbackList, positive
-from ...abc import Component
+from ...abc import Component, Request
 from ...asset import Sound
 from ...math.easing import EasingFunc, is_easing, linear
 
 from numbers import Real
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from ..._managers._audio import SoundBundle
+from dataclasses import dataclass
 
 # ======================================== COMPONENT ========================================
 class SoundEmitter(Component):
@@ -52,7 +49,7 @@ class SoundEmitter(Component):
         self._on_end: CallbackList = CallbackList()
 
         # Buffer
-        self._to_play: list[Sound] = []
+        self._to_play: list[SoundRequest] = []
         self._playing: set[SoundHandle] = set()
 
     # ======================================== CONTRACT ========================================
@@ -142,13 +139,19 @@ class SoundEmitter(Component):
         return self._on_end
 
     # ======================================== INTERFACE ========================================
-    def play(self, sound: Sound) -> None:
+    def play(self, sound: Sound, repeat: bool = False, limit: int | None = None) -> None:
         """Joue un ``Sound`` asset
 
         Args:
             sound: son à jouer
         """
-        self._to_play.append(sound)
+        self._to_play.append(
+            SoundRequest(
+                sound = sound,
+                repeat = repeat,
+                limit = limit
+            )
+        )
 
     def resume(self) -> None:
         """Reprend la lecture des sons"""
@@ -180,3 +183,11 @@ class SoundEmitter(Component):
         """Vide la liste des sons en cours de lecture"""
         self._playing.clear()
         self._on_end.trigger()
+
+# ======================================== REQUESTS ========================================
+@dataclass(slots=True, frozen=True)
+class SoundRequest(Request):
+    """Reqûete de lecture d'un son"""
+    sound: Sound
+    repeat: bool = False
+    limit: int | None = None

@@ -2,11 +2,15 @@
 from __future__ import annotations
 
 from ..._internal import expect, HasPosition
-from ..._managers._audio import SoundHandle
 from ...abc import System
 
 from .._world import World
 from .._component import SoundEmitter, Transform
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .._component._sound_emitter import SoundRequest
 
 # ======================================== SYSTEM ========================================
 class SoundSystem(System):
@@ -34,7 +38,7 @@ class SoundSystem(System):
         return f"SoundSystem(origin={(self._origin.x, self._origin.y)})"
     
     # ======================================== LIFE CYCLE ========================================
-    def update(self, world: World,dt: float) -> None:
+    def update(self, world: World, dt: float) -> None:
         """Met à jour les sons émis"""
         for entity in world.query(SoundEmitter):
             se: SoundEmitter = entity.sound_emitter
@@ -53,10 +57,14 @@ class SoundSystem(System):
                 volume = 0.0
             else:
                 volume = 1.0 - (distance - se.inner_radius) / (se.outer_radius - se.inner_radius)
+            
+            # Actualisation des sons en cours de lecture
+            for handle in se._playing:
+                handle.set_volume(volume)
 
             # Lecture des sons à jouer
-            for sound in se._to_play:
-                handle = sound.play(volume=volume, on_end=se._remove_handle)
+            for request in se._to_play:
+                handle = request.sound.play(volume=volume, repeat=request.repeat, limit=request.limit, on_end=se._remove_handle)
                 if handle is not None:
                     se._add_handle(handle)
             se._to_play.clear()

@@ -6,6 +6,7 @@ from ._asset import Asset
 from ._bundle import Bundle
 from ._request import Request
 from ._space import Space
+from._audio_handle import AudioHandle
 from ._manager import Manager
 from ._ecs import Component, System
 from ._gui import Tween, Behavior, Widget
@@ -22,6 +23,7 @@ __all__ = [
     "Bundle",
     "Request",
     "Space",
+    "AudioHandle",
     "Manager",
     "Component",
     "System",
