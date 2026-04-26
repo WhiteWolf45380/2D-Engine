@@ -55,6 +55,18 @@ class AudioHandle(ABC):
         """Renvoie le volume de lecture"""
         return self._base_volume * self._play_volume
     
+    # ======================================== SETTERS ========================================
+    def set_volumes(self, base: float, play: float) -> None:
+        """Fixe les deux types de volumes
+        
+        Args:
+            base: volume de base
+            play: volume de lecture
+        """
+        self._base_volume = base
+        self._play_volume = play
+        self._refresh_volume()
+    
     # ======================================== PREDICATES ========================================
     def is_active(self) -> bool:
         """Vérifie que le handle soit actif"""
