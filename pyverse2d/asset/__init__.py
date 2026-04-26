@@ -6,6 +6,7 @@ from ._image import Image
 from._animation import Animation
 from ._sound import Sound
 from ._music import Music
+from ._playlist import Playlist
 
 from ._bundles import (
     FontBundle,
@@ -23,6 +24,7 @@ __all__ = [
     "Animation",
     "Sound",
     "Music",
+    "Playlist",
 
     "FontBundle",
     "ImageBundle",

@@ -79,6 +79,14 @@ class Bundle(ABC):
         """Renvoie une vue des valeurs du bundle"""
         return self._paths.values()
     
+    def values_list(self) -> list[Any]:
+        """Renvoie une liste des valeurs du bundle"""
+        return [self.get(value) for value in self._paths]
+    
+    def values_dict(self) -> dict[str, Any]:
+        """Renvoie un dictionnaire des valeurs du bundle"""
+        return {name: self.get(value) for name, value in self.paths}
+    
     def __iter__(self):
         """Itère sur les entrées du bundle"""
         return iter(self._paths)
