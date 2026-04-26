@@ -4,7 +4,7 @@ from .._internal import expect, positive
 from .._flag import AudioState
 from ..abc import Asset
 
-from typing import TYPE_CHECKING, Type
+from typing import TYPE_CHECKING, Type, Any, Callable
 from numbers import Real
 import os
 
@@ -221,9 +221,13 @@ class Sound(Asset):
         """Renvoie une copie du son"""
         return Sound(path=self._path, volume=self._volume, cooldown=self._cooldown, group=self._group)
 
-    def play(self) -> SoundHandle | None:
-        """Joue le son si disponible"""
-        return self._get_audio_manager().play_sound(self)
+    def play(self, volume: Real = 1.0, on_end: Callable[[SoundHandle], Any] = None) -> SoundHandle | None:
+        """Joue le son si disponible
+        
+        Args:
+            volume: volume ponctuel *[0, 1]*
+        """
+        return self._get_audio_manager().play_sound(self, volume=volume)
 
     def resume(self) -> None:
         """Reprend le son"""

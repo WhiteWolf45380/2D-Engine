@@ -149,7 +149,6 @@ class SoundEmitter(Component):
             sound: son à jouer
         """
         self._to_play.append(sound)
-        self._on_start.trigger()
 
     def resume(self) -> None:
         """Reprend la lecture des sons"""
@@ -165,4 +164,19 @@ class SoundEmitter(Component):
         """Arrête la lecture des sons"""
         for handle in self._playing:
             handle.stop()
+
+    # ======================================== INTERNALS ========================================
+    def _add_handle(self, handle: SoundHandle) -> None:
+        """Ajoute un ``SoundHandle`` à la liste des sons en cours de lecture"""
+        self._playing.add(handle)
+        self._on_start.trigger()
+
+    def _remove_handle(self, handle: SoundHandle) -> None:
+        """Retire un ``SoundHandle`` de la liste des sons en cours de lecture"""
+        self._playing.discard(handle)
+        self._on_end.trigger()
+    
+    def _clear_handles(self) -> None:
+        """Vide la liste des sons en cours de lecture"""
+        self._playing.clear()
         self._on_end.trigger()

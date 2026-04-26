@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from ..._internal import expect, HasPosition
+from ..._managers._audio import SoundHandle
 from ...abc import System
 
 from .._world import World
@@ -36,4 +37,26 @@ class SoundSystem(System):
     def update(self, world: World,dt: float) -> None:
         """Met à jour les sons émis"""
         for entity in world.query(SoundEmitter):
-            se = entity.sound_emitter
+            se: SoundEmitter = entity.sound_emitter
+            tr: Transform | None = entity.transform
+            
+            # Calcul de la distance à l'origine
+            if tr is None:  # Cas générique
+                distance = 0.0
+            else:           # Cas positionnel
+                distance = ((tr.x - self._origin.x) ** 2 + (tr.y - self._origin.y) ** 2) ** 0.5
+
+            # Calcul du volume distantiel
+            if se.outer_radius == 0.0 or distance <= se.inner_radius:
+                volume = 1.0
+            elif distance > se.outer_radius:
+                volume = 0.0
+            else:
+                volume = 1.0 - (distance - se.inner_radius) / (se.outer_radius - se.inner_radius)
+
+            # Lecture des sons à jouer
+            for sound in se._to_play:
+                handle = sound.play(volume=volume, on_end=se._remove_handle)
+                if handle is not None:
+                    se._add_handle(handle)
+            se._to_play.clear()

@@ -414,12 +414,13 @@ class AudioManager(Manager):
         self._stop_music_immediate()
 
     # ======================================== SOUNDS ========================================
-    def play_sound(self, sound: Sound, volume: Real = 1.0) -> SoundHandle | None:
+    def play_sound(self, sound: Sound, volume: Real = 1.0, on_end: Callable[[SoundHandle], Any] = None) -> SoundHandle | None:
         """Joue un ``Sound`` asset
 
         Args:
             sound: son à jouer
             volume: volume ponctuel
+            on_end: callback de fin de son
 
         Returns:
             handle: handle du son joué, ou None si le son n'a pas pu être joué
@@ -433,6 +434,7 @@ class AudioManager(Manager):
         handle = group._get_free_handle(sound)
         if handle is None:
             return None
+        handle.on_stop = on_end
 
         # Lecture du son
         path = random.choice(sound._paths)
