@@ -102,14 +102,14 @@ class Music(Asset):
         """Renvoie une copie de la musique"""
         return Music(path=self._path, volume=self._volume)
 
-    def play(self, loop: bool = True, fade_s: Real = 0.0) -> MusicHandle | None:
+    def play(self, volume: Real = 1.0, loop: bool = True, fade_s: Real = 0.0, playlist_fallback: bool = True) -> MusicHandle | None:
         """Joue la musique
 
         Args:
             loop: boucle infinie si True
             fade_s: durée du fade-in en secondes
         """
-        return self._get_audio_manager().play_music(self, loop=loop, fade_s=fade_s)
+        return self._get_audio_manager().play_music(self, loop=loop, fade_s=fade_s, playlist_fallback=playlist_fallback)
 
     def stop(self, fade_s: Real = 0.0) -> None:
         """Arrête la musique.
