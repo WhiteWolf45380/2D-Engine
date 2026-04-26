@@ -1,7 +1,7 @@
 # ======================================== IMPORTS ========================================
 from __future__ import annotations
 
-from ..._internal import Positionnal
+from ..._internal import HasPosition
 from ..._flag import Activity
 from ...math import Vector, Point
 from ...math.easing import EasingFunc, is_easing
@@ -14,7 +14,7 @@ from numbers import Real
 # ======================================== REQUEST ========================================
 @dataclass(slots=True)
 class AttachRequest:
-    target: Positionnal
+    target: HasPosition
     offset: Vector
     smoothing: float
 
@@ -167,7 +167,7 @@ class LightSource(ABC):
     # ======================================== ATTACH ========================================
     def attach_to(
             self,
-            target: Positionnal,
+            target: HasPosition,
             offset: Vector = (0.0, 0.0),
             smoothing: Real = 0.0,
         ) -> None:
@@ -191,7 +191,7 @@ class LightSource(ABC):
         """Vérifie si la source est attachée"""
         return self._attach is not None
     
-    def attach_target(self) -> Positionnal:
+    def attach_target(self) -> HasPosition:
         """Renvoie la cible de l'attache"""
         if self._attach is None:
             return None
