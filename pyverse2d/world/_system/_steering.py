@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from ...abc import System
 from ...math import Vector
+
 from .._world import World
 from .._component import Transform, Follow
 

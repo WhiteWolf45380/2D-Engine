@@ -21,6 +21,7 @@ _COMPONENTS: dict[Component, str] = {
     SpriteRenderer: "_sprite_renderer",
     TextRenderer: "_text_renderer",
     Animator: "_animator",
+    SoundEmitter: "_sound_emitter",
 }
 
 # ======================================== OBJECT ========================================
@@ -53,6 +54,7 @@ class Entity:
         self._rigid_body: RigidBody = None
         self._ground_sensor: GroundSensor = None
         self._animator: Animator = None
+        self._sound_emitter: SoundEmitter = None
 
         # Ajouts
         for component in components:
@@ -68,7 +70,7 @@ class Entity:
         """Renvoie l'entier hashé de l'entité"""
         return hash(self._id)
     
-    # ======================================== GETTERS ========================================
+    # ======================================== PROPERTIES ========================================
     @property
     def id(self) -> str:
         """Renvoie l'identifiant de l'entité"""
@@ -81,90 +83,94 @@ class Entity:
     
     @property
     def transform(self) -> Transform | None:
-        """Renvoie le Transform"""
+        """composant ``Transform``"""
         return self._transform
+    
+    @transform.setter
+    def transform(self, value: Transform) -> None:
+        self._transform = expect(value, Transform)
     
     @property
     def follow(self) -> Follow | None:
-        """Renvoie le Follow"""
+        """composant ``Follow``"""
         return self._follow
+    
+    @follow.setter
+    def follow(self, value: Follow) -> None:
+        self._follow = expect(value, Follow)
     
     @property
     def shape_renderer(self) -> ShapeRenderer | None:
-        """Renvoie le ShapeRenderer"""
+        """composant ``ShapeRenderer``"""
         return self._shape_renderer
-    
-    @property
-    def sprite_renderer(self) -> SpriteRenderer | None:
-        """Renvoie le SpriteRenderer"""
-        return self._sprite_renderer
-    
-    @property
-    def text_renderer(self) -> TextRenderer | None:
-        """Renvoie le TextRenderer"""
-        return self._text_renderer
-    
-    @property
-    def collider(self) -> Collider | None:
-        """Renvoie le SpriteCollider"""
-        return self._collider
-    
-    @property
-    def rigid_body(self) -> RigidBody | None:
-        """Renvoie le RigidBody"""
-        return self._rigid_body
-    
-    @property
-    def ground_sensor(self) -> GroundSensor | None:
-        """Renvoie le GroundSensor"""
-        return self._ground_sensor
-    
-    @property
-    def animator(self) -> Animator | None:
-        """Renvoie l'Animator"""
-        return self._animator
-    
-    # ======================================== SETTERS ========================================
-    @transform.setter
-    def transform(self, value: Transform) -> None:
-        """Fixe le Transform"""
-        self._transform = expect(value, Transform)
     
     @shape_renderer.setter
     def shape_renderer(self, value: ShapeRenderer) -> None:
-        """Fixe le ShapeRenderer"""
         self._shape_renderer = expect(value, ShapeRenderer)
-
+    
+    @property
+    def sprite_renderer(self) -> SpriteRenderer | None:
+        """composant ``SpriteRenderer``"""
+        return self._sprite_renderer
+    
     @sprite_renderer.setter
     def sprite_renderer(self, value: SpriteRenderer) -> None:
-        """Fixe le SpriteRenderer"""
         self._sprite_renderer = expect(value, SpriteRenderer)
+    
+    @property
+    def text_renderer(self) -> TextRenderer | None:
+        """composant ``TextRenderer``"""
+        return self._text_renderer
     
     @text_renderer.setter
     def text_renderer(self, value: TextRenderer) -> None:
-        """Fixe le TextRenderer"""
         self._text_renderer = expect(value, TextRenderer)
-
+    
+    @property
+    def collider(self) -> Collider | None:
+        """composant ``Collider``"""
+        return self._collider
+    
     @collider.setter
     def collider(self, value: Collider) -> None:
-        """Fixe le Collider"""
         self._collider = expect(value, Collider)
-
+    
+    @property
+    def rigid_body(self) -> RigidBody | None:
+        """composant ``RigidBody``"""
+        return self._rigid_body
+    
     @rigid_body.setter
     def rigid_body(self, value: RigidBody) -> None:
-        """Fixe le RigidBody"""
         self._rigid_body = expect(value, RigidBody)
-
+    
+    @property
+    def ground_sensor(self) -> GroundSensor | None:
+        """composant ``GroundSensor``"""
+        return self._ground_sensor
+    
     @ground_sensor.setter
     def ground_sensor(self, value: GroundSensor) -> None:
-        """Fixe le GroundSensor"""
         self._ground_sensor = expect(value, GroundSensor)
-
+    
+    @property
+    def animator(self) -> Animator | None:
+        """composant ``Animator``"""
+        return self._animator
+    
     @animator.setter
     def animator(self, value: Animator) -> None:
-        """Fixe l'Animator"""
         self._animator = expect(value, Animator)
     
+    @property
+    def sound_emitter(self) -> SoundEmitter | None:
+        """composant ``SoundEmitter``"""
+        return self._sound_emitter
+    
+    @sound_emitter.setter
+    def sound_emitter(self, value: SoundEmitter) -> None:
+        self._sound_emitter = expect(value, SoundEmitter)
+
     # ======================================== PREDICATES ========================================
     def __eq__(self, other: Entity) -> bool:
         """Vérifie la correspondance de deux entités"""
@@ -176,7 +182,7 @@ class Entity:
         """Vérifie l'activité de l'entité"""
         return self._active
     
-    # ======================================== PUBLIC METHODS ========================================
+    # ======================================== INTERFACE ========================================
     def activate(self):
         """Active l'entité"""
         self._active = True
