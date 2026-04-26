@@ -11,8 +11,7 @@ class AudioHandle(ABC):
     """Classe abstraite des tokens audio"""
     __slots__ = (
         "source", "player", "on_stop",
-        "base_volume",
-        "_active",
+        "_active", "_base_volume", "_play_volume",
         "__weakref__",
     )
 
@@ -21,28 +20,40 @@ class AudioHandle(ABC):
         self.source: _media.StreamingSource = source
         self.player: _media.Player = player
         self.on_stop: Callable[[AudioHandle], Any] = on_stop
-        
-        self.base_volume: float = 1.0
 
         # Attributs internes
         self._active: bool = True
+        self._base_volume: float = 1.0
+        self._play_volume: float = 1.0
 
         # Configuration du player
         self.player.push_handlers(on_player_eos=self.on_eos)
 
-    # ======================================== GETTERS ========================================
-    def get_play_volume(self) -> float:
-        """Renvoie le volume ponctuel"""
-        return (self.player.volume / self.base_volume) if self.base_volume > 0.0 else 0.0
+    # ======================================== PROPERTIES ========================================
+    @property
+    def base_volume(self) -> float:
+        """Volume de base"""
+        return self._base_volume
+    
+    @base_volume.setter
+    def base_volume(self, value: float) -> None:
+        self._base_volume = value
+        self._refresh_volume
+    
+    @property
+    def play_volume(self) -> float:
+        """Volume ponctuel"""
+        return self._play_volume
+    
+    @play_volume.setter
+    def play_volume(self, value: float) -> None:
+        self._play_volume = value
+        self._refresh_volume
 
-    # ======================================== SETTERS ========================================
-    def set_play_volume(self, value: float) -> None:
-        """Fixe le volume ponctuel"""
-        if self._active:
-            new_volume = self.base_volume * value
-            if new_volume == self.player.volume:
-                return
-            self.player.volume = new_volume
+    # ======================================== GETTERS ========================================
+    def get_volume(self) -> float:
+        """Renvoie le volume de lecture"""
+        return self._base_volume * self._play_volume
     
     # ======================================== PREDICATES ========================================
     def is_active(self) -> bool:
@@ -75,7 +86,7 @@ class AudioHandle(ABC):
             self._active = False
     
     # ======================================== INTERNALS ========================================
-    def _set_volume(self, value: float) -> None:
-        """Fixe le volum brute"""
+    def _refresh_volume(self) -> None:
+        """Actualise le volume du player"""
         if self._active:
-            self.player.volume = value
+            self.player.volume = self.get_volume()

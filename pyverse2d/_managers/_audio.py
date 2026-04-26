@@ -422,7 +422,7 @@ class AudioManager(Manager):
         # Calcul du volume
         group_vol = group.get_absolute_volume() if group is not None else 1.0
         handle.base_volume = self._master_volume * group_vol * sound.volume
-        handle.set_volume(float(volume))
+        handle.play_volume = volume
 
         # Lecture du son
         handle.repeat = repeat
@@ -530,6 +530,8 @@ class AudioManager(Manager):
         handle = MusicHandle(music, source, player, on_stop=lambda h: self._clear_current_music(h.music))
 
         # Lecture de la musique
+        handle.base_volume = self._master_volume * self._music_volume * music.volume
+        handle.play_volume = volume
         handle.player.play()
         music._set_handle(handle)
         music._set_loop(loop)
@@ -547,7 +549,7 @@ class AudioManager(Manager):
                 step=0,
                 elapsed=0.0,
                 vol_out=0.0,
-                vol_in=self._master_volume * self._music_volume * music.volume * volume,
+                vol_in=volume,
                 easing=fade_easing,
                 master=self._master_volume,
                 music_vol=self._music_volume,
@@ -592,7 +594,7 @@ class AudioManager(Manager):
                 step_dt=fade_s / _CROSSFADE_STEPS,
                 step=0,
                 elapsed=0.0,
-                vol_out=self._master_volume * self._music_volume * self._current_music.volume,
+                vol_out=self._current_music._handle.play_volume,
                 vol_in=0.0,
                 easing=fade_easing,
                 master=self._master_volume,
@@ -628,7 +630,6 @@ class AudioManager(Manager):
             source = music._source or _media.load(music.path, streaming=True)
         player = _media.Player()
         player.loop = loop
-        player.volume = 0.0
         player.queue(source)
         handle = MusicHandle(music, source, player, on_stop=lambda h: self._clear_current_music(h.music))
 
@@ -640,14 +641,16 @@ class AudioManager(Manager):
             step_dt=fade_s / _CROSSFADE_STEPS,
             step=0,
             elapsed=0.0,
-            vol_out=self._master_volume * self._music_volume * (music_out.volume if music_out else 0.0),
-            vol_in=self._master_volume * self._music_volume * music.volume * volume,
+            vol_out=music_out._handle.play_volume if music_out else 0.0,
+            vol_in=volume,
             easing=fade_easing,
             master=self._master_volume,
             music_vol=self._music_volume,
         )
 
         # Lecture de la musique
+        handle.base_volume = self._master_volume * self._music_volume * music.volume
+        handle.play_volume = volume
         handle.player.play()
         music._set_handle(handle)
         music._loop = loop
@@ -685,19 +688,19 @@ class AudioManager(Manager):
             cf.elapsed -= cf.step_dt
             t = max(0.0, min(cf.easing(cf.step / cf.steps), 1.0))
             if cf.handle_out is not None:
-                cf.handle_out._set_volume(cf.vol_out * (1.0 - t))
+                cf.handle_out.set_play_volume(cf.vol_out * (1.0 - t))
             if cf.handle_in is not None:
-                cf.handle_in._set_volume(cf.vol_in * t)
+                cf.handle_in.set_play_volume(cf.vol_in * t)
 
         if cf.step >= cf.steps:
             if cf.handle_out is not None:
-                cf.handle_out._set_volume(0.0)
+                cf.handle_out.set_play_volume(0.0)
                 if cf.handle_in.music == cf.handle_out.music:
                     cf.handle_out.delete()
                 else:
                     cf.handle_out.stop()
             if cf.handle_in is not None:
-                cf.handle_in._set_volume(cf.vol_in)
+                cf.handle_in.set_play_volume(cf.vol_in)
             self._crossfade = None
 
     def flush(self) -> None:
@@ -739,6 +742,7 @@ class AudioManager(Manager):
                 cf.handle_out._set_volume(cf.vol_out * (1.0 - t))
             if cf.handle_in is not None:
                 cf.handle_in._set_volume(cf.vol_in * t)
+                cf.handle_in.base_volume = self.master_volume * self.music_volume * cf.handle_in.music.volume
         elif self._current_music is not None:
             self._current_music._set_volume(self._master_volume * self._music_volume * self._current_music.volume)
 

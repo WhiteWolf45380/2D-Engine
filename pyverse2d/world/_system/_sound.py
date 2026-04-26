@@ -60,7 +60,7 @@ class SoundSystem(System):
             
             # Actualisation des sons en cours de lecture
             for handle in se._playing:
-                handle.set_volume(volume)
+                handle.play_volume = volume
 
             # Lecture des sons à jouer
             for request in se._to_play:
