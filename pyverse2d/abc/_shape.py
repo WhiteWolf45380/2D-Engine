@@ -94,14 +94,14 @@ class Shape(ABC):
             anchor_x: ancre relative horizontale [0, 1]
             anchor_y: ancre relative verticale [0, 1]
         """
-        key = (scale, rotation, x, y, anchor_x, anchor_y)
+        key = (x, y, anchor_x, anchor_y, scale, rotation)
         if self._cache_key == key:
             return self._cache_world
 
         vertices = self.get_vertices()
         ax, ay = anchor_offset(self.get_bounding_box(), anchor_x, anchor_y)
 
-        if self._cache_key is None or self._cache_key[:4] != (scale, rotation, anchor_x, anchor_y):
+        if self._cache_key is None or self._cache_key[2:] != (anchor_x, anchor_y, scale, rotation):
             rad = math.radians(rotation)
             cos_r, sin_r = math.cos(rad), math.sin(rad)
             R = np.array([[cos_r, sin_r], [-sin_r, cos_r]], dtype=np.float32)

@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from .._internal import positive, not_null, over
-from ..math.vertices import center_vertices
+from ..math.vertices import center_bbox
 from ..abc import Shape
 from ..math import Point
 
@@ -85,7 +85,8 @@ class RegularPolygon(Shape):
     def compute_vertices(self) -> NDArray[np.float32]:
         """Renvoie les N sommets du polygone régulier"""
         angles = np.linspace(0.0, 2.0 * math.pi, self._sides, endpoint=False, dtype=np.float32)
-        return center_vertices(np.stack([np.cos(angles) * self._radius, np.sin(angles) * self._radius], axis=1))
+        verts = np.stack([np.cos(angles) * self._radius, np.sin(angles) * self._radius], axis=1)
+        return center_bbox(verts)
 
     # ======================================== COMPARATORS ========================================
     def __eq__(self, other: object) -> bool:

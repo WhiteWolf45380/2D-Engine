@@ -43,6 +43,20 @@ def center_vertices(vertices: NDArray[np.float32]) -> NDArray[np.float32]:
     return v - center
 
 
+def center_bbox(vertices: NDArray[np.float32]) -> NDArray[np.float32]:
+    """Recentre des vertices sur le milieu de leur bounding box
+
+    Args:
+        vertices: ``(N, 2)`` points du polygone
+    """
+    v = np.asarray(vertices, dtype=np.float32)
+    if len(v) == 0:
+        return v
+
+    center = (v.min(axis=0) + v.max(axis=0)) / 2.0
+    return v - center
+
+
 def order_ccw(vertices: NDArray[np.float32]) -> NDArray[np.float32]:
     """Ordonne des vertices en sens anti-horaire (CCW)
 
@@ -168,6 +182,7 @@ __all__ = [
     "is_convex",
 
     "center_vertices",
+    "center_bbox",
     "order_ccw",
 
     "triangulate_triangle_fan",

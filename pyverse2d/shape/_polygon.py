@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from ..abc import Shape
 from ..math import Point
-from ..math.vertices import is_convex, order_ccw, center_vertices
+from ..math.vertices import is_convex, center_bbox, order_ccw
 
 import numpy as np
 from numpy.typing import NDArray
@@ -26,7 +26,7 @@ class Polygon(Shape):
             if np.unique(self._source_vertices, axis=0).shape[0] != len(self._source_vertices):
                 raise ValueError("Polygon must not have duplicate points")
         
-        self._source_vertices = center_vertices(order_ccw(self._source_vertices))
+        self._source_vertices = center_bbox(order_ccw(self._source_vertices))
         self._convex: bool = is_convex(self._source_vertices)
         super().__init__()
 
