@@ -27,19 +27,15 @@ def expect(value: object, types: type | Tuple[type, ...]):
         dict[K, V] dictionnaire typé
 
     Args:
-        value(object): valeur à vérifier
-        types(type|Tuple[type, ...]): types à vérifier
+        value: valeur à vérifier
+        types: types à vérifier
 
     Returns:
-        value(object): si valide
+        value: si valide
     
     Raises:
         TypeError: si la valeur n'est pas conforme
     """
-    # Execution sans debug
-    if not __debug__:
-        return value
-
     # (T1, T2, T3)
     if isinstance(types, tuple):
         types = tuple(type(None) if t is None else t for t in types)
@@ -163,7 +159,6 @@ def expect_callable(value: object, include_none: bool = False, arg: str = "Argum
         return value
     raise TypeError(f"{arg} ({value}) must be a callable{' or None' if include_none else ''}")
     
-
 # ======================================== VALUE CHECK ========================================
 def not_null(value: object, arg: str = "Argument"):
     """
@@ -173,16 +168,12 @@ def not_null(value: object, arg: str = "Argument"):
         value(object): valeur à vérifier
         arg(str): nom de l'argument à vérifier
     """
-    # Execution sans debug
-    if not __debug__:
-        return value
-
     # None
     if value is None:
         raise ValueError(f"{arg} cannot be None")
 
     # Nombre
-    if isinstance(value, (int, float, complex)):
+    if isinstance(value, Real):
         if value == 0:
             raise ValueError(f"{arg} cannot be None")
         return value
@@ -211,10 +202,6 @@ def not_in(value: object, forbidden: object | tuple[object], arg: str = "Argumen
         forbidden(object | tuple[object]): valeur(s) interdite(s)
         arg(str): nom de l'argument à vérifier
     """
-    # Execution sans debug
-    if not __debug__:
-        return value
-
     forbidden = forbidden if isinstance(forbidden, tuple) else (forbidden,)
     if value in forbidden:
         readable = " | ".join(repr(f) for f in forbidden)
@@ -222,127 +209,90 @@ def not_in(value: object, forbidden: object | tuple[object], arg: str = "Argumen
     return value
 
 # ======================================== NUMBER CHECK ========================================
-def positive(value: object, arg: str = "Argument"):
-    """
-    Vérifie que la valeur soit positive
+def positive(value: Real, arg: str = "Argument"):
+    """Vérifie que la valeur soit positive
 
     Args:
-        value(object): valeur à vérifier
-        arg(str): nom de l'argument à vérifier
+        value: valeur à vérifier
+        arg: nom de l'argument à vérifier
     """
-    # Nombres
-    if isinstance(value, Real):
-        if float(value) < 0:
-            raise ValueError(f"{arg} cannot be negative")
-        return value
+    if value < 0:
+        raise ValueError(f"{arg} cannot be negative")
+    return value
     
-    # Par défaut
-    return  value
-
-def over(value: object, threshold: Real, include: bool = True, arg: str = "Argument"):
-    """
-    Vérifie que la valeur soit supérieure à un seuil
+def over(value: Real, threshold: Real, include: bool = True, arg: str = "Argument"):
+    """Vérifie que la valeur soit supérieure à un seuil
 
     Args:
-        value(object): valeur à vérifier
-        threshold(Real): seuil minimum exclu
-        arg(str): nom de l'argument à vérifier
+        value: valeur à vérifier
+        threshold: seuil minimum exclu
+        arg: nom de l'argument à vérifier
     """
-    if isinstance(value, Real):
-        if (value <= threshold if include else value < threshold):
-            raise ValueError(f"{arg} must be over {threshold}")
-        return value
+    if (value < threshold if include else value <= threshold):
+        raise ValueError(f"{arg} must be over {threshold}")
     return value
 
-def under(value: object, threshold: Real, include: bool = True, arg: str = "Argument"):
-    """
-    Vérifie que la valeur soit inférieure à un seuil
+def under(value: Real, threshold: Real, include: bool = True, arg: str = "Argument"):
+    """Vérifie que la valeur soit inférieure à un seuil
 
     Args:
-        value(object): valeur à vérifier
-        threshold(Real): seuil maximum exclu
-        arg(str): nom de l'argument à vérifier
+        value: valeur à vérifier
+        threshold: seuil maximum exclu
+        arg: nom de l'argument à vérifier
     """
-    if isinstance(value, Real):
-        if (value >= threshold if include else value > threshold):
-            raise ValueError(f"{arg} must be under {threshold}")
-        return value
+    if (value > threshold if include else value >= threshold):
+        raise ValueError(f"{arg} must be under {threshold}")
     return value
 
-def clamped(value: object, min: Real = 0.0, max: Real = 1.0, include_min: bool = True, include_max: bool = True, arg: str = "Argument"):
-    
-    """
-    Vérifie que la valeur soit comprise entre min et max
+def clamped(value: Real, min: Real = 0.0, max: Real = 1.0, include_min: bool = True, include_max: bool = True, arg: str = "Argument"):
+    """Vérifie que la valeur soit comprise entre min et max
 
     Args:
-        value(object): valeur à vérifier
-        min(float, optional): valeur minimale autorisée
-        max(float, optional): valeur maximale autorisée
-        arg(str, optional): nom de l'argument à vérifier
-    """
-    # Execution sans debug
-    if not __debug__:
-        return value
-    
-    # Nombres
-    if isinstance(value, Real):
-        if (float(value) < min if include_min else float(value) <= min) or (float(value) > max if include_max else float(value) >= max):
-            raise ValueError(f"{arg} must be between {min} {'included' if include_min else 'excluded'} and {max} {'included' if include_max else 'excluded'}")
-        return value
-    
-    # Par défaut
+        value: valeur à vérifier
+        min: valeur minimale autorisée
+        max: valeur maximale autorisée
+        arg: nom de l'argument à vérifier
+    """    
+    if (value < min if include_min else value <= min) or (value > max if include_max else value >= max):
+        raise ValueError(f"{arg} must be between {min} {'included' if include_min else 'excluded'} and {max} {'included' if include_max else 'excluded'}")
     return value
 
-def inferior_to(value: object, threshold: Real, include: bool = True, arg: str = "Argument"):
-    """
-    Vérifie que la valeur soit inférieure à un seuil
+def inferior_to(value: Real, threshold: Real, include: bool = True, arg: str = "Argument"):
+    """Vérifie que la valeur soit inférieure à un seuil
 
     Args:
-        value(object): valeur à vérifier
-        threshold(Real): seuil maximum
-        include(bool): inclure le seuil
-        arg(str): nom de l'argument à vérifier
+        value: valeur à vérifier
+        threshold: seuil maximum
+        include: inclure le seuil
+        arg: nom de l'argument à vérifier
     """
-    if not __debug__:
-        return value
-
-    if isinstance(value, Real):
-        if (value > threshold if include else value >= threshold):
-            raise ValueError(f"{arg} must be inferior to {threshold}")
+    if (value > threshold if include else value >= threshold):
+        raise ValueError(f"{arg} must be inferior to {threshold}")
     return value
 
 
-def superior_to(value: object, threshold: Real, include: bool = True, arg: str = "Argument"):
-    """
-    Vérifie que la valeur soit supérieure à un seuil
+def superior_to(value: Real, threshold: Real, include: bool = True, arg: str = "Argument"):
+    """Vérifie que la valeur soit supérieure à un seuil
 
     Args:
-        value(object): valeur à vérifier
-        threshold(Real): seuil minimum
-        include(bool): inclure le seuil
-        arg(str): nom de l'argument à vérifier
+        value: valeur à vérifier
+        threshold: seuil minimum
+        include: inclure le seuil
+        arg: nom de l'argument à vérifier
     """
-    if not __debug__:
-        return value
-
-    if isinstance(value, Real):
-        if (value < threshold if include else value <= threshold):
-            raise ValueError(f"{arg} must be superior to {threshold}")
+    if (value < threshold if include else value <= threshold):
+        raise ValueError(f"{arg} must be superior to {threshold}")
     return value
 
 
-def equal_to(value: object, target: object, arg: str = "Argument"):
-    """
-    Vérifie que la valeur soit égale à une cible
+def equal_to(value: Real, target: object, arg: str = "Argument"):
+    """Vérifie que la valeur soit égale à une cible
 
     Args:
-        value(object): valeur à vérifier
-        target(object): valeur attendue
-        arg(str): nom de l'argument à vérifier
+        value: valeur à vérifier
+        target: valeur attendue
+        arg: nom de l'argument à vérifier
     """
-    if not __debug__:
-        return value
-
     if value != target:
         raise ValueError(f"{arg} must be equal to {target!r}, got {value!r}")
     return value
