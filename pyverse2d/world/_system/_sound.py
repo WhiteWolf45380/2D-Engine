@@ -7,11 +7,6 @@ from ...abc import System
 from .._world import World
 from .._component import SoundEmitter, Transform
 
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from .._component._sound_emitter import SoundRequest
-
 # ======================================== SYSTEM ========================================
 class SoundSystem(System):
     """Système gérant les composants ``SoundEmitter``
@@ -65,7 +60,7 @@ class SoundSystem(System):
 
             # Lecture des sons à jouer
             for request in se._to_play:
-                handle = request.asset.play(volume=volume, loop=request.loop, on_end=se._remove_handle)
+                handle = request.sound.play(volume=volume, loop=request.loop, limit=request.limit, on_end=se._remove_handle)
                 if handle is not None:
                     se._add_handle(handle)
             se._to_play.clear()

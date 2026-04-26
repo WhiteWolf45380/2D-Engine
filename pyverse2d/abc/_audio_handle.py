@@ -96,6 +96,8 @@ class AudioHandle(ABC):
             self.player.pause()
             self.player.delete()
             self._active = False
+            if self.on_stop:
+                self.on_stop(self)
     
     # ======================================== INTERNALS ========================================
     def _refresh_volume(self) -> None:

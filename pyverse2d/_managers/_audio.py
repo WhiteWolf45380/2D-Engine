@@ -65,12 +65,10 @@ class SoundHandle(AudioHandle):
     def stop(self) -> None:
         """Arrête le son"""
         if self._active:
-            self.delete()
             self.sound._remove_handle(self)
             if not self.sound._handles:
                 self.sound._set_state(AudioState.SLEEPING)
-            if self.on_stop:
-                self.on_stop(self)
+            self.delete()
 
 
 class MusicHandle(AudioHandle):
@@ -126,11 +124,9 @@ class MusicHandle(AudioHandle):
     def stop(self) -> None:
         """Arrête la musique"""
         if self._active:
-            self.delete()
             self.music._set_state(AudioState.SLEEPING)
             self.music._set_handle(None)
-            if self.on_stop:
-                self.on_stop(self)
+            self.delete()
 
 # ======================================== GROUPS ========================================
 class SoundGroup:
@@ -428,7 +424,14 @@ class AudioManager(Manager):
         self._stop_music_immediate()
 
     # ======================================== SOUNDS ========================================
-    def play_sound(self, sound: Sound, volume: Real = 1.0, loop: bool = False, limit: int | None = None, on_end: Callable[[SoundHandle], Any] = None) -> SoundHandle | None:
+    def play_sound(
+            self,
+            sound: Sound,
+            volume: Real = 1.0,
+            loop: bool = False,
+            limit: int | None = None,
+            on_end: Callable[[SoundHandle], Any] = None
+        ) -> SoundHandle | None:
         """Joue un ``Sound`` asset
 
         Args:
@@ -550,6 +553,7 @@ class AudioManager(Manager):
             loop: bool = True,
             fade_s: float = 0.0,
             fade_easing: EasingFunc = linear,
+            on_end: Callable[[MusicHandle], Any] = None,
             playlist_fallback: bool = True,
             _interrupt_playlist: bool = True,
         ) -> MusicHandle:
@@ -561,6 +565,7 @@ class AudioManager(Manager):
             loop: boucle si True
             fade_s: fade-in en secondes
             fade_easing: fonction d'atténuation du fade-in
+            on_end: callback de fin de lecture
             playlist_fallback: relancer la playliste en cours après la musique
         """
         # Arrêt de la musique en cours
@@ -575,7 +580,7 @@ class AudioManager(Manager):
         player = _media.Player()
         player.loop = loop
         player.queue(source)
-        handle = MusicHandle(music, source, player, on_stop=self._make_on_stop(music, playlist_fallback))
+        handle = MusicHandle(music, source, player, on_stop=self._make_on_stop(music, on_end, playlist_fallback))
 
         # Lecture de la musique
         handle.player.play()
@@ -886,10 +891,12 @@ class AudioManager(Manager):
             self._playlist.delay_timer = 0.0
             self._play_playlist_next()
 
-    def _make_on_stop(self, music: Music, playlist_fallback: bool) -> Callable:
+    def _make_on_stop(self, music: Music, on_end: Callable[[MusicHandle], Any], playlist_fallback: bool) -> Callable:
         """Construit le callback on_stop en fusionnant la logique musique et playlist"""
         def on_stop(h: MusicHandle) -> None:
             self._clear_current_music(music)
+            if on_end is not None:
+                on_end(h)
             if playlist_fallback and self._playlist is not None and not self._playlist.playing:
                 self._on_interrupted_music_end(h)
         return on_stop

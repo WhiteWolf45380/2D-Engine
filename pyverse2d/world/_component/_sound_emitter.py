@@ -5,7 +5,7 @@ from pyverse2d._managers._audio import SoundHandle
 
 from ..._internal import CallbackList, positive
 from ...abc import Component, Request
-from ...asset import Sound, Music
+from ...asset import Sound
 from ...math.easing import EasingFunc, is_easing, linear
 
 from numbers import Real
@@ -140,16 +140,17 @@ class SoundEmitter(Component):
         return self._on_end
 
     # ======================================== INTERFACE ========================================
-    def play(self, asset: Sound | Music, loop: bool = False) -> None:
-        """Joue un asset assez audio
+    def play(self, sound: Sound, loop: bool = False, limit: int | None = None) -> None:
+        """Joue un son
 
         Args:
-            asset: asset à jouer
+            sound: son à jouer
         """
         self._to_play.append(
             AudioRequest(
-                asset = asset,
+                sound = sound,
                 loop = loop,
+                limit = limit,
             )
         )
 
@@ -188,5 +189,6 @@ class SoundEmitter(Component):
 @dataclass(slots=True, frozen=True)
 class AudioRequest(Request):
     """Reqûete de lecture d'un son"""
-    asset: Sound | Music
+    sound: Sound
     loop: bool = False
+    limit: int | None = None

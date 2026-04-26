@@ -4,7 +4,7 @@ from .._internal import positive
 from .._flag import AudioState
 from ..abc import Asset
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable, Any
 from numbers import Real
 
 from pyglet import media as _media
@@ -102,14 +102,14 @@ class Music(Asset):
         """Renvoie une copie de la musique"""
         return Music(path=self._path, volume=self._volume)
 
-    def play(self, volume: Real = 1.0, loop: bool = True, fade_s: Real = 0.0, playlist_fallback: bool = True) -> MusicHandle | None:
+    def play(self, volume: Real = 1.0, loop: bool = True, fade_s: Real = 0.0, on_end: Callable[[MusicHandle], Any] = None, playlist_fallback: bool = True) -> MusicHandle | None:
         """Joue la musique
 
         Args:
             loop: boucle infinie si True
             fade_s: durée du fade-in en secondes
         """
-        return self._get_audio_manager().play_music(self, loop=loop, fade_s=fade_s, playlist_fallback=playlist_fallback)
+        return self._get_audio_manager().play_music(self, loop=loop, fade_s=fade_s, on_end=on_end, playlist_fallback=playlist_fallback)
 
     def stop(self, fade_s: Real = 0.0) -> None:
         """Arrête la musique.
