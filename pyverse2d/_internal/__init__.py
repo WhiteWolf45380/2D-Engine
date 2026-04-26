@@ -16,7 +16,7 @@ from ._validators import (
 )
 
 from ._protocols import (
-    Positionnal,
+    HasPosition,
 )
 
 from ._processor import Processor
@@ -38,7 +38,7 @@ __all__ = [
     "equal_to",
     "rgba",
 
-    "Positionnal",
+    "HasPosition",
 
     "Processor",
     "CallbackList",

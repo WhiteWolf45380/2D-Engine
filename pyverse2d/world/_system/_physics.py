@@ -11,10 +11,16 @@ from math import exp
 class PhysicsSystem(System):
     """Système intégrant la physique des corps dynamiques"""
     __slots__ = ()
+
     order = 50
     exclusive = True
 
-    # ======================================== UPDATE ========================================
+    # ======================================== CONTRACT ========================================
+    def __repr__(self) -> str:
+        """Renvoie une représentation du système"""
+        return f"PhysicsSystem()"
+
+    # ======================================== LIFE CYCLE ========================================
     def update(self, world: World, dt: float):
         """Intègre la physique de tous les corps dynamiques actifs
 

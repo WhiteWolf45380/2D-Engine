@@ -15,6 +15,7 @@ class GravitySystem(System):
         gravity(Real): force gravitationnelle en N/kg
     """
     __slots__ = ("_gravity")
+
     order = 0
     exclusive = False
     requires = ("PhysicsSystem",)
@@ -22,19 +23,25 @@ class GravitySystem(System):
     def __init__(self, gravity: Vector = (0.0, -9.8)):
         self._gravity: Vector = Vector(gravity)
 
-    # ======================================== GETTERS ========================================
+    # ======================================== CONTRACT ========================================
+    def __repr__(self) -> str:
+        """Renvoie une représentation du système"""
+        return f"GravitySystem(gravity={self._gravity})"
+
+    # ======================================== PROPERTIES ========================================
     @property
     def gravity(self) -> Vector:
-        """Renvoie le vecteur gravitationnel en N/kg"""
+        """Vecteur gravitationnel en N/kg
+        
+        Le vecteur peut être un objet ``Vector`` ou n'import quel tuple ``(vx, vy)``.
+        """
         return self._gravity
 
-    # ======================================== SETTERS ========================================
     @gravity.setter
     def gravity(self, value: Vector):
-        """Fixe le vecteur gravitationnel en N/kg"""
         self._gravity = Vector(value)
 
-    # ======================================== UPDATE ========================================
+    # ======================================== LIFE CYCLE ========================================
     def update(self, world: World, dt: float):
         """Applique la force gravitationnelle sur tous les corps dynamiques
 

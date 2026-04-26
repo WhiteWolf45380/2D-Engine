@@ -39,9 +39,16 @@ def _closest_sector_angle(current, angle, cone, cone_gap):
 class SteeringSystem(System):
     """Système gérant le pilotage positionnel"""
     __slots__ = ()
+    
     order = 10
     exclusive = True
 
+    # ======================================== CONTRACT ========================================
+    def __repr__(self) -> str:
+        """Renvoie une représentation du système"""
+        return f"SteeringSystem()"
+
+    # ======================================== LIFE CYCLE ========================================
     def update(self, world: World, dt: float):
         """Actualisation du pilotage"""
         for entity in world.query(Follow, Transform):

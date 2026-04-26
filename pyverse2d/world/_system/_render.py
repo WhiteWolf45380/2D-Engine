@@ -20,6 +20,7 @@ _ORDER_LABEL = 2
 class RenderSystem(System):
     """Système gérant le rendu des entités"""
     __slots__ = ("_sprites", "_shapes", "_labels")
+    
     order = 100
     exclusive = True
 
@@ -28,7 +29,12 @@ class RenderSystem(System):
         self._shapes: dict[int, PygletShapeRenderer] = {}
         self._labels: dict[int, PygletLabelRenderer] = {}
 
-    # ======================================== UPDATE ========================================
+    # ======================================== CONTRACT ========================================
+    def __repr__(self) -> str:
+        """Renvoie une représentation du système"""
+        return f"RenderSystem()"
+
+    # ======================================== LIFE CYCLE ========================================
     def update(self, world: World, dt: float):
         """Actualisation du pilotage
 
@@ -38,7 +44,6 @@ class RenderSystem(System):
         """
         pass
 
-    # ======================================== DRAW ========================================
     def draw(self, world: World, pipeline: Pipeline):
         """Synchronise toutes les entités renderables avec le Batch de rendu
 

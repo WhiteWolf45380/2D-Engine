@@ -16,5 +16,10 @@ class System(ABC):
     requires: tuple[type, ...] = ()
     conflicts: tuple[type, ...] = ()
 
+    # ======================================== CONTRACT ========================================
+    @abstractmethod
+    def __repr__(self): ...
+
+    # ======================================== LIFE CYCLE ========================================
     @abstractmethod
     def update(self, world: World, dt: float): ...

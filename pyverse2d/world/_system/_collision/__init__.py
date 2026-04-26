@@ -61,8 +61,13 @@ class CollisionSystem(System):
         self._restitution_threshold: float = float(restitution_threshold)
         self._restitution_max_velocity: float = float(restitution_max_velocity)
         self._vel_along_wake_treshold: float = float(vel_along_wake_treshold)
+    
+    # ======================================== CONTRACT ========================================
+    def __repr__(self) -> str:
+        """Renvoie une représentation du système"""
+        return f"CollisionSystem(broadphase={self._hash is not None}, slop={self._slop}, iterations={self._iterations})"
 
-    # ======================================== UPDATE ========================================
+    # ======================================== LIFE CYCLE ========================================
     def update(self, world: World, dt: float):
         """
         Détecte et résout les collisions pour toutes les entités actives
@@ -80,7 +85,7 @@ class CollisionSystem(System):
         ctx = UpdateContext.build(world, dt, self._hash, self._cache, C)
         update_processor(ctx)
 
-    # ======================================== PUBLIC ========================================
+    # ======================================== INTERFACE ========================================
     def reset_calibration(self):
         """Réinitialise la calibration du spatial hash"""
         if self._hash is not None:

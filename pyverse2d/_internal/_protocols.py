@@ -1,8 +1,9 @@
 # ======================================== IMPORTS ========================================
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
 # ======================================== PROTOCOLS ========================================
-class Positionnal(Protocol):
+@runtime_checkable
+class HasPosition(Protocol):
     """Objet positionnel
     
     L'objet doit exposé deux attributs ou propriétés ``x`` et ``y``.

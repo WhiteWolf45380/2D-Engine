@@ -19,7 +19,12 @@ class AnimationSystem(System):
     order = 90
     exclusive = True
 
-    # ======================================== UPDATE ========================================
+    # ======================================== CONTRACT ========================================
+    def __repr__(self) -> str:
+        """Renvoie une représentation du système"""
+        return f"AnimationSystem()"
+
+    # ======================================== LIFE CYCLE ========================================
     def update(self, world: World, dt: float) -> None:
         """Mise à jour des animations
 
@@ -32,7 +37,7 @@ class AnimationSystem(System):
             sr: SpriteRenderer = entity.get(SpriteRenderer)
             self._update_animator(animator, sr, dt)
 
-    # ======================================== INTERNAL ========================================
+    # ======================================== INTERNALS ========================================
     def _update_animator(self, animator: Animator, sr: SpriteRenderer, dt: float) -> None:
         """Mise à jour d'un composant animateur"""
         target_req = self._resolve(animator)

@@ -1,12 +1,18 @@
 # ======================================== IMPORTS ========================================
 from __future__ import annotations
 
+from pyverse2d._managers._audio import SoundHandle
+
 from ..._internal import CallbackList, positive
 from ...abc import Component
 from ...asset import Sound
 from ...math.easing import EasingFunc, is_easing, linear
 
 from numbers import Real
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ..._managers._audio import SoundBundle
 
 # ======================================== COMPONENT ========================================
 class SoundEmitter(Component):
@@ -47,7 +53,7 @@ class SoundEmitter(Component):
 
         # Buffer
         self._to_play: list[Sound] = []
-        self._playing: set[Sound] = set()
+        self._playing: set[SoundHandle] = set()
 
     # ======================================== CONTRACT ========================================
     def __repr__(self) -> str:
@@ -142,16 +148,21 @@ class SoundEmitter(Component):
         Args:
             sound: son à jouer
         """
+        self._to_play.append(sound)
         self._on_start.trigger()
 
     def resume(self) -> None:
         """Reprend la lecture des sons"""
-        ...
+        for handle in self._playing:
+            handle.resume()
 
     def pause(self) -> None:
         """Met en pause la lecture des sons"""
-        ...
+        for handle in self._playing:
+            handle.pause()
 
     def stop(self) -> None:
         """Arrête la lecture des sons"""
+        for handle in self._playing:
+            handle.stop()
         self._on_end.trigger()
