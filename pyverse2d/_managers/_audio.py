@@ -224,8 +224,6 @@ class _CrossfadeRequest(Request):
     vol_out: float
     vol_in: float
     easing: EasingFunc
-    master: float
-    music_vol: float
 
 # ======================================== MANAGER ========================================
 class AudioManager(Manager):
@@ -551,8 +549,6 @@ class AudioManager(Manager):
                 vol_out=0.0,
                 vol_in=volume,
                 easing=fade_easing,
-                master=self._master_volume,
-                music_vol=self._music_volume,
             )
 
         # Cas sans fade-in
@@ -596,9 +592,6 @@ class AudioManager(Manager):
                 elapsed=0.0,
                 vol_out=self._current_music._handle.play_volume,
                 vol_in=0.0,
-                easing=fade_easing,
-                master=self._master_volume,
-                music_vol=self._music_volume,
             )
             self._current_music = None
         
@@ -644,8 +637,6 @@ class AudioManager(Manager):
             vol_out=music_out._handle.play_volume if music_out else 0.0,
             vol_in=volume,
             easing=fade_easing,
-            master=self._master_volume,
-            music_vol=self._music_volume,
         )
 
         # Lecture de la musique
@@ -679,28 +670,26 @@ class AudioManager(Manager):
         # Fade musical
         if self._crossfade is None:
             return
-
         cf = self._crossfade
         cf.elapsed += dt
-
+    
         while cf.elapsed >= cf.step_dt and cf.step < cf.steps:
             cf.step += 1
             cf.elapsed -= cf.step_dt
             t = max(0.0, min(cf.easing(cf.step / cf.steps), 1.0))
             if cf.handle_out is not None:
-                cf.handle_out.set_play_volume(cf.vol_out * (1.0 - t))
+                cf.handle_out.play_volume = cf.vol_out * (1.0 - t)
             if cf.handle_in is not None:
-                cf.handle_in.set_play_volume(cf.vol_in * t)
+                cf.handle_in.play_volume = cf.vol_in * t
 
         if cf.step >= cf.steps:
             if cf.handle_out is not None:
-                cf.handle_out.set_play_volume(0.0)
                 if cf.handle_in.music == cf.handle_out.music:
                     cf.handle_out.delete()
                 else:
                     cf.handle_out.stop()
             if cf.handle_in is not None:
-                cf.handle_in.set_play_volume(cf.vol_in)
+                cf.handle_in.play_volume = cf.vol_in
             self._crossfade = None
 
     def flush(self) -> None:
@@ -733,18 +722,16 @@ class AudioManager(Manager):
 
     def _refresh_volumes(self) -> None:
         """Actualise les volumes"""
+        base_musics_volume = self.master_volume * self.music_volume
         if self._crossfade is not None:
             cf = self._crossfade
-            cf.master = self._master_volume
-            cf.music_vol = self._music_volume
             t = cf.step / cf.steps if cf.steps else 1.0
             if cf.handle_out is not None:
-                cf.handle_out._set_volume(cf.vol_out * (1.0 - t))
+                cf.handle_out.base_volume = base_musics_volume * cf.handle_in.music.volume
             if cf.handle_in is not None:
-                cf.handle_in._set_volume(cf.vol_in * t)
-                cf.handle_in.base_volume = self.master_volume * self.music_volume * cf.handle_in.music.volume
+                cf.handle_in.base_volume = base_musics_volume * cf.handle_in.music.volume
         elif self._current_music is not None:
-            self._current_music._set_volume(self._master_volume * self._music_volume * self._current_music.volume)
+            self._current_music._handle.base_volume = base_musics_volume * self._current_music.volume
 
 # ======================================== EXPORTS ========================================
 __all__ = [
