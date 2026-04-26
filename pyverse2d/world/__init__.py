@@ -22,6 +22,7 @@ from ._system import (
     CollisionSystem,
     RenderSystem,
     AnimationSystem,
+    SoundSystem,
 )
 
 # ======================================== EXPORTS ========================================
@@ -38,6 +39,7 @@ __all__ = [
     "SpriteRenderer",
     "TextRenderer",
     "Animator",
+    "SoundEmitter"
 
     "PhysicsSystem",
     "GravitySystem",
@@ -45,6 +47,5 @@ __all__ = [
     "CollisionSystem",
     "RenderSystem",
     "AnimationSystem",
-
-    "SoundEmitter",
+    "SoundSystem",
 ]
