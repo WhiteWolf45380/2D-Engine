@@ -454,15 +454,15 @@ class AudioManager(Manager):
             return None
         handle.on_stop = on_end
 
-        # Calcul du volume
-        group_vol = group.get_absolute_volume() if group is not None else 1.0
-        handle.set_volumes(self._master_volume * group_vol * sound.volume, volume)
-
         # Lecture du son
         handle.repeat = repeat
         handle.iterations_left = limit
         handle.player.queue(source)
         handle.player.play()
+
+        # Calcul du volume
+        group_vol = group.get_absolute_volume() if group is not None else 1.0
+        handle.set_volumes(self._master_volume * group_vol * sound.volume, volume)
 
         # Actualisation de l'état du son
         sound._add_handle(handle)
@@ -578,8 +578,8 @@ class AudioManager(Manager):
         handle = MusicHandle(music, source, player, on_stop=self._make_on_stop(music, playlist_fallback))
 
         # Lecture de la musique
-        handle.set_volumes(self._master_volume * self._music_volume * music.volume, volume)
         handle.player.play()
+        handle.set_volumes(self._master_volume * self._music_volume * music.volume, 0.0)
         music._set_handle(handle)
         music._set_loop(loop)
         music._set_state(AudioState.PLAYING)
@@ -703,7 +703,7 @@ class AudioManager(Manager):
         )
 
         # Lecture de la musique
-        handle.set_volumes(self._master_volume * self._music_volume * music.volume, volume)
+        handle.set_volumes(self._master_volume * self._music_volume * music.volume, 0.0)
         handle.player.play()
         music._set_handle(handle)
         music._loop = loop
