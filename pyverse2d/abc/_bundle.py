@@ -53,10 +53,11 @@ class Bundle(ABC):
             paths[key] = os.path.join(folder_path, filename)
         return cls(paths, **kwargs)
 
-    def preload(self) -> None:
+    def preload(self) -> Bundle:
         """Précharge tous les éléments du bundle"""
         for key in self._paths:
             self.get(key, cache=True)
+        return self
 
     # ======================================== INTERFACE ========================================
     @abstractmethod
