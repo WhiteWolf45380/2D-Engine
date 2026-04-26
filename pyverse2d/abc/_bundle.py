@@ -56,7 +56,7 @@ class Bundle(ABC):
     def preload(self) -> Bundle:
         """Précharge tous les éléments du bundle"""
         for key in self._paths:
-            self.get(key, cache=True)
+            self.get(key)
         return self
 
     # ======================================== INTERFACE ========================================
