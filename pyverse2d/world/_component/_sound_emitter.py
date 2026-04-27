@@ -10,6 +10,7 @@ from ...math.easing import EasingFunc, is_easing, linear
 
 from numbers import Real
 from dataclasses import dataclass
+from typing import Callable
 
 # ======================================== COMPONENT ========================================
 class SoundEmitter(Component):
@@ -140,7 +141,12 @@ class SoundEmitter(Component):
         return self._on_end
 
     # ======================================== INTERFACE ========================================
-    def play(self, sound: Sound, loop: bool = False, limit: int | None = None) -> None:
+    def play(
+            self,
+            sound: Sound,
+            loop: bool = False,
+            limit: int | None = None,
+        ) -> None:
         """Joue un son
 
         Args:

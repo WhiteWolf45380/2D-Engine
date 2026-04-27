@@ -333,11 +333,11 @@ class AudioManager(Manager):
     # ======================================== FACTORY ========================================
     @staticmethod
     def create_sound(
-        path: str,
-        volume: Real = 1.0,
-        cooldown: Real = 0.0,
-        group: SoundGroup = None,
-    ) -> Sound:
+            path: str,
+            volume: Real = 1.0,
+            cooldown: Real = 0.0,
+            group: SoundGroup = None,
+        ) -> Sound:
         """Crée et retourne un ``Sound`` asset
 
         Args:
