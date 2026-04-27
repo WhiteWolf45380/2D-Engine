@@ -472,3 +472,8 @@ class PygletLabelRenderer:
         """Reconstruit le label avec les paramètres courants"""
         self.delete()
         self._build()
+
+# ======================================== EXPORTS ========================================
+__all__ = [
+    "PygletLabelRenderer",
+]

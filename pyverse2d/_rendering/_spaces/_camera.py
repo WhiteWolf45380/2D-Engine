@@ -107,6 +107,10 @@ class Camera(Space):
             offset: décalage
             parallax_x: facteur parallax horizontal
             parallax_y: facteur parallax vertical
+            keep_zoom: suivi du zoom de la caméra principale
+            zoom_factor: facteur de zoom supplémentaire
+            keep_rotation: suivi de la rotation de la caméra principale
+            rotation_offset: rotation supplémentaire
         """
         derived_camera = camera.copy()
         derived_camera.attach_to(
@@ -293,7 +297,8 @@ class Camera(Space):
         """Suit un Followable
 
         Args:
-            entity: entité à suivre
+            target: objet à suivre
+            offset: vecteur de décalage
             smoothing: facteur de retard relatif [0, 1[
             max_speed: vitesse maximale de déplacement en u/s
         """
@@ -341,7 +346,11 @@ class Camera(Space):
 
     # ======================================== LIFE CYCLE ========================================
     def update(self, dt: float) -> None:
-        """Actualisation"""
+        """Actualisation
+        
+        Args:
+            dt: delta-time
+        """
         if self._state is None:
             return
         if self.in_transition():
@@ -352,7 +361,11 @@ class Camera(Space):
             self._update_attach(dt)
 
     def _update_transition(self, dt: float) -> None:
-        """Actualise la transition"""
+        """Actualise la transition
+        
+        Args:
+            dt: delta-time
+        """
         # Connexion
         tr: TransitionRequest = self._state
 
@@ -369,7 +382,11 @@ class Camera(Space):
         self._go(*_step_position(tr.start.x, tr.start.y, tr.end.x, tr.end.y, t))
 
     def _update_follow(self, dt: float) -> None:
-        """Actualise le suivi"""
+        """Actualise le suivi
+        
+        Args:
+            dt: delta-time
+        """
         # Connexion
         follow: FollowRequest = self._state
         target = follow.target
@@ -395,7 +412,11 @@ class Camera(Space):
         self._go(x, y)
 
     def _update_attach(self, dt: float) -> None:
-        """Actualise l'attache"""
+        """Actualise l'attache
+        
+        Args:
+            dt: delta-time
+        """
         # Connexion
         attach: AttachRequest = self._state
         camera = attach.camera

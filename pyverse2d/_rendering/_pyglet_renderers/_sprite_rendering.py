@@ -360,3 +360,8 @@ class PygletSpriteRenderer:
         """Reconstruit le sprite avec les paramètres courants"""
         self.delete()
         self._build()
+
+# ======================================== EXPORTS ========================================
+__all__ = [
+    "PygletSpriteRenderer",
+]

@@ -227,7 +227,12 @@ class Window(Space):
     
     # ======================================== INTERNALS ========================================
     def _apply_letterboxing(self, win_w: int, win_h: int):
-        """Calcul du letterboxing"""
+        """Calcul du letterboxing
+        
+        Args:
+            win_w: largeur de la fenêtre OS
+            win_h: hauteur de la fenêtre OS
+        """
         # Calcul des ratios
         screen_ratio = self._screen.ratio
         win_ratio = win_w / win_h

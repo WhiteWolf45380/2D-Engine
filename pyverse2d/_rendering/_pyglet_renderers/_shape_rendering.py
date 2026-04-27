@@ -440,3 +440,8 @@ def _build_strip(contour: np.ndarray, width: float, align: str = "center") -> np
     strip[-1] = inner[0]
 
     return strip
+
+# ======================================== EXPORTS ========================================
+__all__ = [
+    "PygletShapeRenderer",
+]

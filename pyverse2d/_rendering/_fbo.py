@@ -22,14 +22,17 @@ class Framebuffer:
 
     @property
     def width(self) -> int:
+        """Largeur du Framebuffer"""
         return self._texture.width
 
     @property
     def height(self) -> int:
+        """Hauteur du Framebuffer"""
         return self._texture.height
 
     @property
     def texture_id(self) -> int:
+        """Identifiant de la texture"""
         return self._texture.id
 
     # ======================================== INTERFACE ========================================
