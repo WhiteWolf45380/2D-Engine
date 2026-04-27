@@ -226,6 +226,9 @@ class Sound(Asset):
         
         Args:
             volume: volume ponctuel *[0, 1]*
+            loop: lecture en boucle
+            limit: limite d'itérations
+            on_end: callback final
         """
         return self._get_audio_manager().play_sound(self, volume=volume, loop=loop, limit=limit, on_end=on_end)
 
