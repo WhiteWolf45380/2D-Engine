@@ -6,9 +6,12 @@ from ...math import Point, Vector
 from ...math.easing import EasingFunc, is_easing
 from ...abc import Request, Space
 
+from pyglet.math import Mat4
+
 from numbers import Real
 from dataclasses import dataclass
 from typing import ClassVar, Type
+from math import cos, sin, radians
 
 # ======================================== REQUEST ========================================
 @dataclass(slots=True)
@@ -61,9 +64,15 @@ class Camera(Space):
        "_state",
     )
 
+    # Requêtes
     TransitionRequest: ClassVar[Type[TransitionRequest]] = TransitionRequest
     FollowRequest: ClassVar[Type[FollowRequest]] = FollowRequest
     AttachRequest: ClassVar[Type[AttachRequest]] = AttachRequest
+
+    # Caches de matrices
+    _PROJECTION_CACHE: dict[tuple, Mat4] = {}
+    _VIEW_CACHE_STORED: dict[tuple, Mat4] = {}
+    _VIEW_CACHE_FRAME: dict[tuple, Mat4] = {}
 
     def __init__(
             self,
@@ -434,51 +443,111 @@ class Camera(Space):
             self._rotation = camera.rotation + attach.rotation_offset
 
     # ======================================== RESOLVE ========================================
-    def resolve(self, viewport_width: int, viewport_height: int) -> tuple[float, float, float, float, float, float, tuple[float, float]]:
-        """Renvoie le frustum ``(x, y, width, height, rotation)`` dans l'espace monde
+    def projection_matrix(self, fb_w: int, fb_h: int) -> Mat4:
+        """Renvoie la matrice de projection"""
+        # Renommage
+        vw = self._view_width
+        vh = self._view_height
 
-        Args:
-            viewport_width: largeur du viewport
-            viewport_height: hauteur du viewport
-        """
-        # Dimensions
-        if self._view_width is None and self._view_height is None:
-            width  = viewport_width
-            height = viewport_height
-        elif self._view_width is None:
-            height = self._view_height
-            width  = height * (viewport_width / viewport_height)
-        elif self._view_height is None:
-            width  = self._view_width
-            height = width * (viewport_height / viewport_width)
-        else:
-            viewport_ratio = viewport_width / viewport_height
-            view_ratio = self._view_width / self._view_height
-            if viewport_ratio < view_ratio:
-                height = self._view_height
-                width  = height * viewport_ratio
-            else:
-                width  = self._view_width
-                height = width / viewport_ratio
+        # Cache
+        projection_key: tuple = (fb_w, fb_h, vw, vh)
+        if projection_key in self._PROJECTION_CACHE:
+            return self._PROJECTION_CACHE[projection_key]
+        
+        # Construction
+        matrix = self._compute_projection(fb_w, fb_h, vw, vh)
+        self._PROJECTION_CACHE[projection_key] = matrix
+        return matrix
 
-        # Ancre
-        ax = (self._anchor.x - 0.5) * (width  / self._zoom)
-        ay = (self._anchor.y - 0.5) * (height / self._zoom)
+    def view_matrix(self) -> Mat4:
+        """Renvoie la matrice de vue"""
+        # Renommage
+        cx, cy = self._position
+        theta = self._rotation
+        zoom = self._zoom
 
-        return (
-            self._position.x - ax,
-            self._position.y - ay,
-            width ,
-            height,
-            self._zoom,
-            self._rotation,
-        )
+        # Cache
+        view_key: tuple = (cx, cy, theta, zoom)
+        if view_key in self._VIEW_CACHE_FRAME:
+            return self._VIEW_CACHE_FRAME[view_key]
+        if view_key in self._VIEW_CACHE_STORED:
+            matrix = self._VIEW_CACHE_STORED[view_key]
+            self._VIEW_CACHE_FRAME[view_key] = matrix
+            return matrix
+        
+        # Construction
+        matrix = self._compute_view(cx, cy, theta, zoom)
+        self._VIEW_CACHE_FRAME[view_key] = matrix
+        return matrix
+    
+    def clear_projection_cache(self) -> None:
+        """Vide le cache de projection"""
+        self._PROJECTION_CACHE.clear()
+    
+    def clear_view_cache(self) -> None:
+        """Vide le cache de vue"""
+        self._VIEW_CACHE_STORED.clear()
+
+    def flush_view_cache_frame(self) -> None:
+        """Nettoie le cache de vue de la frame courante"""
+        self._VIEW_CACHE_FRAME.clear()
     
     # ======================================== INTERNALS ========================================
     def _go(self, x: float, y: float) -> None:
         """Déplacement instantanné"""
         self._position.x = x
         self._position.y = y
+
+    def _compute_projection(self, fb_w: int, fb_h: int, vw: float, vh: float) -> Mat4:
+        """Compute la matrice de projection *(S)*
+        
+        Args:
+            fb_w: largeur du framebuffer
+            fb_h: hauteur du framebuffer
+            vw: largeur de la vue
+            vh: hauteur de la vue
+        """
+        # Calcul des dimensions du frustum
+        if vw is None and vh is None:
+            vw, vh = fb_w, fb_h
+        elif vw is None:
+            vw = vh * fb_w / fb_h
+        elif vh is None:
+            vh = vw * fb_h / fb_w
+        else:
+            fb_ratio = fb_w / fb_h
+            view_ratio = vw / vh
+            if fb_ratio < view_ratio:
+                vw = vh * fb_ratio
+            else:
+                vh = vw * fb_ratio
+
+        # Calcul des paramètres
+        sx = fb_w / vw
+        sy = fb_h / vh
+        
+        # Construction de la matrice
+        return Mat4(
+            sx, 0,  0, 0,
+            0,  sy, 0, 0,
+            0,  0,  1, 0,
+            0,  0,  0, 1,
+        )
+
+    def _compute_view(self, cx: float, cy: float, theta: float, zoom: float) -> Mat4:
+        """Compute la matrice de vue - *(TRS)^(-1)*"""
+        # Calcul des paramètres
+        theta_rad = radians(theta)
+        co, si = cos(theta_rad), sin(theta_rad)
+        sx = sy = zoom
+
+        # Construction de la matrice
+        return Mat4(
+            co / sx,    si / sx,    0,     -cx * co - cy * si,
+           -si / sy,    co / sy,    0,      cx * si - cy * co,
+            0,          0,          1,      0,
+            0,          0,          0,      1,
+        )
 
 # ======================================== HELPERS ========================================
 def _step_position(start_x: float, start_y: float, end_x: float, end_y: float, t: float) -> tuple[float, float]:
