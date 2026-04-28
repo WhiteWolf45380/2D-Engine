@@ -93,6 +93,7 @@ class Tween(ABC):
     
     @easing.setter
     def easing(self, value: EasingFunc) -> None:
+        assert callable(value), f"easing ({value}) must be an EasingFunc"
         self._easing = value
     
     # ======================================== PREDICATES ========================================
@@ -149,7 +150,11 @@ class Tween(ABC):
 
     # ======================================== LIFE CYCLE ========================================
     def update(self, dt: float) -> float:
-        """Actualisation"""
+        """Actualisation
+
+        Args:
+            dt: delta-time
+        """
         if self._direction == 0:
             return
         if self._duration <= 0.0:

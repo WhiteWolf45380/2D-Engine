@@ -45,6 +45,8 @@ class LightSource(ABC):
             enable: bool = True,
         ):
         # Transtyping
+        position = Point(position)
+        color = Color(color)
         intensity: float = float(intensity)
 
         # Debugging
@@ -53,14 +55,14 @@ class LightSource(ABC):
             expect_callable(falloff)
             expect(enable, bool)
 
-        # Paramètres publiques
-        self._position: Point = Point(position)
-        self._color: Color = Color(color)
-        self._intensity: float = float(intensity)
+        # Attributs publiques
+        self._position: Point = position
+        self._color: Color = color
+        self._intensity: float = intensity
         self._falloff: EasingFunc = falloff
         self._enabled: bool = enable
 
-        # Paramètres internes
+        # Attributs internes
         self._attach: AttachRequest | None = None
         self._activity: Activity = Activity.DEFAULT
 

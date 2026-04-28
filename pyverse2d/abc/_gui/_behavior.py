@@ -1,6 +1,7 @@
 # ======================================== IMPORTS ========================================
 from __future__ import annotations
 
+from ..._internal import expect
 from ._tween import Tween
 
 from abc import ABC, abstractmethod
@@ -44,12 +45,13 @@ class Behavior(ABC):
 
         Args:
             widget: composant UI maître
-            _from_widget: origine de l'appel
         """
         if not _from_widget:
             return widget.add_behavior(self)
         if self._owner is not None:
             raise ValueError("This behavior is already attached")
+        if __debug__:
+            expect(widget, Widget)
         self._owner = widget
         for tween in self._tweens.values():
             if tween.widget is None:
@@ -57,11 +59,7 @@ class Behavior(ABC):
         self._on_attach()
 
     def detach(self, _from_widget: bool = False) -> None:
-        """Supprime l'assignation au ``Widget`` possesseur
-
-        Args:
-            _from_widget: origine de l'appel
-        """
+        """Supprime l'assignation au ``Widget`` possesseur"""
         if not _from_widget:
             return self._owner.remove_behavior(self)
         self._on_detach()
@@ -90,6 +88,8 @@ class Behavior(ABC):
             target: widget cible (par défaut le possesseur)
         """
         widget = target or self._owner
+        if __debug__:
+            expect(widget, Widget)
         if widget is not None:
             tween.bind(widget)
         self._tweens[type(tween)] = tween
@@ -148,7 +148,11 @@ class Behavior(ABC):
     def _update(self, dt: float) -> None: ...
 
     def update(self, dt: float) -> None:
-        """Actualisation"""
+        """Actualisation
+        
+        Args:
+            dt: delta-time
+        """
         self._update(dt)
         for tween in self._tweens.values():
             tween.update(dt)

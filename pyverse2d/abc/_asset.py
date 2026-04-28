@@ -9,5 +9,4 @@ class Asset(ABC):
     __slots__ = tuple()
 
     @abstractmethod
-    def __init__(self):
-        ...
+    def __init__(self): ...

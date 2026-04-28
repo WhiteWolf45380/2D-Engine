@@ -66,11 +66,12 @@ class Layer(ABC):
     
     @camera.setter
     def camera(self, value: Camera) -> None:
-        self._camera = expect(value, (self._get_camera_type(), None))
+        assert value is None or isinstance(value, self._get_camera_type()), f"camera ({value}) must be a Camera object"
+        self._camera = value
 
     # ======================================== PREDICATES ========================================
     def is_fx(self) -> bool:
-        """Vérifie que le layer soit un layer d'effets  post-process"""
+        """Vérifie que le layer soit un layer d'effets post-process"""
         return self._IS_FX
     
     # ======================================== ACTIVITY ========================================
@@ -90,6 +91,11 @@ class Layer(ABC):
         """Bascule l'activité"""
         self._active = not self._active
 
+    def set_activity(self, value: bool) -> None:
+        """Fixe l'activité"""
+        assert isinstance(value, bool), f"activity ({value}) must be a boolean"
+        self._active = value
+
     # ======================================== VISIBILITY ========================================
     def is_visible(self) -> bool:
         """Vérifie la visibilité"""
@@ -107,6 +113,11 @@ class Layer(ABC):
         """Bascule la visibilité"""
         self._visible = not self._visible
 
+    def set_visibility(self, value: bool) -> None:
+        """Fixe la visibilité"""
+        assert isinstance(value, bool), f"visibility ({value}) must be a boolean"
+        self._visible = value
+
     # ======================================== HOOKS ========================================
     @abstractmethod
     def on_start(self): ...
@@ -122,7 +133,11 @@ class Layer(ABC):
     def _update(self, dt: float) -> None: ...
 
     def update(self, dt: float):
-        """Actualisation"""
+        """Actualisation
+        
+        Args:
+            dt: delta-time
+        """
         if self._camera is not None:
             self._camera.update(dt)
             self._apply_context()
@@ -133,7 +148,11 @@ class Layer(ABC):
     def _draw(self, pipeline: Pipeline) -> None: ...
 
     def draw(self, pipeline: Pipeline) -> None:
-        """Affichage global"""
+        """Affichage global
+
+        Args:
+            pipeline: ``Pipeline`` de rendu
+        """
         if self._camera is not None:
             self._apply_context()
         self._draw(pipeline)

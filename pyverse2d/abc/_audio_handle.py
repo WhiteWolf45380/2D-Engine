@@ -32,7 +32,10 @@ class AudioHandle(ABC):
     # ======================================== PROPERTIES ========================================
     @property
     def base_volume(self) -> float:
-        """Volume de base"""
+        """Volume de base
+        
+        Le volume doit être un ``Réel`` positif.
+        """
         return self._base_volume
     
     @base_volume.setter
@@ -42,7 +45,9 @@ class AudioHandle(ABC):
     
     @property
     def play_volume(self) -> float:
-        """Volume ponctuel"""
+        """Volume ponctuel
+        Le volume doit être un ``Réel`` positif.
+        """
         return self._play_volume
     
     @play_volume.setter

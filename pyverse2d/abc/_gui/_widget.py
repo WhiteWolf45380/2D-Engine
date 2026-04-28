@@ -43,22 +43,33 @@ class WidgetGroup(Group):
         )
 
     def __hash__(self) -> int:
+        """Renvoie le hash du groupe"""
         return hash((self.order, self.parent, self.resolved))
 
     def __eq__(self, other: WidgetGroup) -> bool:
+        """Vérifie la correspondance de deux groupes"""
         return super().__eq__(other) and self.resolved == other.resolved
 
     def set_state(self):
+        """Active l'état OpenGl"""
         if self.resolved is not None:
             gl.glEnable(gl.GL_SCISSOR_TEST)
             gl.glScissor(*self.resolved)
 
     def unset_state(self):
+        """Désactive l'état OpenGl"""
         if self.resolved is not None:
             gl.glDisable(gl.GL_SCISSOR_TEST)
 
     @classmethod
     def get_group(cls, order: int, parent: WidgetGroup | None, scissor: tuple | None) -> WidgetGroup:
+        """Renvoie un groupe correspondant
+        
+        Args:
+            order: ordre de priorité
+            parent: groupe parent
+            scissor: rect de clipping
+        """
         key = (order, id(parent), scissor)
         if key not in cls._cache:
             cls._cache[key] = cls(order=order, parent=parent, scissor=scissor)
@@ -66,6 +77,7 @@ class WidgetGroup(Group):
 
     @classmethod
     def invalidate(cls, parent_id: int) -> None:
+        """Invalide le scissor du groupe et de ses enfants"""
         cls._cache = {k: v for k, v in cls._cache.items() if k[1] != parent_id}
 
 # ======================================== ABSTRACT CLASS ========================================
@@ -93,7 +105,7 @@ class Widget(ABC):
 
     @classmethod
     def _get_render_context(cls) -> RenderContext:
-        """Renvoie la class RenderContext"""
+        """Renvoie la class ``RenderContext``"""
         if cls._RENDER_CONTEXT_CLS is None:
             from ...gui import RenderContext
             cls._RENDER_CONTEXT_CLS = RenderContext
@@ -108,20 +120,25 @@ class Widget(ABC):
             opacity: float = 1.0,
             clipping: bool = False,
         ):
-        # position
-        self._position: Point = Point(position)
-        self._anchor: Point = Point(anchor)
-        self._scale: float = float(scale)
-        self._rotation: float = float(rotation)
-
-        # Design
-        self._opacity: float = float(opacity)
-        self._clipping: bool = clipping
+        # Transtyping
+        position  = Point(position)
+        anchor = Point(anchor)
+        scale = float(scale)
+        rotation = float(rotation)
+        opacity = float(opacity)
 
         if __debug__:
-            over(self._scale, 0.0, include=False)
-            clamped(self._opacity)
-            if not isinstance(self._clipping, bool): raise ValueError(f"clipping ({self._clipping}) must be a boolean")
+            over(scale, 0.0, include=False)
+            clamped(opacity)
+            expect(clipping, bool)
+
+        # Attributs publique
+        self._position: Point = position
+        self._anchor: Point = anchor
+        self._scale: float = scale
+        self._rotation: float = rotation
+        self._opacity: float = opacity
+        self._clipping: bool = clipping
             
         # Arbre
         self._layer: GuiLayer = None
@@ -165,7 +182,7 @@ class Widget(ABC):
     # ======================================== PROPERTIES ========================================
     @property
     def layer(self) -> GuiLayer | None:
-        """Layer gui maître"""
+        """``Layer`` gui maître"""
         return self._layer
 
     @property
@@ -366,7 +383,7 @@ class Widget(ABC):
     def resize(self, factor: Real) -> None:
         """Redimensionne le widget par un facteur
 
-        Le facteur de redimensionnement doit être un réel positif non nul.
+        Le facteur de redimensionnement doit être un ``Réel`` positif non nul.
         """
         self._scale *= over(float(factor), 0.0, include=False)
         self._invalidate_scissor()
@@ -381,11 +398,10 @@ class Widget(ABC):
 
     # ========================================  STATE ========================================
     def activate(self, propagate: bool = True) -> None:
-        """
-        Active le composant
+        """Active le composant
 
         Args:
-            propagate(bool, optional): propage l'état aux enfants
+            propagate: propage l'état aux enfants
         """
         self._active = True
         for behavior in self._behaviors:
@@ -397,11 +413,10 @@ class Widget(ABC):
                 child.widget.activate()
     
     def deactivate(self, propagate: bool = True) -> None:
-        """
-        Désactive le composant
+        """Désactive le composant
 
         Args:
-            propagate(bool, optional): propage l'état aux enfants
+            propagate: propage l'état aux enfants
         """
         self._active = False
         for behavior in self._behaviors:
@@ -414,11 +429,10 @@ class Widget(ABC):
                 child.widget.deactivate()
     
     def switch_activity(self, propagate: bool = True) -> None:
-        """
-        Bascule l'activité
+        """Bascule l'activité
 
         Args:
-            propagate(bool, optional): propage l'état aux enfants
+            propagate: propage l'état aux enfants
         """
         if self._active:
             self.deactivate(propagate=propagate)
@@ -426,11 +440,10 @@ class Widget(ABC):
             self.activate(propagate=propagate)
 
     def show(self, propagate: bool = True) -> None:
-        """
-        Montre le composant
+        """Montre le composant
 
         Args:
-            propagate(bool, optional): propage l'état aux enfants
+            propagate: propage l'état aux enfants
         """
         self._visible = True
         for fn in self._show_process:
@@ -440,11 +453,10 @@ class Widget(ABC):
                 child.widget.show()
 
     def hide(self, propagate: bool = True) -> None:
-        """
-        Cache le composant
+        """Cache le composant
 
         Args:
-            propagate(bool, optional): propage l'état aux enfants
+            propagate: propage l'état aux enfants
         """
         self._visible = False
         for fn in self._hide_process:
@@ -454,11 +466,10 @@ class Widget(ABC):
                 child.widget.hide()
     
     def switch_visibility(self, propagate: bool = True) -> None:
-        """
-        Bascule la visibilité
+        """Bascule la visibilité
 
         Args:
-            propagate(bool, optional): propage l'état aux enfants
+            propagate: propage l'état aux enfants
         """
         if self._visible:
             self.hide(propagate=propagate)
@@ -469,13 +480,17 @@ class Widget(ABC):
     def add_behavior(self, behavior: Behavior) -> None:
         """Ajoute un comportement
 
-        Les comportements sont exclusifs par widget
+        Les comportements sont exclusifs par widget.
         """
-        expect(behavior, Behavior)
+        # Vérifications
         if getattr(self, f"_{behavior._ID}", None) is not None:
             raise ValueError(f"This widget already has a {type(behavior).__name__}, try to remove it first")
+        
+        # Attachement
         behavior.attach(self, _from_widget=True)
         setattr(self, f"_{behavior._ID}", behavior)
+
+        # Insertion
         for i in range(len(self._behaviors)):
             if behavior._PRIORITY > getattr(self, self._behaviors[i])._PRIORITY:
                 self._behaviors.insert(i, behavior._ID)
@@ -488,10 +503,13 @@ class Widget(ABC):
         Args:
             behavior: élément ``Behavior`` ou ``Type`` de behavior à retirer
         """
+        # Vérifications
         if getattr(self, f"_{behavior._ID}", None) is None:
             raise ValueError(f"This widget has no {type(behavior).__name__}")
-        elif isinstance(behavior, Behavior) and getattr(self, f"_{behavior._ID}", None) != behavior:
+        if isinstance(behavior, Behavior) and getattr(self, f"_{behavior._ID}", None) != behavior:
             raise ValueError("This widget does not own that behavior")
+        
+        # Dissociation
         behavior.detach(_from_widget=True)
         self._attr_locks = {attr: p for attr, p in self._attr_locks.items() if p != behavior._PRIORITY}
         self._behaviors.remove(behavior._ID)
@@ -546,7 +564,12 @@ class Widget(ABC):
     
     # ======================================== LOCKING ========================================
     def _lock_attr(self, attr: str, priority: int) -> bool:
-        """Tente de verrouiller un attribut pour un behavior de priorité donnée"""
+        """Tente de verrouiller un attribut pour un behavior de priorité donnée
+        
+        Args:
+            attr: attribut à vérouiller
+            priority: niveau de priorité
+        """
         current = self._attr_locks.get(attr, 0)
         if priority >= current:
             self._attr_locks[attr] = priority
@@ -554,14 +577,18 @@ class Widget(ABC):
         return False
 
     def _unlock_attr(self, attr: str, priority: int) -> None:
-        """Libère le verrou d'un attribut si il appartient à cette priorité"""
+        """Libère le verrou d'un attribut si il appartient à cette priorité
+        
+        Args:
+            attr: attribut à déverouiller
+            priority: niveau de priorité
+        """
         if self._attr_locks.get(attr) == priority:
             del self._attr_locks[attr]
 
     # ======================================== CHILDREN ========================================
     def add_child(self, child: Widget, name: str = None, z: int = 1, share_scale: bool = True, share_rotation: bool = True) -> Widget:
-        """
-        Ajoute un composant enfant
+        """Ajoute un composant enfant
 
         Args:
             child: composant à associer
@@ -573,10 +600,13 @@ class Widget(ABC):
         Returns:
             child: widget enfant associé
         """
+        # Vérifications
         if child._layer is not None and child._layer != self._layer:
             raise ValueError(f"{child} is in another layer")
         if child.parent is not None:
             raise ValueError(f"{child} has already a parent")
+    
+        # Ajout
         wrapper = WidgetWrapper(expect(child, Widget), expect(name, (str, None)), expect(z, int), share_scale, share_rotation)
         child._layer = self._layer
         child._parent = self
@@ -584,8 +614,7 @@ class Widget(ABC):
         return child
 
     def remove_child(self, child: Widget) -> Widget:
-        """
-        Retire un composant enfant
+        """Retire un composant enfant
 
         Args:
             child(Widget): composant à dissocier
@@ -593,6 +622,7 @@ class Widget(ABC):
         Returns:
             child: widget enfant dissocié
         """
+        # Dissociation
         if expect(child, Widget) in self._children:
             child._layer = None
             child._parent = None
@@ -601,16 +631,18 @@ class Widget(ABC):
         return child
 
     def remove_child_by_name(self, name: str) -> None:
-        """
-        Retire un composant enfant par son identifiant
+        """Retire un composant enfant par son identifiant
 
         Args:
-            name(str): nom du composant à dissocier
+            name: nom du composant à dissocier
         """
+        # Détection
         to_remove: list[WidgetWrapper] = []
         for child in self._children:
             if child.name == name:
                 to_remove.append(child)
+
+        # Dissociation
         for wrapper in to_remove:
             wrapper.widget._layer = None
             wrapper.widget._parent = None
@@ -626,12 +658,11 @@ class Widget(ABC):
         self._children.clear()
     
     def reorder(self, child: Widget, z: int) -> None:
-        """
-        Modifie le Zorder d'un composant enfant
+        """Modifie le z-order d'un composant enfant
 
         Args:
-            child(Widget): composant enfant
-            z(int): ordre de rendu
+            child: composant enfant
+            z: ordre de rendu
         """
         wrapper = self._get_wrapper(expect(child, Widget))
         if wrapper.z != z:
@@ -640,36 +671,50 @@ class Widget(ABC):
             insort(self._children, wrapper)
     
     def child(self, name: str) -> Widget:
-        """
-        Renvoie un ``Widget`` enfant par son identifiant
+        """Renvoie un ``Widget`` enfant par son identifiant
 
         Args:
-            name(str): identifiant du composant
+            name: identifiant du composant
         """
-        expect(name, str)
         for child in self._children:
             if child.name == name:
                 return child.widget
-        raise ValueError(f"This widget has no child named {name}")
+        return None
 
     # ======================================== HOOKS ========================================
     def on_activate(self, fn: Callable) -> Callable:
-        """Ajoute une fonction à l'activation et retourne un token d'invalidation"""
+        """Ajoute une fonction à l'activation et retourne un token d'invalidation
+        
+        Args:
+            fn: fonction à ajouter
+        """
         self._activate_process.append(fn)
         return lambda: self._activate_process.remove(fn)
     
     def on_deactivate(self, fn: Callable) -> Callable:
-        """Ajoute une fonction à la désactivation et retourne un token d'invalidation"""
+        """Ajoute une fonction à la désactivation et retourne un token d'invalidation
+        
+        Args:
+            fn: fonction à ajouter
+        """
         self._deactivate_process.append(fn)
         return lambda: self._deactivate_process.remove(fn)
     
     def on_show(self, fn: Callable) -> Callable:
-        """Ajoute une fonction à l'apparition et retourne un token d'invalidation"""
+        """Ajoute une fonction à l'apparition et retourne un token d'invalidation
+        
+        Args:
+            fn: fonction à ajouter
+        """
         self._show_process.append(fn)
         return lambda: self._show_process.remove(fn)
 
     def on_hide(self, fn: Callable) -> Callable:
-        """Ajoute une fonction à la dispartion et retourne un token d'invalidation"""
+        """Ajoute une fonction à la dispartion et retourne un token d'invalidation
+        
+        Args:
+            fn: fonction à ajouter
+        """
         self._hide_process.append(fn)
         return lambda: self._hide_process.remove(fn)
 
@@ -678,7 +723,11 @@ class Widget(ABC):
     def _update(self, dt: float) -> None: ...
 
     def update(self, dt: float) -> None:
-        """Actualisation"""
+        """Actualisation
+        
+        Args:
+            dt: delta-time
+        """
         if not self._active:
             return
         
@@ -697,7 +746,14 @@ class Widget(ABC):
     def _draw(self, pipeline: Pipeline, context: RenderContext): ...
 
     def draw(self, pipeline: Pipeline, context: RenderContext, share_scale: bool = True, share_rotation: bool = True) -> None:
-        """Affichage"""
+        """Affichage
+        
+        Args:
+            pipeline: ``Pipeline`` de rendu
+            context: ``RenderContext``du parent
+            share_scale: partage de la taille du parent
+            share_rotation: partage de la rotation du parent
+        """
         if not self._visible:
             return
         self_context = self._context
@@ -740,20 +796,34 @@ class Widget(ABC):
     
     # ======================================== INTERNALS ========================================
     def _switch_layer(self, layer: GuiLayer | None) -> None:
-        """Change le layer du composant et de ses enfants"""
+        """Change le layer du composant et de ses enfants
+
+        Args:
+            layer: nouveau ``GuiLayer``
+        """
         self._layer = layer
         for child in self._children:
             child.widget._switch_layer(layer)
     
     def _get_wrapper(self, child: Widget) -> WidgetWrapper:
-        """Récupère le wrapper d'un composant"""
+        """Récupère le wrapper d'un composant
+
+        Args:
+            child: ``Widget`` à chercher
+        """
         for wrapper in self._children:
             if wrapper.widget == child:
                 return wrapper
-        raise ValueError(f"{child} is not a child of this widget")
+        return None
     
     def _update_render_context(self, context: RenderContext, share_scale: bool = True, share_rotation: bool = True) -> RenderContext:
-        """Actualise le contexte de rendu avec les paramètres courants"""
+        """Actualise le contexte de rendu avec les paramètres courants
+
+        Args:
+            context: ``RenderContext`` du parent
+            share_scale: partage de la taille du parent
+            share_rotation: partage de la rotation du parent
+        """
         self_context = self._context
         self_context.x = self._position.x + context.x
         self_context.y = self._position.y + context.y
@@ -809,6 +879,7 @@ class WidgetWrapper:
     
     @property
     def widget(self) -> Widget:
+        """``Widget`` contenu"""
         return self._widget
 
     def __eq__(self, other: Widget | WidgetWrapper) -> bool:
@@ -825,9 +896,17 @@ class WidgetWrapper:
     
 # ======================================== HELPERS ========================================
 def intersect(a: tuple[int, int, int, int], b: tuple[int, int, int, int]) -> tuple[int, int, int, int]:
-    """Renvoie l'intersection de deux Rectangles"""
+    """Renvoie l'intersection de deux Rectangles
+
+    Args:
+        a: premier rect
+        b: second rect
+    """
+    # Unpackaging
     ax, ay, aw, ah = a
     bx, by, bw, bh = b
+
+    # Calcul de l'intersection
     x = max(ax, bx)
     y = max(ay, by)
     w = max(0, min(ax + aw, bx + bw) - x)
