@@ -102,7 +102,7 @@ class TileLayer(Layer):
             return
 
         # Frustum visible (world space)
-        vx, vy, vw_world, vh_world = pipeline.visible_world_rect()
+        vx_min, vy_min, vx_max, vy_max = pipeline.visible_world_rect()
 
         # Region visible (tilemap)
         tm = self._tile_map
@@ -113,10 +113,10 @@ class TileLayer(Layer):
         chunk_cols = (tm.cols + self._chunk_size - 1) // self._chunk_size
         chunk_rows = (tm.rows + self._chunk_size - 1) // self._chunk_size
 
-        cc_min = max(0, int((vx - ox) // chunk_w))
-        cc_max = min(chunk_cols, int((vx + vw_world - ox) // chunk_w) + 1)
-        cr_min = max(0, int((vy - oy) // chunk_h))
-        cr_max = min(chunk_rows, int((vy + vh_world - oy) // chunk_h) + 1)
+        cc_min = max(0, int((vx_min - ox) // chunk_w))
+        cc_max = min(chunk_cols, int((vx_max - ox) // chunk_w) + 1)
+        cr_min = max(0, int((vy_min - oy) // chunk_h))
+        cr_max = min(chunk_rows, int((vy_max - oy) // chunk_h) + 1)
 
         # Génération du contexte
         if self._clip_camera:

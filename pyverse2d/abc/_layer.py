@@ -161,7 +161,9 @@ class Layer(ABC):
     # ======================================== INTERNALS ========================================
     def _apply_context(self) -> None:
         """Applique le contexte du layer"""
-        self._get_coordinates().bind_temporary_camera(self._camera)
+        coos = self._get_coordinates()
+        coos.bind_temporary_camera(self._camera)
+        coos.apply_context()
         self._get_mouse()._refresh_world_position()
 
     def _clear_context(self) -> None:

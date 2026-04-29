@@ -59,6 +59,16 @@ class CoordinatesManager(Manager):
     def current_camera(self) -> Camera | None:
         """Renvoie la caméra courante"""
         return self._temporary_camera or self._camera
+    
+    @property
+    def main_camera(self) -> Camera | None:
+        """Renvoie la caméra principale"""
+        return self._camera
+    
+    @property
+    def temporary_camera(self) -> Camera | None:
+        """Renvoie la caméra temporaire"""
+        return self._temporary_camera
 
     # ======================================== BIND ========================================
     def bind_viewport(self, viewport: Viewport) -> None:
@@ -138,10 +148,34 @@ class CoordinatesManager(Manager):
         self._pipeline = None
         self._inv_pipeline = None
     
-    # ======================================== TRANSFORMATION ========================================
+    # ======================================== TRANSFORMATIONS ========================================
     def homogeneous(self, x: float, y: float, vector: bool = False) -> tuple[float, float, float, float]:
         """Rend un objet mathématique homogène en 4D"""
         return (x, y, 0, 0) if vector else (x, y, 0, 1)
+    
+    # ======================================== INTERFACE ========================================
+    def get_frustum_corners(self) -> tuple[tuple[float, float], ...]:
+        """Renvoie les coins du frustum visible"""
+        # Corners NDC
+        corners = (
+            (-1, -1, 0, 1),
+            ( 1, -1, 0, 1),
+            ( 1,  1, 0, 1),
+            (-1,  1, 0, 1),
+        )
+
+        try:
+            # Conversion monde
+            inv_Pip = self._get_inv_pipeline()
+            return tuple((inv_Pip @ c)[:2] for c in corners)
+        except TypeError:
+            raise NoContextError() from None
+        
+    def get_frustum_aabb(self) -> tuple[float, float, float, float]:
+        """Renvoie le AABB ``(x_min, y_min, x_max, y_max)`` du frustum visible"""
+        corners = self.get_frustum_corners()
+        xs, ys = zip(*corners)
+        return min(xs), min(ys), max(xs), max(ys)
 
     # ======================================== FROM WORLD ========================================
     def world_to_framebuffer(self, x: float, y: float, vector: bool = False) -> tuple[float, float]:

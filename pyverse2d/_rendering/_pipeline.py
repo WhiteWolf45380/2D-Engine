@@ -318,7 +318,47 @@ class Pipeline:
         self._context.clear()
         
     # ======================================== SPACE CONVERSIONS ========================================
-    def convert(self, x: float, y: float, from_space: CoordSpace, to_space: CoordSpace, viewport: Viewport = None, camera: Camera = None) -> tuple[float, float]:
+    @contextmanager
+    def coords_context(self, viewport: Viewport = None, camera: Camera = None):
+        """Crée un contexte particulier de coordonnées
+        
+        Args:
+            viewport: ``Viewport`` à utiliser (par défaut le viewport courant)
+            camera: ``Camera`` à utiliser (par défaut la caméra courante)
+        """
+        coord = self.get_coord()
+
+        # Modification du contexte
+        if camera is None or viewport is None:
+            # Sauvegarde
+            old_camera = coord.temporary_camera
+            old_viewport = coord.current_viewport
+
+            # Recalcul pipeline
+            if camera is not None:
+                coord.bind_temporary_camera(camera)
+            if viewport is not None:
+                coord.bind_viewport(viewport)
+            coord.apply_context()
+
+            try:
+                yield
+            finally:
+                # Restauration
+                if camera is not None:
+                    coord.bind_temporary_camera(old_camera)
+                if viewport is not None:
+                    coord.bind_viewport(old_viewport)
+                coord.apply_context()
+
+        # Pas de modification
+        else:
+            try:
+                yield
+            finally:
+                pass
+    
+    def convert(self, x: float, y: float, from_space: CoordSpace, to_space: CoordSpace, vector: bool = False, viewport: Viewport = None, camera: Camera = None) -> tuple[float, float]:
         """Convertit une position d'un espace à un autre
 
         x: position horizontale
@@ -328,9 +368,10 @@ class Pipeline:
         viewport: viewport à utiliser (par défaut le viewport courant)
         camera: camera à utiliser (par défaut la camera courante)
         """
-        return self.get_coord().convert(x, y, from_space, to_space, viewport=viewport, camera=camera)
+        with self.coords_context(viewport=viewport, camera=camera):
+            return self.get_coord().convert(x, y, from_space, to_space, vector=vector)
 
-    def world_to_framebuffer(self, x: float, y: float, viewport: Viewport = None, camera: Camera = None) -> tuple[int, int]:
+    def world_to_framebuffer(self, x: float, y: float, vector: bool = False, viewport: Viewport = None, camera: Camera = None) -> tuple[int, int]:
         """Convertit un point monde en pixel framebuffer
 
         Args:
@@ -339,9 +380,10 @@ class Pipeline:
             viewport: Viewport à utiliser (par défaut le viewport courant)
             camera: Camera à utiliser (par défaut la caméra courante)
         """
-        return self.get_coord().world_to_logical(x, y, viewport=viewport, camera=camera)
+        with self.coords_context(viewport=viewport, camera=camera):
+            return self.get_coord().world_to_framebuffer(x, y, vector=vector)
 
-    def framebuffer_to_world(self, x: int, y: int, viewport: Viewport =  None, camera: Camera = None) -> tuple[float, float]:
+    def framebuffer_to_world(self, x: int, y: int, vector: bool = False, viewport: Viewport =  None, camera: Camera = None) -> tuple[float, float]:
         """Convertit un pixel framebuffer en point monde
 
         Args:
@@ -350,52 +392,13 @@ class Pipeline:
             viewport: Viewport à utiliser (par défaut le viewport courant)
             camera: Camera à utiliser (par défaut la caméra courante)
         """
-        return self.get_coord().logical_to_world(x, y, viewport=viewport, camera=camera)
-    
-    def world_to_framebuffer_dir(self, dx: float, dy: float) -> tuple[float, float]:
-        """Convertit un vecteur directionnel monde en vecteur framebuffer
-
-        Args:
-            dx: composante horizontale monde
-            dy: composante verticale monde
-        """
-        _, _, vw, vh, zoom, rotation = self._context.camera_resolve
-        _, _, lw, lh, _, (fdx, fdy) = self._context.viewport_resolve
-
-        # Rotation caméra uniquement (pas de translation)
-        if rotation != 0.0:
-            rad = math.radians(rotation)
-            cos_r, sin_r = math.cos(rad), math.sin(rad)
-            dx, dy = dx * cos_r + dy * sin_r, -dx * sin_r + dy * cos_r
-
-        # Scale frustum -> NVC -> Framebuffer
-        half_w, half_h = vw / (zoom * fdx * 2), vh / (zoom * fdy * 2)
-        fx = (dx / half_w / 2) * lw
-        fy = (dy / half_h / 2) * lh
-
-        return fx, fy
-
-    def world_to_framebuffer_dir_normalized(self, dx: float, dy: float) -> tuple[float, float]:
-        """Convertit un vecteur directionnel monde en vecteur framebuffer normalisé
-
-        Args:
-            dx: composante horizontale monde
-            dy: composante verticale monde
-        """
-        fx, fy = self.world_to_framebuffer_dir(dx, dy)
-        length = math.sqrt(fx * fx + fy * fy)
-        if length == 0.0:
-            return (0.0, 0.0)
-        return (fx / length, fy / length)
+        with self.coords_context(viewport=viewport, camera=camera):
+            return self.get_coord().framebuffer_to_world(x, y, vector=vector)
 
     # ======================================== UTILITAIRES ========================================
     def visible_world_rect(self) -> tuple[float, float, float, float]:
-        """Renvoie ``(x, y, width, height)`` du frustum visible en coordonnées monde"""
-        cx, cy, vw, vh, zoom, _ = self._context.camera_resolve
-        _, _, _, _, _, (dx, dy) = self._context.viewport_resolve
-        half_w = vw / (zoom * 2 * abs(dx))
-        half_h = vh / (zoom * 2 * abs(dy))
-        return (cx - half_w, cy - half_h, half_w * 2, half_h * 2)
+        """Renvoie ``(x_min, y_min, x_max, y_max)`` du frustum visible en coordonnées monde"""
+        return self.get_coord().get_frustum_aabb()
 
     def scale_to_framebuffer(self, width: float = None, height: float = None) -> float | tuple[float, float]:
         """Convertit une taille monde en taille framebuffer
@@ -404,11 +407,7 @@ class Pipeline:
             width: largeur monde
             height: hauteur monde
         """
-        if width is None:
-            return height * self._context.ppu_y
-        if height is None:
-            return width * self._context.ppu_x
-        return (width * self._context.ppu_x, height * self._context.ppu_y)
+        return self.get_coord().world_to_framebuffer(width, height, vector=True)
     
     @contextmanager
     def scissor_world(self, wx: float, wy: float, ww: float, wh: float, viewport: Viewport = None, camera: Camera = None):
@@ -444,7 +443,7 @@ class Pipeline:
 
     @contextmanager
     def scissor_framebuffer(self, x: float, y: float, w: float, h: float):
-        """Context manager appliquant un scissor test en coordonnées écran
+        """Context manager appliquant un scissor test en coordonnées Framebuffer
 
         Args:
             x: coordonnée horizontale coin bas-gauche
@@ -502,6 +501,9 @@ class _PipelineContext:
     main_projection: Mat4 = None
     main_view: Mat4 = None
     main_static_matrix: Mat4 = None
+
+    pipeline_matrix: Mat4 = None
+    inv_pipeline_matrix: Mat4 = None
 
     def clear(self) -> None:
         """Nettoie le contexte"""

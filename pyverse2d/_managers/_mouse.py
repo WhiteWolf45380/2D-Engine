@@ -425,7 +425,7 @@ class MouseManager(Manager):
 
     def _refresh_world_position(self) -> None:
         """Actualise la position monde"""
-        self._world_position = self._ctx.coordinates.logical_to_world(self._mouse_x, self._mouse_y)
+        self._world_position = self._ctx.coordinates.framebuffer_to_world(self._mouse_x, self._mouse_y)
 
     def _clear_world_position(self) -> None:
         """Nettoie la position monde"""
