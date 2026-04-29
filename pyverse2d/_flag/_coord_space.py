@@ -1,8 +1,8 @@
 # ======================================== IMPORTS ========================================
-from enum import IntEnum
+from enum import StrEnum
 
 # ======================================== FLAG ========================================
-class CoordSpace(IntEnum):
+class CoordSpace(StrEnum):
     """Espaces de coordonnées"""
     WORLD = "world"
     FRAMEBUFFER = "framebuffer"
