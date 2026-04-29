@@ -17,7 +17,7 @@ class Viewport(Space):
         position: position du coin bas gauche du viewport
         width: largeur en pixels logiques (None = tout)
         height: hauteur en pixels logiques (None = tout)
-        origin: origine locale du viewport
+        origin: origine locale relative du viewport *((0.5, 0.5) = centre)*
         direction: direction locale des coordonnées
     """
     __slots__ = (
@@ -155,54 +155,60 @@ class Viewport(Space):
             origin = self._origin,
             direction = self._direction,
         )
-
-    # ======================================== RESOLVE ========================================
-    def resolve(self, screen_width: int, screen_height: int) -> tuple[float, float, float, float]:
-        """Renvoie ``(x, y, witdh, height, origin, )`` résolus dans l'espace logique
-
-        Args:
-            screen_width: largeur de l'espace logique
-            screen_height: hauteur de l'espace logique
-        """
-        w = self._width  if self._width  != 0.0 else screen_width
-        h = self._height if self._height != 0.0 else screen_height
-
-        ox = (self._origin.x - 0.5) * w
-        oy = (self._origin.y - 0.5) * h
-
-        dx, dy = self._direction
-
-        return (self._position.x, self._position.y, w, h, (ox, oy), (dx, dy))
     
+    # ======================================== RESOLVE ========================================
+    def resolve(self, fb_width: int, fb_height: int) -> tuple[int, int, int, int]:
+        """Renvoie le viewport résolu dans le Framebuffer
+        
+        Args:
+            fb_width: largeur du framebuffer
+            fb_height: hauteur du framebuffer
+        """
+        x = int(self._position.x)
+        y  = int(self._position.y)
+        width = int(self._width) if self._width != 0.0 else fb_width
+        height = int(self._height) if self._height != 0.0 else fb_height
+        return x, y, width, height
+
+    # ======================================== COMPUTE ========================================
     def viewport_matrix(self) -> Mat4:
         """Renvoie la matrice du viewport"""
+        # Renommage
+        ox, oy = self._origin
+        dx, dy = self._direction
+
+        # Cache
+        viewport_key: tuple = (ox, oy, dx, dy)
+        if viewport_key in self._VIEWPORT_CACHE:
+            return self._VIEWPORT_CACHE[viewport_key]
+        
+        # Construction
+        matrix = self._compute_viewport(ox, oy, dx, dy)
+        self._VIEWPORT_CACHE = matrix
+        return matrix
     
     # ======================================== INTERNALS ========================================
-    def _compute_viewport(self, fb_w: float, fb_h: float, lx: float, ly: float, lw: float, lh: float, ox: float, oy: float, dx: float, dy: float) -> Mat4:
+    def _compute_viewport(self, ox: float, oy: float, dx: float, dy: float) -> Mat4:
         """Compute la matrice du viewport *(TS)^(-1)*
 
+        Espace: *NDC* to *NDC*
+
         Args:
-            fb_w: largeur du framebuffer
-            fb_h: hauteur du framebuffer
-            lx: coordonnée horizontale du viewort
-            ly: coordonnée verticale du viewport
-            lw: largeur du viewport
-            lh: hauteur du viewport
-            ox: origine horizontale locale du viewport
-            oy: origine verticale locale du viewport
+            ox: origine horizontale relative locale du viewport
+            oy: origine verticale relative locale du viewport
             dx: composante x du vecteur directionnel
             dy: composante y du vecteur directionnel
         """
         # Calcul des paramètres
-        tx = lx + ox
-        ty = ly + oy
-        sx = lw / (fb_w * dx)
-        sy = lh / (fb_h * dy)
+        tx = ox
+        ty = oy
+        sx = dx
+        sy = dx
 
         # Construction de la matrice
         return Mat4(
-            sx, 0,  0, tx,
-            0,  sy, 0, ty,
+            1/sx, 0,  0, -tx,
+            0,  1/sy, 0, -ty,
             0,  0,  1, 0,
             0,  0,  0, 1,
         )

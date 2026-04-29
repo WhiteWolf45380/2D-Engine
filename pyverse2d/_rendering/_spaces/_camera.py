@@ -490,6 +490,7 @@ class Camera(Space):
 
     def flush_view_cache_frame(self) -> None:
         """Nettoie le cache de vue de la frame courante"""
+        self._VIEW_CACHE_FRAME, self._VIEW_CACHE_STORED =  self._VIEW_CACHE_STORED, self._VIEW_CACHE_FRAME
         self._VIEW_CACHE_FRAME.clear()
     
     # ======================================== INTERNALS ========================================
@@ -499,7 +500,7 @@ class Camera(Space):
         self._position.y = y
 
     def _compute_projection(self, fb_w: int, fb_h: int, vw: float, vh: float) -> Mat4:
-        """Compute la matrice de projection *(S)*
+        """Compute la matrice de projection *(TS)^(-1)*
         
         Args:
             fb_w: largeur du framebuffer
@@ -523,30 +524,39 @@ class Camera(Space):
                 vh = vw * fb_ratio
 
         # Calcul des paramètres
-        sx = fb_w / vw
-        sy = fb_h / vh
+        tx = ty = 1
+        sx = vw / 2
+        sy = vh / 2
         
         # Construction de la matrice
         return Mat4(
-            sx, 0,  0, 0,
-            0,  sy, 0, 0,
-            0,  0,  1, 0,
-            0,  0,  0, 1,
+            1/sx,   0,      0,      0,
+            0,      1/sy,   0,      0,
+            0,      0,      1,      0,
+           -tx,    -ty,     0,      1,
         )
 
-    def _compute_view(self, cx: float, cy: float, theta: float, zoom: float) -> Mat4:
-        """Compute la matrice de vue - *(TRS)^(-1)*"""
+    def _compute_view(self, cx: float, cy: float, rotation: float, zoom: float) -> Mat4:
+        """Compute la matrice de vue - *(TRS)^(-1)*
+        
+        Args:
+            cx: position horizontale de la caméra
+            cy: position verticale de la caméra
+            rotation: rotation de la caméra *(en degrés)*
+            zoom: facteur de zoom de la caméra
+        """
         # Calcul des paramètres
-        theta_rad = radians(theta)
-        co, si = cos(theta_rad), sin(theta_rad)
+        tx, ty = cx, cy
+        theta = radians(rotation)
+        theta_cos, theta_sin = cos(theta), sin(theta)
         sx = sy = zoom
 
         # Construction de la matrice
         return Mat4(
-            co / sx,    si / sx,    0,     -cx * co - cy * si,
-           -si / sy,    co / sy,    0,      cx * si - cy * co,
-            0,          0,          1,      0,
-            0,          0,          0,      1,
+            theta_cos / sx,                           -theta_sin / sy,                          0,      0,
+            theta_sin / sx,                            theta_cos / sy,                          0,      0,
+            0,                                         0,                                       1,      0,
+          -(tx * theta_cos + ty * theta_sin) / sx,   -(tx * theta_sin - ty * theta_cos) / sy,   0,      1,
         )
 
 # ======================================== HELPERS ========================================

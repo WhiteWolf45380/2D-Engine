@@ -23,6 +23,20 @@ if TYPE_CHECKING:
     from .._managers import CoordinatesManager
     from ..scene import Scene
 
+_VERT = """
+#version 330 core
+
+layout(location = 0) in vec2 aPos;
+
+uniform mat4 V;
+uniform mat4 P;
+uniform mat4 Vp;
+
+void main() {
+    gl_Position = Vp * P * V  * vec4(aPos, 0.0, 1.0);
+}
+"""
+
 # ======================================== DATA ========================================
 @dataclass(slots=True, frozen=True)
 class SceneData:
@@ -230,29 +244,28 @@ class Pipeline:
         """
         screen = self._window.screen
 
-        # Assignation de la scene
-        self._context.scene = scene
-        self._context.viewport = scene.viewport
-
         # Création des données si non exisantes
         if scene not in self._data:
             fbo = Framebuffer(screen.width, screen.height)
             self._data[scene] = SceneData(fbo, {})
+        else:
+            fbo = self._data[scene].fbo
 
-        # Enregistrement de l'état courant
-        self._context.fbo = self._data[scene].fbo
+        # Assignation de la scene
+        self._context.scene = scene
+        self._context.viewport = scene.viewport
+        self._context.fbo = fbo
 
-        # Résolution du viewport
-        self._context.viewport_resolve = scene.viewport.resolve(screen.width, screen.height)
-        lx, ly, lw, lh, _, _ = self._context.viewport_resolve
+        # Calcul de la matrice du viewport
+        Vp = scene.viewport.viewport_matrix()
 
         # Calcul du viewport OpenGl
-        gl_x = int(lx)
-        gl_y = int(ly)
-        gl_w = int(lw)
-        gl_h = int(lh)
-        self._context.gl_viewport = (gl_x, gl_y, gl_w, gl_h)
-        gl.glViewport(gl_x, gl_y, gl_w, gl_h)
+        gx = 0
+        gy = 0
+        gw = fbo.width
+        gh = fbo.height
+        gl.glViewport(gx, gy, gw, gh)
+        self._context.gl_viewport = (gx, gy, gw, gh)
 
         # Assignation du FrameBuffer
         self._context.fbo.bind()
@@ -264,27 +277,16 @@ class Pipeline:
         Args:
             layer: Layer courant
         """
-        # Etablissement de la connexion au layer
-        self._context.layer = layer
-        self._context.camera = layer.camera or self._context.scene.camera
-
         # Création des données si non existantes
         layers_data = self._data[self._context.scene].layers
         if layer not in layers_data:
             layers_data[layer] = LayerData(Batch(), {})
 
-        # Enregistrement de l'état courant
+        # Assignation du layer
+        self._context.layer = layer
+        self._context.camera = layer.camera or self._context.scene.camera
         self._context.batch = layers_data[layer].batch
         self._context.z_groups = layers_data[layer].z_groups
-
-        # Résolution de la caméra
-        _, _, lw, lh, (ox , oy), (dx, dy) = self._context.viewport_resolve
-        self._context.camera_resolve = self._context.camera.resolve(lw, lh)
-        cx, cy, vw, vh, zoom, rotation = self._context.camera_resolve
-
-        # Calcul des ratios
-        self._context.ppu_x, self._context.ppu_y = self.compute_ppu(lw, lh, vw, vh, zoom)
-        self._context.ppu = (self._context.ppu_x + self._context.ppu_y) / 2
 
         # Matrice de projection
         projection = self.compute_projection(vw, vh, dx, dy, zoom)
@@ -295,6 +297,9 @@ class Pipeline:
         view = self.compute_view(cx, cy, rotation, ox, oy)
         self._context.view_matrix = view
         self._window.native.view = view
+
+    def apply(self) -> None:
+        """Applique le contexte GPU courant"""
 
     def flush(self) -> None:
         """Envoie tout le batch au GPU"""
@@ -578,18 +583,12 @@ class _PipelineContext:
     batch: Batch = None
     z_groups: dict[int, Group] = None
 
-    # Espaces internes
+    # Espaces
     viewport: Viewport = None
-    viewport_resolve: tuple = None
     camera: Camera = None
-    camera_resolve: tuple = None
-
-    # Ratios
-    ppu_x: float = None
-    ppu_y: float = None
-    ppu: float = None
     
     # Matrices
+    viewport_matrix: Mat4 = None
     projection_matrix: Mat4 = None
     view_matrix: Mat4 = None
 
