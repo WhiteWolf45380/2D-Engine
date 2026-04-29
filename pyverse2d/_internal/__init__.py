@@ -12,7 +12,6 @@ from ._validators import (
     inferior_to,
     superior_to,
     equal_to,
-    rgba,
 )
 
 from ._protocols import (
@@ -38,7 +37,6 @@ __all__ = [
     "inferior_to",
     "superior_to",
     "equal_to",
-    "rgba",
 
     "HasPosition",
 
