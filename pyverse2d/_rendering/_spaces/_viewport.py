@@ -18,12 +18,13 @@ class Viewport(Space):
         width: largeur en pixels logiques (None = tout)
         height: hauteur en pixels logiques (None = tout)
         origin: origine locale relative du viewport *((0.5, 0.5) = centre)*
-        direction: direction locale des coordonnées
+        x_direction: direction locale des coordonnées horizontales
+        y_direction: direction locale des coordonnées verticales
     """
     __slots__ = (
         "_position",
         "_width", "_height",
-        "_origin", "_direction",
+        "_origin", "_x_direction", "_y_direction",
     )
 
     _VIEWPORT_CACHE: dict[tuple, Mat4] = {}
@@ -34,14 +35,16 @@ class Viewport(Space):
         width: Real = 0.0,
         height: Real = 0.0,
         origin: Point = (0.0, 0.0),
-        direction: Vector = (1.0, 1.0),
+        x_direction: Vector = (1.0, 0.0),
+        y_direction: Vector = (0.0, 1.0),
     ):
         # Transtypage
         position = Point(position)
         width = float(width)
         height = float(height)
         origin = Point(origin)
-        direction = Vector(direction)
+        x_direction = Vector(x_direction)
+        y_direction = Vector(y_direction)
 
         # Debugging
         if __debug__:
@@ -53,7 +56,8 @@ class Viewport(Space):
         self._width: float = width
         self._height: float = height
         self._origin: Point = origin
-        self._direction: Vector = direction
+        self._x_direction: Vector = x_direction
+        self._y_direction: Vector = y_direction
 
     # ======================================== PROPERTIES ========================================
     @property
@@ -134,16 +138,30 @@ class Viewport(Space):
         self._origin.x, self._origin.y = value
 
     @property
-    def direction(self) -> Vector:
-        """Vecteur directionnel des coordonnées
+    def x_direction(self) -> Vector:
+        """Vecteur directionnel x
 
-        Le vecteur peut être un objet ``Vector`` ou un tuple ``(dx, dy)``
+        Le vecteur peut être un objet ``Vector`` ou un tuple ``(dx, dy)``.
+        Cette propriété permet de transformer la direction horiontale dans le viewport.
         """
-        return self._direction
+        return self._x_direction
 
-    @direction.setter
-    def direction(self, value: Vector) -> None:
-        self._direction.x, self._direction.y = value
+    @x_direction.setter
+    def x_direction(self, value: Vector) -> None:
+        self._x_direction.x, self._x_direction.y = value
+
+    @property
+    def y_direction(self) -> Vector:
+        """Vecteur directionnel y
+
+        Le vecteur peut être un objet ``Vector`` ou un tuple ``(dx, dy)``.
+        Cette propriété permet de transformer la direction verticale dans le viewport.
+        """
+        return self._y_direction
+
+    @y_direction.setter
+    def y_direction(self, value: Vector) -> None:
+        self._y_direction.x, self._y_direction.y = value
 
     # ======================================== COLLECTIONS ========================================
     def copy(self) -> Viewport:
@@ -153,12 +171,13 @@ class Viewport(Space):
             width = self._width,
             height = self._height,
             origin = self._origin,
-            direction = self._direction,
+            x_direction = self._x_direction,
+            y_direction = self._y_direction,
         )
     
     # ======================================== RESOLVE ========================================
     def resolve(self, fb_width: int, fb_height: int) -> tuple[int, int, int, int]:
-        """Renvoie le viewport résolu dans le Framebuffer
+        """Renvoie le viewport résolu ``(x, y, width, height)`` dans le Framebuffer
         
         Args:
             fb_width: largeur du framebuffer
@@ -168,27 +187,28 @@ class Viewport(Space):
         y  = int(self._position.y)
         width = int(self._width) if self._width != 0.0 else fb_width
         height = int(self._height) if self._height != 0.0 else fb_height
-        return x, y, width, height
+        return (x, y, width, height)
 
     # ======================================== COMPUTE ========================================
     def viewport_matrix(self) -> Mat4:
         """Renvoie la matrice du viewport"""
         # Renommage
         ox, oy = self._origin
-        dx, dy = self._direction
+        ix, iy = self._x_direction
+        jx, jy = self._y_direction
 
         # Cache
-        viewport_key: tuple = (ox, oy, dx, dy)
+        viewport_key: tuple = (ox, oy, ix, iy, jx, jy)
         if viewport_key in self._VIEWPORT_CACHE:
             return self._VIEWPORT_CACHE[viewport_key]
         
         # Construction
-        matrix = self._compute_viewport(ox, oy, dx, dy)
-        self._VIEWPORT_CACHE = matrix
+        matrix = self._compute_viewport(ox, oy, ix, iy, jx, jy)
+        self._VIEWPORT_CACHE[viewport_key] = matrix
         return matrix
     
     # ======================================== INTERNALS ========================================
-    def _compute_viewport(self, ox: float, oy: float, dx: float, dy: float) -> Mat4:
+    def _compute_viewport(self, ox: float, oy: float, ix: float, iy: float, jx: float, jy: float) -> Mat4:
         """Compute la matrice du viewport *(TS)^(-1)*
 
         Espace: *NDC* to *NDC*
@@ -196,19 +216,31 @@ class Viewport(Space):
         Args:
             ox: origine horizontale relative locale du viewport
             oy: origine verticale relative locale du viewport
-            dx: composante x du vecteur directionnel
-            dy: composante y du vecteur directionnel
+            ix: composante x du vecteur directionnel i
+            iy: composante y du vecteur directionnel i
+            jx: composante x du vecteur directionnel j
+            jy: composante y du vecteur directionnel j
         """
         # Calcul des paramètres
-        tx = ox
-        ty = oy
-        sx = dx
-        sy = dx
+        ox_ndc = 2 * ox - 1
+        oy_ndc = 2 * oy - 1
+
+        det = ix * jy - iy * jx
+        inv_det = 1.0 / det
+
+        m00 =  jy * inv_det
+        m01 = -jx * inv_det
+        m10 = -iy * inv_det
+        m11 =  ix * inv_det
+
+        # Translation inverse
+        tu = -(m00 * ox_ndc + m01 * oy_ndc)
+        tv = -(m10 * ox_ndc + m11 * oy_ndc)
 
         # Construction de la matrice
         return Mat4(
-            1/sx, 0,  0, -tx,
-            0,  1/sy, 0, -ty,
-            0,  0,  1, 0,
-            0,  0,  0, 1,
+            m00,   m10,   0,     0,
+            m01,   m11,   0,     0,
+            0,     0,     1,     0,
+            tu,    tv,    0,     1,
         )

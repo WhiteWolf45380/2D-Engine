@@ -168,22 +168,6 @@ class Pipeline:
         """Résolution de la caméra"""
         return self._context.camera_resolve
     
-    # Ratios
-    @property
-    def ppu(self) -> tuple[float, float]:
-        """Ratio pixels par unité moyen"""
-        return self._context.ppu
-    
-    @property
-    def ppu_x(self) -> float:
-        """Ratio pixels par unité horizontal"""
-        return self._context.ppu_x
-    
-    @property
-    def ppu_y(self) -> float:
-        """Ratio pixels par unité vertical"""
-        return self._context.ppu_y
-    
     # Matrices
     @property
     def projection_matrix(self) -> Mat4:
@@ -242,9 +226,10 @@ class Pipeline:
         Args:
             scene: scene courante
         """
+        # Raccourcis
         screen = self._window.screen
 
-        # Création des données si non exisantes
+        # Création du cache si nécessaire
         if scene not in self._data:
             fbo = Framebuffer(screen.width, screen.height)
             self._data[scene] = SceneData(fbo, {})
@@ -254,22 +239,28 @@ class Pipeline:
         # Assignation de la scene
         self._context.scene = scene
         self._context.viewport = scene.viewport
+        self._context.main_camera = scene.camera
         self._context.fbo = fbo
 
-        # Calcul de la matrice du viewport
-        Vp = scene.viewport.viewport_matrix()
+        # Calcul des matrices de la scene
+        Vp: Mat4 = scene.viewport.viewport_matrix()
+        P: Mat4 = scene.camera.projection_matrix(screen.width, screen.height)
+        V: Mat4 = scene.camera.view_matrix()
+        self._context.viewport_matrix = Vp        
+        self._context.main_projection = P
+        self._context.main_view = V
+        self._context.main_static_matrix = Vp @ P
+
+        # Assignation du FrameBuffer
+        fbo.bind()
 
         # Calcul du viewport OpenGl
-        gx = 0
-        gy = 0
-        gw = fbo.width
-        gh = fbo.height
+        gx, gy, gw, gh = self._context.viewport.resolve(screen.width, screen.height)
         gl.glViewport(gx, gy, gw, gh)
         self._context.gl_viewport = (gx, gy, gw, gh)
 
-        # Assignation du FrameBuffer
-        self._context.fbo.bind()
-        self._context.fbo.clear()
+        # Nettoyage du FrameBuffer
+        fbo.clear()
 
     def bind_layer(self, layer: Layer) -> None:
         """Configure le contexte de rendu pour un layer de la scene courante
@@ -277,7 +268,10 @@ class Pipeline:
         Args:
             layer: Layer courant
         """
-        # Création des données si non existantes
+        # Raccourcis
+        screen = self._window.screen
+
+        # Création du cache si nécessaire
         layers_data = self._data[self._context.scene].layers
         if layer not in layers_data:
             layers_data[layer] = LayerData(Batch(), {})
@@ -288,18 +282,29 @@ class Pipeline:
         self._context.batch = layers_data[layer].batch
         self._context.z_groups = layers_data[layer].z_groups
 
-        # Matrice de projection
-        projection = self.compute_projection(vw, vh, dx, dy, zoom)
-        self._context.projection_matrix = projection
-        self._window.native.projection = projection
+        # Calcul des matrices du layer
+        if self._context.camera is self._context.main_camera:
+            P: Mat4 = self._context.main_projection
+            V: Mat4 = self._context.main_view
+            Sc: Mat4 = self._context.main_static_matrix
+        else:
+            Vp: Mat4 = self._context.viewport_matrix
+            P: Mat4 = self._context.camera.projection_matrix(screen.width, screen.height)
+            V: Mat4 = self._context.camera.view_matrix()
+            Sc: Mat4 = Vp @ P
+        self._context.projection_matrix = P
+        self._context.view_matrix = V
+        self._context.static_matrix = Sc
 
-        # Matrice de vue
-        view = self.compute_view(cx, cy, rotation, ox, oy)
-        self._context.view_matrix = view
-        self._window.native.view = view
-
-    def apply(self) -> None:
-        """Applique le contexte GPU courant"""
+    def apply(self, projection: Mat4 = None, view: Mat4 = None) -> None:
+        """Applique le contexte GPU courant
+        
+        Args:
+            projection: matrice de projection *(par défault la matrice courante)*
+            view: matrice de vue *(par défaut la matrice courante)*
+        """
+        self._window.native.projection = projection or self._context.static_matrix
+        self._window.native.view = view or self._context.view_matrix
 
     def flush(self) -> None:
         """Envoie tout le batch au GPU"""
@@ -319,28 +324,13 @@ class Pipeline:
         )
         self._quad.blit(self._context.fbo.texture_id)
 
+        # Nettoyage des caches temporaires
+        self._context.camera.flush_view_cache_frame()
+
         # Nettoyage de l'état courant
         self._context.clear()
 
-        # Nettoyage des caches
-        self._view_cache, self._view_buffer = self._view_buffer, self._view_cache
-        self._view_buffer.clear()
-
     # ======================================== COMPUTING ========================================
-    def compute_ppu(self, lw: float, lh: float, vw: float, vh: float, zoom: float) -> tuple[float, float]:
-        """Calcul des ratios pixels per unit
-        
-        Args:
-            lw: largeur du viewport (logical space)
-            lh: hauteur du viewport (logical space)
-            vw: largeur de la vision (view space)
-            vh: hauteur de la vision (view space)
-            zoom: facteur de zoom
-        """
-        ppu_x = (lw / vw) * zoom
-        ppu_y = (lh / vh) * zoom
-        return (ppu_x, ppu_y)
-
     def compute_projection(self, vw: float, vh: float, dx: float, dy: float, zoom: float) -> Mat4:
         """Calcul la matrice de projection
 
@@ -585,12 +575,18 @@ class _PipelineContext:
 
     # Espaces
     viewport: Viewport = None
+    main_camera: Camera = None
     camera: Camera = None
     
     # Matrices
     viewport_matrix: Mat4 = None
     projection_matrix: Mat4 = None
     view_matrix: Mat4 = None
+    static_matrix: Mat4 = None
+
+    main_projection: Mat4 = None
+    main_view: Mat4 = None
+    main_static_matrix: Mat4 = None
 
     def clear(self) -> None:
         """Nettoie le contexte"""

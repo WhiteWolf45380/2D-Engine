@@ -524,16 +524,16 @@ class Camera(Space):
                 vh = vw * fb_ratio
 
         # Calcul des paramètres
-        tx = ty = 1
-        sx = vw / 2
-        sy = vh / 2
+        tx = ty = -1
+        sx = 2 / vw
+        sy = 2 / vh
         
         # Construction de la matrice
         return Mat4(
-            1/sx,   0,      0,      0,
-            0,      1/sy,   0,      0,
+            sx,     0,      0,      0,
+            0,      sy,     0,      0,
             0,      0,      1,      0,
-           -tx,    -ty,     0,      1,
+            tx,     ty,     0,      1,
         )
 
     def _compute_view(self, cx: float, cy: float, rotation: float, zoom: float) -> Mat4:
@@ -546,17 +546,17 @@ class Camera(Space):
             zoom: facteur de zoom de la caméra
         """
         # Calcul des paramètres
-        tx, ty = cx, cy
-        theta = radians(rotation)
+        tx, ty = -cx, -cy
+        theta = radians(-rotation)
         theta_cos, theta_sin = cos(theta), sin(theta)
-        sx = sy = zoom
+        sx = sy = 1 / zoom
 
         # Construction de la matrice
         return Mat4(
-            theta_cos / sx,                           -theta_sin / sy,                          0,      0,
-            theta_sin / sx,                            theta_cos / sy,                          0,      0,
-            0,                                         0,                                       1,      0,
-          -(tx * theta_cos + ty * theta_sin) / sx,   -(tx * theta_sin - ty * theta_cos) / sy,   0,      1,
+            sx * theta_cos,                          sy * theta_sin,                          0,      0,
+           -sx * theta_sin,                          sy * theta_cos,                          0,      0,
+            0,                                       0,                                       1,      0,
+           (tx * theta_cos - ty * theta_sin) * sx,  (tx * theta_sin + ty * theta_cos) * sy,   0,      1,
         )
 
 # ======================================== HELPERS ========================================
