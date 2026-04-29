@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from ..._internal import CallbackList
-from ..._managers._inputs import _Listener
+from ..._managers._inputs import Listener
 from ...abc import Behavior
 from ...math import Point
 
@@ -43,7 +43,7 @@ class SelectBehavior(Behavior):
         self._when_deselected: CallbackList = CallbackList()
 
         # Listeners
-        self._listener: _Listener = None
+        self._listener: Listener = None
 
         # Tweens
         self._on_select(self._play_tweens)
@@ -84,7 +84,7 @@ class SelectBehavior(Behavior):
     def _on_attach(self) -> None:
         """Hook d'attachement"""
         self._register()
-        self._listener: _Listener = inputs.add_listener(
+        self._listener: Listener = inputs.add_listener(
             key = mouse.B_LEFT,
             callback = self._handle_click,
             condition = self._is_hovered,

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from ..._internal import expect, CallbackList
 from ..._managers import InputsManager
-from ..._managers._inputs import _Listener
+from ..._managers._inputs import Listener
 from ...abc import Behavior
 from ...math import Point
 
@@ -51,9 +51,9 @@ class FocusBehavior(Behavior):
         self._on_keyup: CallbackList = CallbackList()
 
         # Listeners
-        self._click_listener: _Listener = None
-        self._outside_listeners: set[_Listener] = set()
-        self._key_listener: _Listener = None
+        self._click_listener: Listener = None
+        self._outside_listeners: set[Listener] = set()
+        self._key_listener: Listener = None
 
         # Tweens
         self._on_focus(self._play_tweens)

@@ -1,6 +1,6 @@
 # ======================================== IMPORTS ========================================
 from ..._managers import MouseManager
-from ..._managers._inputs import _Listener
+from ..._managers._inputs import Listener
 from ...abc import Behavior
 from ...math import Point
 
@@ -22,8 +22,8 @@ class ClickBehavior(Behavior):
         super().__init__()
 
         # Actions
-        self._down_listeners: dict[str, _Listener] = {}
-        self._up_listeners: dict[str, _Listener] = {}
+        self._down_listeners: dict[str, Listener] = {}
+        self._up_listeners: dict[str, Listener] = {}
 
     # ======================================== INTERFACE ========================================
     def add(
@@ -60,7 +60,7 @@ class ClickBehavior(Behavior):
         elif name in self._down_listeners:
             raise ValueError(f"This bhavior already has a Listener {name}")
 
-        down_listener: _Listener = inputs.add_listener(
+        down_listener: Listener = inputs.add_listener(
             key = key,
             callback = callback,
             args = args,
@@ -74,7 +74,7 @@ class ClickBehavior(Behavior):
         self._down_listeners[name] = down_listener
 
         if when_up:
-            up_listener: _Listener = inputs.add_listener(
+            up_listener: Listener = inputs.add_listener(
                 key = key,
                 up = True,
             )
