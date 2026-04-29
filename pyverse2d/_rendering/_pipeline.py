@@ -23,20 +23,6 @@ if TYPE_CHECKING:
     from .._managers import CoordinatesManager
     from ..scene import Scene
 
-_VERT = """
-#version 330 core
-
-layout(location = 0) in vec2 aPos;
-
-uniform mat4 V;
-uniform mat4 P;
-uniform mat4 Vp;
-
-void main() {
-    gl_Position = Vp * P * V  * vec4(aPos, 0.0, 1.0);
-}
-"""
-
 # ======================================== DATA ========================================
 @dataclass(slots=True, frozen=True)
 class SceneData:
@@ -82,12 +68,6 @@ class Pipeline:
 
         # Cache
         self._data: dict[Scene, SceneData] = {}
-        self._projection_cache: dict[tuple, Mat4] = {}
-        self._view_cache: dict[tuple, Mat4] = {}
-
-        # Buffering de la view matrix
-        self._view_buffer: dict[tuple, Mat4] = {}
-        self._default_view: Mat4 = Mat4()
 
         # Contexte
         self._context: _PipelineContext = _PipelineContext()
@@ -303,8 +283,15 @@ class Pipeline:
             projection: matrice de projection *(par défault la matrice courante)*
             view: matrice de vue *(par défaut la matrice courante)*
         """
-        self._window.native.projection = projection or self._context.static_matrix
-        self._window.native.view = view or self._context.view_matrix
+        # Application de la matrice de projection
+        P = projection or self._context.static_matrix
+        if P is not self._window.native.projection:
+            self._window.native.projection = P
+
+        # Application de la matrice de vue
+        V = view or self._context.view_matrix
+        if V is not self._window.native.view:
+            self._window.native.view = view or self._context.view_matrix
 
     def flush(self) -> None:
         """Envoie tout le batch au GPU"""
@@ -329,78 +316,6 @@ class Pipeline:
 
         # Nettoyage de l'état courant
         self._context.clear()
-
-    # ======================================== COMPUTING ========================================
-    def compute_projection(self, vw: float, vh: float, dx: float, dy: float, zoom: float) -> Mat4:
-        """Calcul la matrice de projection
-
-        Args:
-            vw: largeur de la vision (view space)
-            vh: hauteur de la vision (view space)
-            zoom: facteur de zoom
-        """
-        projection_key = (vw, vh, dx, dy, zoom)
-        if projection_key not in self._projection_cache:
-            half_w = vw / (dx * zoom * 2)
-            half_h = vh / (dy * zoom * 2)
-            self._projection_cache[projection_key] = Mat4.orthogonal_projection(
-                left=-half_w,
-                right=half_w,
-                bottom=-half_h,
-                top=half_h,
-                z_near=-8192.0,
-                z_far=8192.0,
-            )
-        return self._projection_cache[projection_key]
-    
-    def compute_view(self, cx: float, cy: float, rotation: float, ox: float, oy: float) -> Mat4:
-        """Calcul la matrice de vue
-        
-        Args
-            cx: centre horizontal de la vision (world space)
-            cy: centre vertical de la vision (world space)
-            rotation: angle de rotation en degrés (CCW)
-            ox: origine horizontale du viewport (absolute viewport space)
-            oy: origine verticale du viewport (absolute viewport space)
-            scale_x: facteur de redimensionnement horizontal
-            scale_y: facteur de redimensionnement vertical
-        """
-        view_key = (cx, cy, rotation, ox, oy)
-        if view_key in self._view_buffer:
-            return self._view_buffer[view_key]
-        if view_key in self._view_cache:
-            view = self._view_cache[view_key]
-            self._view_buffer[view_key] = view
-            return view
-        view = self._default_view
-        view = self.compute_camera(view, cx, cy, rotation)
-        view = self.compute_viewport(view, ox, oy)
-        self._view_buffer[view_key] = view
-        return view
-    
-    def compute_camera(self, view: Mat4, cx: float, cy: float, rotation: float) -> Mat4:
-        """Transforme une matrice selon l'espace caméra
-        
-        Args:
-            matrix: matrice de vue
-            cx: centre horizontal de la camera (world space)
-            cy: centre vertical de la camera (world space)
-            rotation: angle de rotation en degrés (CCW)
-        """
-        view = view.translate((-cx, -cy, 0))
-        if rotation != 0.0:
-            view = view.rotate(math.radians(rotation), (0, 0, 1))
-        return view
-    
-    def compute_viewport(self, view: Mat4, ox: float, oy: float) -> Mat4:
-        """Transforme une matrice selon l'espace viewport
-
-        Args:
-            ox: origine horizontale du viewport (absolute viewport space)
-            oy: origine verticale du viewport (absolute viewport space)
-        """
-        view = view.translate((ox / self.ppu_x, oy / self.ppu_y, 0))
-        return view
         
     # ======================================== SPACE CONVERSIONS ========================================
     def convert(self, x: float, y: float, from_space: CoordSpace, to_space: CoordSpace, viewport: Viewport = None, camera: Camera = None) -> tuple[float, float]:

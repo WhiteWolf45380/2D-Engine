@@ -158,13 +158,19 @@ class Scene:
         """Affichage"""
         self._apply_context()
         pipeline.bind_scene(self)
+        
         for layer in self._layers:
             if not layer.is_visible():
                 continue
+
             pipeline.bind_layer(layer)
+            pipeline.apply()
+
             layer.draw(pipeline)
+
             pipeline.flush()
         pipeline.end()
+
         for fn in self._draw_callbacks:
             fn()
         self._clear_context()

@@ -5,31 +5,24 @@ from .._flag import CoordSpace
 from .._rendering import Viewport, Camera
 from ..abc import Manager
 
+from pyglet.math import Mat4
+
 from ._context import ContextManager
 
-from typing import Callable
-import math
-
-# ======================================== PIPELINE ========================================
-_PIPELINE = [
-    CoordSpace.WORLD,
-    CoordSpace.FRUSTUM,
-    CoordSpace.NDC,
-    CoordSpace.NVC,
-    CoordSpace.VIEWPORT,
-    CoordSpace.LOGICAL,
-    CoordSpace.CANVAS,
-    CoordSpace.WINDOW,
-]
+# ======================================== ERRORS ========================================
+class NoContextError(RuntimeError):
+    """Aucun contexte appliqué"""
+    def __str__(self):
+        return "No context applied. Call apply_context() before converting coordinates."
 
 # ======================================== MANAGER ========================================
 class CoordinatesManager(Manager):
     """Gestionnaire global des conversions de coordonnées"""
     __slots__ = (
-        "_window",
-        "_viewport", "_viewport_resolve",
-        "_camera", "_camera_resolve",
-        "_temporary_camera", "_temporary_camera_resolve",
+        "_viewport", "_camera", "_temporary_camera",
+        "_context_applied",
+        "_view_matrix", "_projection_matrix", "_viewport_matrix", "_viewport_resolve",
+        "_pipeline", "_inv_pipeline",
     )
 
     _ID: str = "coordinates"
@@ -38,156 +31,261 @@ class CoordinatesManager(Manager):
         # Initialisation du gestionnaire
         super().__init__(context_manager)
 
+        # Contexte
         self._viewport: Viewport = None
-        self._viewport_resolve: tuple = None
         self._camera: Camera = None
-        self._camera_resolve: tuple = None
         self._temporary_camera: Camera = None
-        self._temporary_camera_resolve: tuple = None
+
+        # Flag
+        self._context_applied: bool = False
+
+        # Cache de contexte
+        self._view_matrix: Mat4 = None
+        self._projection_matrix: Mat4 = None
+        self._viewport_matrix: Mat4 = None
+        self._viewport_resolve: tuple[int, int, int, int] = None
+
+        # Cache dynamique
+        self._pipeline: Mat4 = None
+        self._inv_pipeline: Mat4 = None
+
+    # ======================================== PROPERTIES ========================================
+    @property
+    def current_viewport(self) -> Viewport | None:
+        """Renvoie le viewport courant"""
+        return self._viewport
+    
+    @property
+    def current_camera(self) -> Camera | None:
+        """Renvoie la caméra courante"""
+        return self._temporary_camera or self._camera
 
     # ======================================== BIND ========================================
     def bind_viewport(self, viewport: Viewport) -> None:
-        """Résout et met en cache le viewport courant
+        """Fixe le viewport courant
 
         Args:
             viewport: viewport courant
+            Vp: matrice viewport
         """
-        screen = self._window.screen
         self._viewport = viewport
-        self._viewport_resolve = viewport.resolve(screen.width, screen.height)
-        self._camera = None
-        self._camera_resolve = None
-        self._temporary_camera = None
-        self._temporary_camera_resolve = None
 
     def bind_camera(self, camera: Camera) -> None:
-        """Résout et met en cache la caméra principale courante
+        """Fixe la caméra principale courante
 
         Args:
             camera: caméra principale courante
         """
-        _, _, lw, lh, _, _ = self._viewport_resolve
         self._camera = camera
-        self._camera_resolve = camera.resolve(lw, lh)
 
     def bind_temporary_camera(self, camera: Camera) -> None:
-        """Résout et met en cache la caméra locale courante
+        """Fixe la caméra locale courante
 
         Args:
             camera: caméra locale courante
         """
-        _, _, lw, lh, _, _ = self._viewport_resolve
         self._temporary_camera = camera
-        self._temporary_camera_resolve = camera.resolve(lw, lh)
 
     def unbind_temporary_camera(self) -> None:
         """Restaure la caméra principale"""
         self._temporary_camera = None
-        self._temporary_camera_resolve = None
 
-    # ======================================== FAST CONVERSIONS ========================================
-    def world_to_logical(self, x: float, y: float, viewport: Viewport = None, camera: Camera = None) -> tuple[int, int]:
-        """Conversion directe World to Logical"""
-        # Résolutions
-        vp_r, cam_r = self._resolve(viewport, camera)
-        lx, ly, lw, lh, (ox, oy), (dx, dy) = vp_r
-        cx, cy, vw, vh, zoom, rotation = cam_r
+    # ======================================== CONTEXT ========================================
+    def apply_context(self) -> None:
+        """Applique le contexte courant"""
+        # Nettoyage des caches
+        self.clear_cache()
 
-        # World to Frustum
-        fx, fy = x - cx, y - cy
-        if rotation != 0.0:
-            rad = math.radians(rotation)
-            c, s = math.cos(rad), math.sin(rad)
-            fx, fy = fx * c - fy * s, fx * s + fy * c
+        # Vérification du viewport
+        viewport = self.current_viewport
+        if viewport is None:
+            raise RuntimeError("Cannot apply context with no viewport set")
+        
+        # Vérification de la caméra
+        camera = self.current_camera
+        if camera is None:
+            raise RuntimeError("Cannot apply context with no camera set")
+        
+        # Raccourcis
+        fb_width, fb_height = self._window.screen.size
+        
+        # calcul des matrices et résolutions
+        self._view_matrix = camera.view_matrix()
+        self._projection_matrix = camera.projection_matrix(fb_width, fb_height)
+        self._viewport_matrix = viewport.viewport_matrix()
+        self._viewport_resolve = viewport.resolve(fb_width, fb_height)
 
-        # Frustum to NDC to NVC
-        nvc_x = ((fx * zoom * 2 / vw) + 1) / 2
-        nvc_y = ((fy * zoom * 2 / vh) + 1) / 2
+        # Validation de l'application
+        self._context_applied = True
 
-        # NVC to Viewport to Logical
-        return lx + ox + nvc_x * lw * dx, ly + oy + nvc_y * lh * dy
+    def clear_context(self) -> None:
+        """Nettoie le contexte courant"""
+        self._context_applied = False
 
-    def logical_to_world(self, x: float, y: float, viewport: Viewport = None, camera: Camera = None) -> tuple[float, float]:
-        """Conversion directe Logical to World"""
-        # Résolutions
-        vp_r, cam_r = self._resolve(viewport, camera)
-        lx, ly, lw, lh, (ox, oy), (dx, dy) = vp_r
-        cx, cy, vw, vh, zoom, rotation = cam_r
+        self._viewport = None
+        self._camera = None
+        self._temporary_camera = None
 
-        # Logical to Viewport to NVC
-        nvc_x = (x - lx - ox) / (dx * lw)
-        nvc_y = (y - ly - oy) / (dy * lh)
+        self.clear_cache()
 
-        # NVC to NDC to Frustum
-        fr_x = (nvc_x * 2 - 1) * vw / (zoom * 2)
-        fr_y = (nvc_y * 2 - 1) * vh / (zoom * 2)
+    def clear_cache(self) -> None:
+        """Nettoie le cache courant"""
+        self._view_matrix = None
+        self._projection_matrix = None
+        self._viewport_matrix = None
+        self._viewport_resolve = None
 
-        # Frustum to World
-        if rotation != 0.0:
-            rad = math.radians(rotation)
-            c, s = math.cos(rad), math.sin(rad)
-            fr_x, fr_y = fr_x * c + fr_y * s, -fr_x * s + fr_y * c
-        return fr_x + cx, fr_y + cy
+        self._pipeline = None
+        self._inv_pipeline = None
+    
+    # ======================================== TRANSFORMATION ========================================
+    def homogeneous(self, x: float, y: float, vector: bool = False) -> tuple[float, float, float, float]:
+        """Rend un objet mathématique homogène en 4D"""
+        return (x, y, 0, 0) if vector else (x, y, 0, 1)
 
-    def window_to_logical(self, x: float, y: float) -> tuple[float, float]:
-        """Conversion directe Window to Logical"""
-        canvas = self._window.canvas
-        logic_x = (x - canvas.x) * self._window.logical_scale
-        logic_y = (y - canvas.y) * self._window.logical_scale
-        return logic_x, logic_y
+    # ======================================== FROM WORLD ========================================
+    def world_to_framebuffer(self, x: float, y: float, vector: bool = False) -> tuple[float, float]:
+        """Conversion ``World`` vers ``Framebuffer``
+        
+        Args:
+            x: coordonnée horizontal *(World)*
+            y: coordonnée verticale *(World)*
+            vector: ignore la translation
+        """
+        try:
+            return self._world_to_framebuffer(x, y, vector)
+        except TypeError:
+            raise NoContextError() from None
+        
+    def _world_to_framebuffer(self, x: float, y: float, vector: bool) -> tuple[float, float]:
+        """Logique interne de ``world_to_framebuffer``"""
+        M = self.homogeneous(x, y, vector=vector)
+        Pip = self._get_pipeline()
+        ndc_x, ndc_y, _, _ = Pip @ M
+        gx, gy, gw, gh = self._viewport_resolve
+        return gx + ndc_x * gw, gy + ndc_y * gh
 
-    def logical_to_window(self, x: float, y: float) -> tuple[int, int]:
-        """Conversion directe Logical to Window"""
-        canvas = self._window.canvas
-        win_x = int(canvas.x + x * self._window.physical_scale),
-        win_y = int(canvas.y + y * self._window.physical_scale),
-        return win_x, win_y
+    def world_to_window(self, x: float, y: float, vector: bool = False) -> tuple[float, float]:
+        """Conversion ``World`` vers ``Window``
+        
+        Args:
+            x: coordonnée horizontal *(World)*
+            y: coordonnée verticale *(World)*
+            vector: ignore la translation
+        """
+        try:
+            fb_x, fb_y = self._world_to_framebuffer(x, y, vector)
+            win_x, win_y = self._framebuffer_to_window(fb_x, fb_y, vector)
+            return win_x, win_y
+        except TypeError:
+            raise NoContextError() from None
 
-    # ======================================== GLOBAL CONVERSIONS ========================================
+    # ======================================== FROM FRAMEBUFFER ========================================
+    def framebuffer_to_world(self, x:float, y: float, vector: bool = False) -> tuple[float, float]:
+        """Conversion ``Framebuffer`` vers ``World``
+        
+        Args:
+            x: coordonnée horizontal *(Logical)*
+            y: coordonnée verticale *(Logical)*
+            vector: ignore la translation
+        """
+        try:
+            return self._framebuffer_to_world(x, y, vector)
+        except TypeError:
+            raise NoContextError() from None
+        
+    def _framebuffer_to_world(self, x: float, y: float, vector: bool) -> tuple[float, float]:
+        """Logique interne de ``framebuffer_to_world``"""
+        gx, gy, gw, gh = self._viewport_resolve
+        ndc_x, ndc_y = (x - gx) / gw, (y - gy) / gh
+        M = self.homogeneous(ndc_x, ndc_y, vector=vector)
+        inv_Pip = self._get_inv_pipeline()
+        world_x, world_y, _, _ = inv_Pip @ M
+        return world_x, world_y
+
+    def framebuffer_to_window(self, x: float, y: float, vector: bool = False) -> tuple[float, float]:
+        """Conversion ``Framebuffer`` vers ``Window``
+        
+        Args:
+            x: coordonnée horizontal *(Logical)*
+            y: coordonnée verticale *(Logical)*
+            vector: *ignoré*
+        """
+        try:
+            return self._framebuffer_to_window(x, y)
+        except TypeError:
+            raise NoContextError() from None
+        
+    def _framebuffer_to_window(self, x: float, y: float) -> tuple[float, float]:
+        """Logique interne de ``framebuffer_to_window``"""
+        window = self._window
+        canvas = window.canvas
+        return canvas.x + x * window.physical_scale, canvas.y + y * window.physical_scale
+
+    # ======================================== FROM WINDOW ========================================
+    def window_to_world(self, x: float, y: float, vector: bool = False) -> tuple[float, float]:
+        """Conversion ``Window`` vers ``World``
+        
+        Args:
+            x: coordonnée horizontal *(Physical)*
+            y: coordonnée verticale *(Physical)*
+            vector: ignore la translation
+        """
+        try:
+            fb_x, fb_y = self._window_to_framebuffer(x, y, vector)
+            world_x, world_y = self._framebuffer_to_world(fb_x, fb_y, vector)
+            return world_x, world_y
+        except TypeError:
+            raise NoContextError() from None
+
+    def window_to_framebuffer(self, x: float, y: float, vector: bool = False) -> tuple[float, float]:
+        """Conversion ``Window``vers ``Framebuffer``
+        
+        Args:
+            x: coordonnée horizontal *(Phyisical)*
+            y: coordonnée verticale *(Physical)*
+            vector: *ignoré*
+        """
+        try:
+            return self._window_to_framebuffer(x, y)
+        except TypeError:
+            raise NoContextError() from None
+        
+    def _window_to_framebuffer(self, x: float, y: float) -> tuple[float, float]:
+        """Logique interne de ``window_to_framebuffer``"""
+        window = self._window
+        canvas = window.canvas
+        return (x - canvas.x) * window.logical_scale, (y - canvas.y) * window.logical_scale
+
+    # ======================================== GLOBAL CONVERSION ========================================
     def convert(
         self,
         x: float,
         y: float,
         from_space: CoordSpace,
         to_space: CoordSpace,
-        viewport: Viewport = None,
-        camera: Camera = None,
+        vector: bool = False,
     ) -> tuple[float, float]:
-        """Convertit (x, y) entre deux espaces quelconques via le pipeline step-by-step"""
-        vp_r, cam_r = self._resolve(viewport, camera)
-        lx, ly, lw, lh, (ox, oy), (dx, dy) = vp_r
-        cx, cy, vw, vh, zoom, rotation = cam_r
-        canvas = self._window.canvas
-
-        _ARGS = (
-            (cx, cy, rotation),            # WORLD    to FRUSTUM
-            (vw, vh, zoom),                # FRUSTUM  to NDC
-            (),                            # NDC      to NVC
-            (lw, lh, ox, oy, dx, dy),      # NVC      to VIEWPORT
-            (lx, ly),                      # VIEWPORT to LOGICAL
-            (self._window.logical_scale,), # LOGICAL  to CANVAS
-            (canvas.x, canvas.y),          # CANVAS   to WINDOW
-        )
-
-        i_from, i_to = from_space.value, to_space.value
-        if i_from == i_to:
-            return x, y
-
-        forward = i_from < i_to
-        for i in (range(i_from, i_to) if forward else range(i_from, i_to, -1)):
-            if forward:
-                fn = _CONVERTERS[(_PIPELINE[i], _PIPELINE[i + 1])]
-                args = _ARGS[i]
-            else:
-                fn = _CONVERTERS[(_PIPELINE[i], _PIPELINE[i - 1])]
-                args = _ARGS[i - 1]
-            x, y = fn(x, y, *args)
-
-        return x, y
+        """Convertit ``(x, y)`` entre deux espaces quelconques"""
+        # Même espace
+        if from_space == to_space:
+            return (x, y)
+        
+        # Cas non géré
+        handler = getattr(self, f"{from_space}_to_{to_space}", None)
+        if handler is None:
+            raise RuntimeError(f"No conversion from {from_space} to {to_space} available")
+        
+        # Conversion
+        return handler(x, y, vector=vector)
     
     # ======================================== LIFE CYCLE ========================================
     def update(self, dt: float) -> None:
-        """Actualisation"""
+        """Actualisation
+        
+        Args:
+            dt: delta-time
+        """
         pass
 
     def flush(self) -> None:
@@ -195,133 +293,27 @@ class CoordinatesManager(Manager):
         pass
 
     # ======================================== INTERNALS ========================================
-    def _resolve(self, viewport: Viewport = None, camera: Camera = None) -> tuple[tuple, tuple]:
-        """Renvoie (viewport_resolve, camera_resolve) en combinant overrides et contexte courant.
-        
-        Priorité caméra : override explicite > caméra temporary > caméra scène
-        """
-        if viewport is not None:
-            screen = self._window.screen
-            vp_r = viewport.resolve(screen.width, screen.height)
-        elif self._viewport_resolve is not None:
-            vp_r = self._viewport_resolve
-        else:
-            raise RuntimeError(
-                "CoordinatesManager : no viewport available")
+    def _compute_pipeline(self) -> None:
+        """Génère la matrice composée"""
+        self._pipeline = self._viewport_matrix @ self._projection_matrix @ self._view_matrix
 
-        if camera is not None:
-            _, _, lw, lh, _, _ = vp_r
-            cam_r = camera.resolve(lw, lh)
-        elif self._temporary_camera_resolve is not None:
-            cam_r = self._temporary_camera_resolve
-        elif self._camera_resolve is not None:
-            cam_r = self._camera_resolve
-        else:
-            raise RuntimeError(
-                "CoordinatesManager : no camera available")
+    def _compute_inv_pipeline(self) -> None:
+        """Génère la matrice composée inverse"""
+        if self._pipeline is None:
+            self._compute_pipeline()
+        self._inv_pipeline = self._pipeline.__invert__()
 
-        return vp_r, cam_r
-
-    # ======================================== WORLD to WINDOW ========================================
-    @staticmethod
-    def world_to_frustum(x: float, y: float, cx: float = 0.0, cy: float = 0.0, rotation: float = 0.0) -> tuple[float, float]:
-        """World to Frustum : translation caméra + rotation"""
-        fx, fy = x - cx, y - cy
-        if rotation != 0.0:
-            rad = math.radians(rotation)
-            c, s = math.cos(rad), math.sin(rad)
-            fx, fy = fx * c - fy * s, fx * s + fy * c
-        return fx, fy
-
-    @staticmethod
-    def frustum_to_ndc(fr_x: float, fr_y: float, vw: float, vh: float, zoom: float) -> tuple[float, float]:
-        """Frustum to NDC : normalisation par le demi-frustum"""
-        return fr_x * zoom * 2 / vw, fr_y * zoom * 2 / vh
-
-    @staticmethod
-    def ndc_to_nvc(ndc_x: float, ndc_y: float) -> tuple[float, float]:
-        """NDC [-1, 1] to NVC [0, 1]"""
-        return (ndc_x + 1) / 2, (ndc_y + 1) / 2
-
-    @staticmethod
-    def nvc_to_viewport(nvc_x: float, nvc_y: float, lw: float, lh: float, ox: float, oy: float, dx: float, dy: float) -> tuple[float, float]:
-        """NVC to Viewport : mise à l'échelle + offset + direction"""
-        return ox + nvc_x * lw * dx, oy + nvc_y * lh * dy
-
-    @staticmethod
-    def viewport_to_logical(vp_x: float, vp_y: float, lx: float, ly: float) -> tuple[float, float]:
-        """Viewport (relatif) to Logical (absolu dans le LogicalScreen)"""
-        return lx + vp_x, ly + vp_y
-
-    @staticmethod
-    def logical_to_canvas(logic_x: float, logic_y: float, logical_scale: float) -> tuple[int, int]:
-        """Logical to Canvas : mise à l'échelle vers les pixels physiques"""
-        return int(logic_x * logical_scale), int(logic_y * logical_scale)
-
-    @staticmethod
-    def canvas_to_window(cnv_x: float, cnv_y: float, cnv_ox: float, cnv_oy: float) -> tuple[float, float]:
-        """Canvas to Window : ajout de l'offset du canvas dans la fenêtre OS"""
-        return cnv_ox + cnv_x, cnv_oy + cnv_y
-
-    # ======================================== WINDOW to WORLD ========================================
-    @staticmethod
-    def window_to_canvas(win_x: float, win_y: float, cnv_ox: float, cnv_oy: float) -> tuple[float, float]:
-        """Window to Canvas"""
-        return win_x - cnv_ox, win_y - cnv_oy
-
-    @staticmethod
-    def canvas_to_logical(cnv_x: float, cnv_y: float, logical_scale: float) -> tuple[float, float]:
-        """Canvas to Logical : pixels physiques to espace logique"""
-        return cnv_x / logical_scale, cnv_y / logical_scale
-
-    @staticmethod
-    def logical_to_viewport(logic_x: float, logic_y: float, lx: float, ly: float) -> tuple[float, float]:
-        """Logical (absolu) to Viewport (relatif)"""
-        return logic_x - lx, logic_y - ly
-
-    @staticmethod
-    def viewport_to_nvc(vp_x: float, vp_y: float, lw: float, lh: float, ox: float, oy: float, dx: float, dy: float) -> tuple[float, float]:
-        """Viewport to NVC"""
-        return (vp_x - ox) / (dx * lw), (vp_y - oy) / (dy * lh)
-
-    @staticmethod
-    def nvc_to_ndc(nvc_x: float, nvc_y: float) -> tuple[float, float]:
-        """NVC [0, 1] to NDC [-1, 1]"""
-        return nvc_x * 2 - 1, nvc_y * 2 - 1
-
-    @staticmethod
-    def ndc_to_frustum(ndc_x: float, ndc_y: float, vw: float, vh: float, zoom: float) -> tuple[float, float]:
-        """NDC to Frustum"""
-        return ndc_x * vw / (zoom * 2), ndc_y * vh / (zoom * 2)
-
-    @staticmethod
-    def frustum_to_world(fr_x: float, fr_y: float, cx: float = 0.0, cy: float = 0.0, rotation: float = 0.0) -> tuple[float, float]:
-        """Frustum to World : rotation inverse + translation caméra"""
-        if rotation != 0.0:
-            rad = math.radians(rotation)
-            c, s = math.cos(rad), math.sin(rad)
-            fr_x, fr_y = fr_x * c + fr_y * s, -fr_x * s + fr_y * c
-        return fr_x + cx, fr_y + cy
-
-# ======================================== REGISTER ========================================
-_CONVERTERS: dict[tuple[CoordSpace, CoordSpace], Callable] = {
-    # World to Window
-    (CoordSpace.WORLD,    CoordSpace.FRUSTUM):  CoordinatesManager.world_to_frustum,
-    (CoordSpace.FRUSTUM,  CoordSpace.NDC):       CoordinatesManager.frustum_to_ndc,
-    (CoordSpace.NDC,      CoordSpace.NVC):       CoordinatesManager.ndc_to_nvc,
-    (CoordSpace.NVC,      CoordSpace.VIEWPORT):  CoordinatesManager.nvc_to_viewport,
-    (CoordSpace.VIEWPORT, CoordSpace.LOGICAL):   CoordinatesManager.viewport_to_logical,
-    (CoordSpace.LOGICAL,  CoordSpace.CANVAS):    CoordinatesManager.logical_to_canvas,
-    (CoordSpace.CANVAS,   CoordSpace.WINDOW):    CoordinatesManager.canvas_to_window,
-    # Window to World
-    (CoordSpace.WINDOW,   CoordSpace.CANVAS):    CoordinatesManager.window_to_canvas,
-    (CoordSpace.CANVAS,   CoordSpace.LOGICAL):   CoordinatesManager.canvas_to_logical,
-    (CoordSpace.LOGICAL,  CoordSpace.VIEWPORT):  CoordinatesManager.logical_to_viewport,
-    (CoordSpace.VIEWPORT, CoordSpace.NVC):       CoordinatesManager.viewport_to_nvc,
-    (CoordSpace.NVC,      CoordSpace.NDC):       CoordinatesManager.nvc_to_ndc,
-    (CoordSpace.NDC,      CoordSpace.FRUSTUM):   CoordinatesManager.ndc_to_frustum,
-    (CoordSpace.FRUSTUM,  CoordSpace.WORLD):     CoordinatesManager.frustum_to_world,
-}
+    def _get_pipeline(self) -> Mat4:
+        """Renvoie la matrice composée ``World`` to ``NDC``"""
+        if self._pipeline is None:
+            self._compute_pipeline()
+        return self._pipeline
+    
+    def _get_inv_pipeline(self) -> Mat4:
+        """Renvoie la matrice composée inverse ``NDC`` to ``World``"""
+        if self._inv_pipeline is None:
+            self._compute_inv_pipeline()
+        return self._inv_pipeline
 
 # ======================================== EXPORTS ========================================
 __all__ = [

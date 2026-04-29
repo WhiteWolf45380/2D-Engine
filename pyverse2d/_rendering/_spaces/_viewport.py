@@ -188,6 +188,13 @@ class Viewport(Space):
         width = int(self._width) if self._width != 0.0 else fb_width
         height = int(self._height) if self._height != 0.0 else fb_height
         return (x, y, width, height)
+    
+    def basis_resolve(self) -> tuple[float, float, float, float, float, float]:
+        """Renvoie la résolution locale ``(ox, oy, ix, iy, jx, jy)`` dans le viewport"""
+        ox, oy = self._origin
+        ix, iy = self._x_direction
+        jx, jy = self._y_direction
+        return (ox, oy, ix, iy, jx, jy)
 
     # ======================================== COMPUTE ========================================
     def viewport_matrix(self) -> Mat4:
