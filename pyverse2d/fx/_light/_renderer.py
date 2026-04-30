@@ -694,7 +694,11 @@ class LightRenderer:
 
         for i, light in enumerate(cones):
             fx, fy = pipeline.world_to_framebuffer(light.x, light.y)
-            dfx, dfy = pipeline.world_to_framebuffer_dir_normalized(light.direction.x, light.direction.y)
+            dfx, dfy = pipeline.world_to_framebuffer(light.direction.x, light.direction.y, vector=True)
+            norm = (dfx**2 + dfy**2)**0.5
+            if norm != 0.0:
+                dfx /= norm
+                dfy /= norm
             c_pos[i] = (fx, fy)
             c_dir[i] = (dfx, dfy)
             c_col[i] = light.color.rgb
