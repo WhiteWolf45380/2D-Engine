@@ -5,7 +5,7 @@ from .._internal import expect, profile_section
 from .._rendering import Pipeline, Camera
 from .._flag import Activity
 from ..abc import Layer
-from ..fx.postfx import PostFxZone, PostFxRenderer, WavePostFxRenderer
+from ..fx import PostFxZone, PostFxRenderer, WavePostFxRenderer
 
 from typing import ClassVar
 
