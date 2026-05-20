@@ -87,9 +87,6 @@ class PostFxRenderer:
         match zone.shape:
             case Circle():
                 r = pipeline.scale_to_framebuffer(zone.shape.radius)
-                dist = ((sx - cx) ** 2 + (sy - cy) ** 2) ** 0.5
-                if dist >= r + blend:
-                    return None
                 return MaskData(
                     type=1,
                     center_x=cx,
@@ -100,14 +97,6 @@ class PostFxRenderer:
 
             case Rect():
                 hw, hh = pipeline.scale_to_framebuffer(width=zone.shape.half_width, height=zone.shape.half_height)
-                dx = max(abs(sx - cx) - hw, 0.0)
-                dy = max(abs(sy - cy) - hh, 0.0)
-                dist = (dx ** 2 + dy ** 2) ** 0.5
-                if blend <= 0.0:
-                    if dx > 0.0 or dy > 0.0:
-                        return None
-                elif dist >= blend:
-                    return None
                 return MaskData(
                     type=2,
                     center_x=cx,
