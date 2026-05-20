@@ -82,7 +82,7 @@ class PostFxRenderer:
         """
         cx, cy = pipeline.world_to_framebuffer(zone.x, zone.y)
         sx, sy = pipeline.screen.center
-        blend = pipeline.scale_to_framebuffer(blend)
+        blend = pipeline.scale_to_framebuffer(zone.blend)
 
         match zone.shape:
             case Circle():
