@@ -34,7 +34,7 @@ class MaskData:
     Toutes les valeurs sont en **coordonnées framebuffer** (pixels).
 
     Args:
-        type: type de masque — ``0`` plein écran, ``1`` cercle, ``2`` rectangle
+        type: type de masque: ``0`` plein écran, ``1`` cercle, ``2`` rectangle
         center_x: abscisse du centre
         center_y: ordonnée du centre
         radius: rayon *(Circle)*

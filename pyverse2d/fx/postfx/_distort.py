@@ -122,7 +122,7 @@ class DistortSwirl(PostFxEffect):
         falloff: rayon de normalisation en unités mondes *(> 0)*
     """
     angle: Real = 1.0
-    falloff: Real = 0.5
+    falloff: Real = 10
 
     _ID: ClassVar[str] = "distort_swirl"
 
@@ -146,8 +146,8 @@ class DistortSqueeze(PostFxEffect):
         strength_y: intensité verticale *(>-1 pour éviter l'inversion)*
         falloff: rayon de normalisation en unités monde *(> 0)*
     """
-    strength_x: Real = 0.3
-    strength_y: Real = -0.3
+    strength_x: Real = 10
+    strength_y: Real = -10
     falloff: Real = 0.5
 
     _ID: ClassVar[str] = "distort_squeeze"
@@ -177,7 +177,7 @@ class DistortRipple(PostFxEffect):
         speed: vitesse d'animation en cycles par seconde *(> 0)*
         falloff: rayon de normalisation en unités monde *(> 0)*
     """
-    amplitude: Real = 0.01
+    amplitude: Real = 10
     frequency: Real = 12.0
     speed: Real = 1.0
     falloff: Real = 0.5

@@ -61,7 +61,7 @@ class Wave(PostFxEffect):
         frequency_y: fréquence spatiale verticale *(cycles par écran)*
         speed: vitesse d'animation en cycles par seconde *(> 0)*
     """
-    amplitude_x: Real = 0.01
+    amplitude_x: Real = 10
     amplitude_y: Real = 0.0
     frequency_x: Real = 8.0
     frequency_y: Real = 8.0

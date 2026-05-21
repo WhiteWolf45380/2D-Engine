@@ -63,9 +63,9 @@ class Vignette(PostFxEffect):
         color: couleur de la vignette RGB (défaut noir)
     """
     strength: Real = 0.8
-    radius: Real = 0.4
-    softness: Real = 0.3
-    color: tuple = (0.0, 0.0, 0.0)
+    radius: Real = 100
+    softness: Real = 30
+    color: Color = (0.0, 0.0, 0.0)
 
     _ID: ClassVar[str] = "vignette"
 

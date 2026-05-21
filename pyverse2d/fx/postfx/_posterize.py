@@ -9,7 +9,7 @@ from ._specialized_renderer import SpecializedPostFxRenderer
 from ._mask import MaskData, GLSL_MASK
 
 from dataclasses import dataclass
-from numbers import Real, Integral
+from numbers import Integral
 from typing import ClassVar
 
 from pyglet.graphics.shader import Shader, ShaderProgram

@@ -75,7 +75,7 @@ class Glitch(PostFxEffect):
         density: densité des bandes affectées *[0, 1]*
         speed: vitesse de renouvellement des bandes *(> 0)*
     """
-    strength: Real = 0.03
+    strength: Real = 30
     density: Real = 0.2
     speed: Real = 1.0
 
