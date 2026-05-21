@@ -2,10 +2,10 @@
 
 **A batteries-included 2D game engine for Python**, built on top of [pyglet](https://pyglet.org/).
 
-PyVerse2D gives you a complete ECS-based runtime: physics, lighting, particles, tilemaps, GUI, audio... behind a clean and minimal API.
+PyVerse2D gives you a complete ECS-based runtime - physics, lighting, particles, tilemaps, GUI, audio, video - behind a clean and minimal API.
 
 [![PyPI version](https://img.shields.io/pypi/v/pyverse2d)](https://pypi.org/project/pyverse2d/)
-[![Python](https://img.shields.io/pypi/pyversions/pyverse2d?cacheSeconds=60)](https://pypi.org/project/pyverse2d/)
+[![Python](https://img.shields.io/pypi/pyversions/pyverse2d)](https://pypi.org/project/pyverse2d/)
 [![License](https://img.shields.io/github/license/WhiteWolf45380/PyVerse2D)](LICENSE)
 
 ---
@@ -21,6 +21,7 @@ PyVerse2D gives you a complete ECS-based runtime: physics, lighting, particles, 
 - **GUI system** - widgets, tweens, behaviors (click, hover, focus, select), toggle buttons, scrollbars, labels
 - **Asset management** - images, animations, fonts, sounds, music, playlists, video
 - **Input system** - keyboard, mouse, combo listeners, repeat and condition support
+- **Post-processing** - shader-based effects (blur, chromatic aberration, color grading, glitch, distortion, scanlines…) applied per zone with spatial masking
 - **Built-in profiler** - frame-accurate profiling with export
 
 ---
@@ -101,7 +102,7 @@ pv.run()
 
 ### Window & screen
 
-`LogicalScreen` defines the virtual resolution your game is designed for. `Window` wraps the OS window and handles letterboxing automatically: your game scales cleanly to any physical window size.
+`LogicalScreen` defines the virtual resolution your game is designed for. `Window` wraps the OS window and handles letterboxing automatically, your game scales cleanly to any physical window size.
 
 ```python
 screen = LogicalScreen(1920, 1080)   # virtual canvas
@@ -262,6 +263,57 @@ main_scene.add_layer(pv.scene.TileLayer(ground), z=4)
 pv.tile.CollisionMapper(ground).inject(main_world)
 ```
 
+### Post-processing
+
+Post-processing effects are applied via a `PostFxLayer`. Each layer holds one or more `PostFxZone` objects, a zone can cover the entire screen (unbounded) or be restricted to a `Circle` or `Rect` shape with an optional soft blend edge. Effects chain in order and are GPU-accelerated (GLSL shaders).
+
+```python
+postfx_layer = pv.scene.PostFxLayer()
+main_scene.add_layer(postfx_layer, z=50)
+
+# Unbounded zone: covers the full screen
+zone = pv.fx.PostFxZone()
+zone.add_effect(pv.fx.ColorGrade(brightness=0.05, contrast=1.1, saturation=0.9))
+zone.add_effect(pv.fx.Vignette(strength=0.6, radius=80, softness=40))
+postfx_layer.add_zone(zone)
+
+# Bounded zone: circle around a point, with edge blending
+local_zone = pv.fx.PostFxZone(shape=pv.shape.Circle(10), position=(0.0, 0.0), blend=3.0)
+local_zone.add_effect(pv.fx.Blur(radius=4.0, passes=2))
+postfx_layer.add_zone(local_zone)
+
+# Attach a zone to a moving object
+local_zone.attach_to(player.transform, offset=(0.0, 1.0), smoothing=0.05)
+```
+
+Available effects and their key parameters:
+
+| Effect | Description | Key params |
+|---|---|---|
+| `Blur` | Gaussian blur (separable, multi-pass) | `radius`, `passes` |
+| `Chromatic` | Chromatic aberration | `strength`, `angle` |
+| `ColorGrade` | Brightness / contrast / saturation / tint | `brightness`, `contrast`, `saturation`, `tint` |
+| `EdgeDetect` | Sobel edge detection | `threshold`, `strength`, `edge_color` |
+| `Flicker` | Luminosity flicker (unstable light source) | `amplitude`, `speed` |
+| `Glitch` | Digital corruption with band shifting | `strength`, `density`, `speed` |
+| `Pixelate` | Pixelation | `block_size` |
+| `Posterize` | Color level reduction (cel-shading) | `levels` |
+| `Scanlines` | CRT scanline overlay | `spacing`, `strength`, `softness` |
+| `Vignette` | Edge darkening | `strength`, `radius`, `softness`, `color` |
+| `Wave` | Sinusoidal distortion (cartesian) | `amplitude_x`, `amplitude_y`, `frequency_x`, `frequency_y`, `speed` |
+| `DistortSwirl` | Vortex rotation | `angle`, `falloff` |
+| `DistortSqueeze` | Asymmetric directional stretch | `strength_x`, `strength_y`, `falloff` |
+| `DistortRipple` | Radial concentric wave | `amplitude`, `frequency`, `speed`, `falloff` |
+
+Effects can be added, removed, replaced and reordered at runtime:
+
+```python
+zone.replace_effect(pv.fx.ColorGrade(saturation=0.0))   # swap params live
+zone.move_effect(pv.fx.Blur, index=0)                   # push blur to first pass
+zone.remove_effect(pv.fx.Vignette)
+zone.disable()                                          # pause the zone without removing it
+```
+
 ### Profiling
 
 ```python
@@ -279,7 +331,7 @@ def on_update(dt: float):
     pass
 
 def on_draw():
-    # your extra draw logic
+    # your extra draw logic (runs before scene.draw)
     pass
 
 pv.preload()
@@ -294,17 +346,18 @@ pv.run(on_update=on_update, on_draw=on_draw)
 
 ```
 pyverse2d/
-├── abc/            # Abstract base classes (Space, Component, System, Asset…)
-├── asset/          # Image, Animation, Font, Sound, Music, Video, Text, Playlist
+├── abc/           # Abstract base classes (Space, Component, System, Asset…)
+├── asset/         # Image, Animation, Font, Sound, Music, Video, Text, Playlist
 ├── fx/
-│   ├── light/      # Ambient, PointLight, ConeLight, Bloom, Vignette, Tint
-│   └── particle/   # Emitters (Line, Circle, Cone, Point) + Modifiers
-├── gui/            # Widgets, Tweens, Behaviors, SelectionGroup
-├── math/           # Point, Vector, Line, easing functions, vertex helpers
-├── scene/          # Scene, WorldLayer, TileLayer, GuiLayer, LightLayer, ParticleLayer
-├── shape/          # Circle, Rect, RoundedRect, Ellipse, Capsule, Polygon, RegularPolygon
-├── tile/           # Tiled TMX loader, CollisionMapper, TileMap
-├── typing/         # Type aliases
+│   ├── light/     # Ambient, PointLight, ConeLight, Bloom, Vignette, Tint
+│   ├── particle/  # Emitters (Line, Circle, Cone, Point) + Modifiers
+│   └── postfx/    # PostFxZone, PostFxLayer + 14 shader effects
+├── gui/           # Widgets, Tweens, Behaviors, SelectionGroup
+├── math/          # Point, Vector, Line, easing functions, vertex helpers
+├── scene/         # Scene, WorldLayer, TileLayer, GuiLayer, LightLayer, ParticleLayer, PostFxLayer
+├── shape/         # Circle, Rect, RoundedRect, Ellipse, Capsule, Polygon, RegularPolygon
+├── tile/          # Tiled TMX loader, CollisionMapper, TileMap
+├── typing/        # Type aliases
 └── world/
     ├── _component/ # Transform, Collider, RigidBody, Renderers, Animator, Follow…
     └── _system/    # Physics, Gravity, Collision, Render, Animation, Steering, Sound, Video
@@ -314,4 +367,4 @@ pyverse2d/
 
 ## License
 
-[MIT](LICENSE) — © WhiteWolf45380
+[MIT](LICENSE) - © WhiteWolf45380
