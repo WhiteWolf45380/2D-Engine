@@ -4,6 +4,7 @@ from __future__ import annotations
 from ..._internal import clamped, over
 from ..._rendering import Pipeline
 from ...abc import PostFxEffect
+from ...asset import Color
 
 from ._specialized_renderer import SpecializedPostFxRenderer
 from ._mask import MaskData, GLSL_MASK
@@ -81,14 +82,14 @@ class EdgeDetect(PostFxEffect):
     """
     threshold: Real = 0.1
     strength: Real = 1.0
-    edge_color: tuple = (1.0, 1.0, 1.0)
+    edge_color: Color = (1.0, 1.0, 1.0)
 
     _ID: ClassVar[str] = "edge_detect"
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "threshold", float(self.threshold))
         object.__setattr__(self, "strength", float(self.strength))
-        object.__setattr__(self, "edge_color", tuple(float(c) for c in self.edge_color))
+        object.__setattr__(self, "edge_color", Color(self.edge_color))
 
         if __debug__:
             over(self.threshold, 0, include=True)
@@ -119,7 +120,7 @@ class EdgeDetectPostFxRenderer(SpecializedPostFxRenderer):
             u_texel=(1.0 / fbo.width, 1.0 / fbo.height),
             u_threshold=effect.threshold,
             u_strength=effect.strength,
-            u_edge_color=effect.edge_color,
+            u_edge_color=effect.edge_color.rgb,
             **mask.as_uniforms(),
         )
 

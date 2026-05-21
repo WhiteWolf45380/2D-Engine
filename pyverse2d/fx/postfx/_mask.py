@@ -51,7 +51,7 @@ class MaskData:
     blend: float = 0.0
 
     def as_uniforms(self) -> dict[str, object]:
-        """Retourne un dict prêt à être dépaqueté dans ``pipeline.apply_shader``"""
+        """Retourne un dict des uniforms"""
         return {
             "u_mask_type":   self.type,
             "u_mask_center": (self.center_x, self.center_y),
@@ -60,8 +60,7 @@ class MaskData:
             "u_mask_blend":  self.blend,
         }
 
-
-# Sentinel : effet plein écran, aucun masque
+# ======================================== SENTINELS ========================================
 MASK_FULL: MaskData = MaskData(type=0)
 
 # ======================================== EXPORTS ========================================

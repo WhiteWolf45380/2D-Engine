@@ -58,6 +58,7 @@ class Pixelate(PostFxEffect):
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "block_size", float(self.block_size))
+        
         if __debug__:
             over(self.block_size, 0, include=False)
 

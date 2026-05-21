@@ -4,6 +4,7 @@ from __future__ import annotations
 from ..._internal import clamped, over
 from ..._rendering import Pipeline
 from ...abc import PostFxEffect
+from ...asset import Color
 
 from ._specialized_renderer import SpecializedPostFxRenderer
 from ._mask import MaskData, GLSL_MASK
@@ -73,7 +74,7 @@ class ColorGrade(PostFxEffect):
     brightness: Real = 0.0
     contrast: Real = 1.0
     saturation: Real = 1.0
-    tint: tuple = (1.0, 1.0, 1.0)
+    tint: Color = (1.0, 1.0, 1.0)
 
     _ID: ClassVar[str] = "color_grade"
 
@@ -81,10 +82,10 @@ class ColorGrade(PostFxEffect):
         object.__setattr__(self, "brightness", float(self.brightness))
         object.__setattr__(self, "contrast", float(self.contrast))
         object.__setattr__(self, "saturation", float(self.saturation))
-        object.__setattr__(self, "tint", tuple(float(c) for c in self.tint))
+        object.__setattr__(self, "tint", Color(self.tint))
 
         if __debug__:
-            clamped(self.brightness, min_val=-1.0, max_val=1.0)
+            clamped(self.brightness, min=-1.0, max=1.0)
             over(self.contrast, 0, include=True)
             over(self.saturation, 0, include=True)
 
@@ -112,7 +113,7 @@ class ColorGradePostFxRenderer(SpecializedPostFxRenderer):
             u_brightness=effect.brightness,
             u_contrast=effect.contrast,
             u_saturation=effect.saturation,
-            u_tint=effect.tint,
+            u_tint=effect.tint.rgb,
             **mask.as_uniforms(),
         )
 

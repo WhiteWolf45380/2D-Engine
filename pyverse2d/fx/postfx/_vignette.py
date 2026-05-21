@@ -4,6 +4,7 @@ from __future__ import annotations
 from ..._internal import clamped, positive
 from ..._rendering import Pipeline
 from ...abc import PostFxEffect
+from ...asset import Color
 
 from ._specialized_renderer import SpecializedPostFxRenderer
 from ._mask import MaskData, GLSL_MASK
@@ -72,7 +73,7 @@ class Vignette(PostFxEffect):
         object.__setattr__(self, "strength", float(self.strength))
         object.__setattr__(self, "radius", float(self.radius))
         object.__setattr__(self, "softness", float(self.softness))
-        object.__setattr__(self, "color", tuple(float(c) for c in self.color))
+        object.__setattr__(self, "color", Color(self.color))
 
         if __debug__:
             clamped(self.strength)
@@ -103,7 +104,7 @@ class VignettePostFxRenderer(SpecializedPostFxRenderer):
             u_strength=effect.strength,
             u_radius=effect.radius,
             u_softness=effect.softness,
-            u_color=effect.color,
+            u_color=effect.color.rgb,
             **mask.as_uniforms(),
         )
 

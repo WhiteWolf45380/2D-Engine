@@ -60,6 +60,7 @@ class Posterize(PostFxEffect):
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "levels", int(self.levels))
+        
         if __debug__:
             over(self.levels, 2, include=True)
 
