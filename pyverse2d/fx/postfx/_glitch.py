@@ -71,7 +71,7 @@ class Glitch(PostFxEffect):
     Décale des bandes horizontales aléatoires avec une aberration chromatique intégrée, produisant un effet de corruption numérique.
 
     Args:
-        strength: amplitude du décalage horizontal en fraction de l'écran *(>= 0)*
+        strength: amplitude du décalage horizontal en unités monde *(>= 0)*
         density: densité des bandes affectées *[0, 1]*
         speed: vitesse de renouvellement des bandes *(> 0)*
     """
@@ -112,9 +112,11 @@ class GlitchPostFxRenderer(SpecializedPostFxRenderer):
         cls._program = None
 
     def apply(self, pipeline: Pipeline, effect: Glitch, mask: MaskData) -> None:
+        strength = pipeline.scale_to_framebuffer(effect.strength)
+        
         pipeline.apply_shader(
             self._get_program(),
-            u_strength=effect.strength,
+            u_strength=strength,
             u_density=effect.density,
             u_time=self._time * effect.speed,
             **mask.as_uniforms(),

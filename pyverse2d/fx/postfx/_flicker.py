@@ -59,7 +59,7 @@ class Flicker(PostFxEffect):
 
     Args:
         amplitude: amplitude de la variation *[0, 1]* (0 = aucun scintillement)
-        speed: fréquence de renouvellement en Hz *(> 0)* (24 = cinématique, 60 = rapide)
+        speed: fréquence de renouvellement en Hz *(> 0)*
     """
     amplitude: Real = 0.15
     speed: Real = 1.0

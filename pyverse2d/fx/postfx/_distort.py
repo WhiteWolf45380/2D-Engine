@@ -119,7 +119,7 @@ class DistortSwirl(PostFxEffect):
 
     Args:
         angle: angle de rotation au centre en radians
-        falloff: rayon de normalisation en fraction de l'écran *(> 0)*
+        falloff: rayon de normalisation en unités mondes *(> 0)*
     """
     angle: Real = 1.0
     falloff: Real = 0.5
@@ -144,7 +144,7 @@ class DistortSqueeze(PostFxEffect):
     Args:
         strength_x: intensité horizontale *(>-1 pour éviter l'inversion)*
         strength_y: intensité verticale *(>-1 pour éviter l'inversion)*
-        falloff: rayon de normalisation en fraction de l'écran *(> 0)*
+        falloff: rayon de normalisation en unités monde *(> 0)*
     """
     strength_x: Real = 0.3
     strength_y: Real = -0.3
@@ -172,10 +172,10 @@ class DistortRipple(PostFxEffect):
     Contrairement à ``Wave`` (cartésien), la propagation est circulaire.
 
     Args:
-        amplitude: déplacement maximal en fraction de l'écran *(>= 0)*
+        amplitude: déplacement maximal en unités monde *(>= 0)*
         frequency: nombre de cycles visibles dans le rayon *(> 0)*
         speed: vitesse d'animation en cycles par seconde *(> 0)*
-        falloff: rayon de normalisation en fraction de l'écran *(> 0)*
+        falloff: rayon de normalisation en unités monde *(> 0)*
     """
     amplitude: Real = 0.01
     frequency: Real = 12.0
@@ -223,11 +223,13 @@ class DistortSwirlPostFxRenderer(SpecializedPostFxRenderer):
 
     def apply(self, pipeline: Pipeline, effect: DistortSwirl, mask: MaskData) -> None:
         cx, cy = _center_from_mask(mask, pipeline.fbo)
+        falloff = pipeline.scale_to_framebuffer(falloff)
+
         pipeline.apply_shader(
             self._get_program(),
             u_center=(cx, cy),
             u_angle=effect.angle,
-            u_falloff=effect.falloff,
+            u_falloff=falloff,
             **mask.as_uniforms(),
         )
 
@@ -251,12 +253,15 @@ class DistortSqueezePostFxRenderer(SpecializedPostFxRenderer):
 
     def apply(self, pipeline: Pipeline, effect: DistortSqueeze, mask: MaskData) -> None:
         cx, cy = _center_from_mask(mask, pipeline.fbo)
+        sx, sy = pipeline.scale_to_framebuffer(effect.strength_x, effect.strength_y)
+        falloff = pipeline.scale_to_framebuffer(falloff)
+
         pipeline.apply_shader(
             self._get_program(),
             u_center=(cx, cy),
-            u_strength_x=effect.strength_x,
-            u_strength_y=effect.strength_y,
-            u_falloff=effect.falloff,
+            u_strength_x=sx,
+            u_strength_y=sy,
+            u_falloff=falloff,
             **mask.as_uniforms(),
         )
 
@@ -281,13 +286,15 @@ class DistortRipplePostFxRenderer(SpecializedPostFxRenderer):
 
     def apply(self, pipeline: Pipeline, effect: DistortRipple, mask: MaskData) -> None:
         cx, cy = _center_from_mask(mask, pipeline.fbo)
+        amplitude, falloff = pipeline.scale_to_framebuffer(amplitude, falloff)
+        
         pipeline.apply_shader(
             self._get_program(),
             u_center=(cx, cy),
-            u_amplitude=effect.amplitude,
+            u_amplitude=amplitude,
             u_frequency=effect.frequency,
             u_time=self._time * effect.speed,
-            u_falloff=effect.falloff,
+            u_falloff=falloff,
             **mask.as_uniforms(),
         )
 

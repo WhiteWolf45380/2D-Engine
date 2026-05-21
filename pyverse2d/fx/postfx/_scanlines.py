@@ -52,7 +52,7 @@ class Scanlines(PostFxEffect):
     """Effet post-processing: lignes de balayage CRT
 
     Args:
-        spacing: espacement entre les lignes en pixels *(> 0)*
+        spacing: espacement entre les lignes en unités monde *(> 0)*
         strength: intensité de l'assombrissement *[0, 1]*
         softness: douceur du bord de chaque ligne *(> 0)* (1 = linéaire, < 1 = plus dur)
     """
@@ -91,9 +91,11 @@ class ScanlinesPostFxRenderer(SpecializedPostFxRenderer):
         cls._program = None
 
     def apply(self, pipeline: Pipeline, effect: Scanlines, mask: MaskData) -> None:
+        spacing = pipeline.scale_to_framebuffer(height=effect.spacing)
+        
         pipeline.apply_shader(
             self._get_program(),
-            u_spacing=effect.spacing,
+            u_spacing=spacing,
             u_strength=effect.strength,
             u_softness=effect.softness,
             **mask.as_uniforms(),

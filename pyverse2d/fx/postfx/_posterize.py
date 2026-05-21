@@ -36,9 +36,9 @@ out vec4 out_color;
 {GLSL_MASK}
 
 void main() {{
-    vec4  orig      = texture(u_texture, v_uv);
-    float mask      = compute_mask();
-    vec3  posterized = floor(orig.rgb * u_levels) / u_levels;
+    vec4 orig = texture(u_texture, v_uv);
+    float mask = compute_mask();
+    vec3 posterized = floor(orig.rgb * u_levels) / u_levels;
     out_color = vec4(mix(orig.rgb, posterized, mask), orig.a);
 }}
 """

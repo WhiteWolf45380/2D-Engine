@@ -76,7 +76,7 @@ class EdgeDetect(PostFxEffect):
     Utile pour des effets de vision thermique, cel-shading, ou stylisation graphique.
 
     Args:
-        threshold: seuil de détection *(>= 0)* — valeurs faibles = plus de contours
+        threshold: seuil de détection *(>= 0)*
         strength: opacité des contours détectés *[0, 1]*
         edge_color: couleur des contours RGB *(défaut blanc)*
     """
@@ -115,6 +115,7 @@ class EdgeDetectPostFxRenderer(SpecializedPostFxRenderer):
 
     def apply(self, pipeline: Pipeline, effect: EdgeDetect, mask: MaskData) -> None:
         fbo = pipeline.fbo
+        
         pipeline.apply_shader(
             self._get_program(),
             u_texel=(1.0 / fbo.width, 1.0 / fbo.height),

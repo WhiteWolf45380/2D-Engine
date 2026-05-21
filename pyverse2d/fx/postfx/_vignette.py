@@ -58,8 +58,8 @@ class Vignette(PostFxEffect):
 
     Args:
         strength: intensité de la vignette *[0, 1]*
-        radius: rayon intérieur en fraction de la diagonale UV *(>= 0)*
-        softness: largeur du fondu *(>= 0)*
+        radius: rayon intérieur en unités monde *(>= 0)*
+        softness: largeur du fondu en unités monde *(>= 0)*
         color: couleur de la vignette RGB (défaut noir)
     """
     strength: Real = 0.8
@@ -99,11 +99,13 @@ class VignettePostFxRenderer(SpecializedPostFxRenderer):
         cls._program = None
 
     def apply(self, pipeline: Pipeline, effect: Vignette, mask: MaskData) -> None:
+        radius, softness = pipeline.scale_to_framebuffer(radius, softness)
+        
         pipeline.apply_shader(
             self._get_program(),
             u_strength=effect.strength,
-            u_radius=effect.radius,
-            u_softness=effect.softness,
+            u_radius=radius,
+            u_softness=softness,
             u_color=effect.color.rgb,
             **mask.as_uniforms(),
         )
