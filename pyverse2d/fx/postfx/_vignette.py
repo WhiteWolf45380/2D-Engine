@@ -99,7 +99,7 @@ class VignettePostFxRenderer(SpecializedPostFxRenderer):
         cls._program = None
 
     def apply(self, pipeline: Pipeline, effect: Vignette, mask: MaskData) -> None:
-        radius, softness = pipeline.scale_to_framebuffer(radius, softness)
+        radius, softness = pipeline.scale_to_framebuffer(effect.radius, effect.softness)
         
         pipeline.apply_shader(
             self._get_program(),
