@@ -4,6 +4,13 @@ from ._chromatic import Chromatic
 from ._pixelate import Pixelate
 from ._wave import Wave
 from ._distort import DistortRipple, DistortSqueeze, DistortSwirl
+from ._color_grade import ColorGrade
+from ._vignette import Vignette
+from ._scanlines import Scanlines
+from ._posterize import Posterize
+from ._glitch import Glitch
+from ._flicker import Flicker
+from ._edge_detect import EdgeDetect
 
 from ._zone import PostFxZone
 
@@ -16,7 +23,14 @@ __all__ = [
     "Chromatic",
     "Pixelate",
     "Wave",
-    "DistortRipple", "DistortSqueeze", "DistortSwirl"
+    "DistortRipple", "DistortSqueeze", "DistortSwirl",
+    "ColorGrade",
+    "Vignette",
+    "Scanlines",
+    "Posterize",
+    "Glitch",
+    "Flicker",
+    "EdgeDetect",
 
     "PostFxZone",
 

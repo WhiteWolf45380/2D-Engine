@@ -6,7 +6,6 @@ from .._rendering import Pipeline, Camera
 from .._flag import Activity
 from ..abc import Layer
 from ..fx.postfx import PostFxZone, PostFxRenderer
-from ..fx.postfx._wave import WavePostFxRenderer
 
 from ._frame_context import FrameContext
 
