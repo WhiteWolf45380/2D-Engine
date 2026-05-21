@@ -17,7 +17,7 @@ class PostFxRenderer:
     __slots__ = tuple()
 
     _registry: ClassVar[dict[Type[PostFxEffect], SpecializedPostFxRenderer]] = {}
-    _with_clock: ClassVar[set[SpecializedPostFxRenderer]]
+    _with_clock: ClassVar[set[SpecializedPostFxRenderer]] = set()
 
     _time: float = 0.0
 
