@@ -102,6 +102,8 @@ class ChromaticPostFxRenderer(SpecializedPostFxRenderer):
         dx = effect.strength * math.cos(theta)
         dy = effect.strength * math.sin(theta)
         dx, dy = pipeline.scale_to_framebuffer(dx, dy)
+        dx /= pipeline.fbo.width
+        dy /= pipeline.fbo.height
 
         pipeline.apply_shader(
             self._get_program(),
