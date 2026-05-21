@@ -102,31 +102,31 @@ pv.run()
 
 ### Assets
  
-Assets are immutable descriptors — they hold configuration but no runtime state. They are cheap to create and safe to share.
+Assets are immutable descriptors - they hold configuration but no runtime state. They are cheap to create and safe to share.
  
 ```python
-# Image — width or height scales proportionally, scale_factor is a multiplier
+# Image - width or height scales proportionally, scale_factor is a multiplier
 img = pv.asset.Image("player.png", height=2.5)
 img = pv.asset.Image("tile.png", scale_factor=2.0)
  
-# Animation — built from an Image sequence
+# Animation - built from an Image sequence
 anim = pv.asset.Animation.from_folder("assets/", prefix="run_", framerate=12, height=2.5)
 anim.duration   # total duration in seconds
 anim.frames     # tuple of Images
  
-# Font — system name, file path, or default
+# Font - system name, file path, or default
 font = pv.asset.Font("Arial", size=24)
 font = pv.asset.Font("fonts/custom.ttf", size=18)
 font = pv.asset.Font()                   # built-in FreeSans fallback
 font.text_width("Hello")                 # pixel width of a string
 font.clip_text("Long string", max_width=200, suffix="…")
  
-# Text — immutable content + font pair
+# Text - immutable content + font pair
 text = pv.asset.Text("Score: 0", font=pv.asset.Font(size=20))
 text.with_text("Score: 100")             # returns a new Text
 text.with_font(pv.asset.Font(size=32))
  
-# Color — accepts int [0, 255] or float [0.0, 1.0] per channel, with optional alpha
+# Color - accepts int [0, 255] or float [0.0, 1.0] per channel, with optional alpha
 red   = pv.asset.Color(255, 0, 0)
 white = pv.asset.Color(1.0, 1.0, 1.0)
 semi  = pv.asset.Color(0.2, 0.6, 1.0, 0.8)
@@ -134,7 +134,7 @@ semi.rgb    # (r, g, b) as floats
 semi.rgba8  # (r, g, b, a) as ints [0, 255]
 semi.with_alpha(0.5)
  
-# Sound — SFX, loaded entirely in memory
+# Sound - SFX, loaded entirely in memory
 sound = pv.asset.Sound("hit.wav", volume=0.8, cooldown=0.1)
 sound.play()
 sound.play(loop=True, limit=3)
@@ -145,7 +145,7 @@ sound.stop()
 footstep = pv.asset.Sound.from_variations("assets/audio/", prefix="step_", cooldown=0.4)
 footstep.add_variation("assets/audio/step_extra.wav")
  
-# Music — streamed from disk
+# Music - streamed from disk
 music = pv.asset.Music("theme.ogg", volume=0.9)
 music.play(loop=True, fade_s=2.0)
 music.stop(fade_s=1.0)
@@ -165,7 +165,7 @@ playlist.add(music_d)
  
 ### Bundles
  
-A `Bundle` loads a whole folder of assets at once, keyed by filename (minus extension and optional prefix). Results are cached — calling `get()` twice for the same key returns the same instance.
+A `Bundle` loads a whole folder of assets at once, keyed by filename (minus extension and optional prefix). Results are cached - calling `get()` twice for the same key returns the same instance.
  
 ```python
 # ImageBundle
@@ -173,7 +173,7 @@ images = pv.asset.ImageBundle.from_folder("assets/ui/", height=64)
 btn_img = images.get("button")           # Image
 images.random()                          # random Image from the bundle
  
-# AnimationBundle — not a built-in type, use Animation.from_folder directly
+# AnimationBundle - not a built-in type, use Animation.from_folder directly
 anim = pv.asset.Animation.from_folder("assets/run/", framerate=12, height=2.5)
  
 # FontBundle
@@ -185,7 +185,7 @@ sounds = pv.audio.load_sounds("assets/audio/sfx/", extensions=[".wav"], volume=1
 sounds["footstep"].play()
 sounds.random().play()
  
-# MusicBundle — preloads each music in a background thread
+# MusicBundle - preloads each music in a background thread
 musics = pv.audio.load_musics("assets/audio/music/", extensions=[".ogg"], volume=0.8)
 musics.preload()
 pv.audio.play_music(musics["theme"])
@@ -229,7 +229,7 @@ viewport = Viewport(
 )
 ```
  
-`x_direction` and `y_direction` form the local basis of the viewport — they must not be collinear. Changing them lets you rotate or mirror the rendered output independently of the camera.
+`x_direction` and `y_direction` form the local basis of the viewport - they must not be collinear. Changing them lets you rotate or mirror the rendered output independently of the camera.
 
 ### Camera
 
@@ -433,19 +433,19 @@ pv.mouse.set_exclusive(True)
 # Single key, fires on press
 pv.inputs.add_listener(pv.key.K_SPACE, player.jump)
  
-# Held key — fires every frame while pressed
+# Held key - fires every frame while pressed
 pv.inputs.add_listener(pv.key.K_D, player.move_right, repeat=True)
  
 # Release
 pv.inputs.add_listener(pv.key.K_LSHIFT, on_sprint_end, up=True)
  
-# Conditional — only fires when the lambda returns True
+# Conditional - only fires when the lambda returns True
 pv.inputs.add_listener(pv.key.K_RIGHT, cam_right, repeat=True, condition=lambda: not pv.key.is_pressed(pv.key.K_LEFT))
  
 # Any of a set of keys
 pv.inputs.when_any_of([pv.key.K_A, pv.key.K_LEFT], player.move_left, repeat=True)
  
-# Combo — all keys held simultaneously
+# Combo - all keys held simultaneously
 pv.inputs.when_all_of([pv.key.K_LEFT, pv.key.K_DOWN], move_downleft, repeat=True)
  
 # Mouse button
