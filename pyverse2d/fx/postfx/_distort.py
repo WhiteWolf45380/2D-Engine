@@ -129,8 +129,9 @@ class DistortSwirl(PostFxEffect):
     def __post_init__(self) -> None:
         object.__setattr__(self, "angle", float(self.angle))
         object.__setattr__(self, "falloff", float(self.falloff))
+        
         if __debug__:
-            positive(self.falloff, include=False)
+            over(self.falloff, 0, include=False)
 
 # ======================================== SQUEEZE ========================================
 @dataclass(slots=True, frozen=True)
@@ -155,8 +156,9 @@ class DistortSqueeze(PostFxEffect):
         object.__setattr__(self, "strength_x", float(self.strength_x))
         object.__setattr__(self, "strength_y", float(self.strength_y))
         object.__setattr__(self, "falloff", float(self.falloff))
+
         if __debug__:
-            positive(self.falloff, include=False)
+            over(self.falloff, 0, include=False)
             over(self.strength_x, -1.0, include=False)
             over(self.strength_y, -1.0, include=False)
 
@@ -187,11 +189,12 @@ class DistortRipple(PostFxEffect):
         object.__setattr__(self, "frequency", float(self.frequency))
         object.__setattr__(self, "speed", float(self.speed))
         object.__setattr__(self, "falloff", float(self.falloff))
+
         if __debug__:
             positive(self.amplitude)
             over(self.frequency, 0, include=False)
             over(self.speed, 0, include=False)
-            positive(self.falloff, include=False)
+            over(self.falloff, 0, include=False)
 
 # ======================================== HELPERS ========================================
 def _center_from_mask(mask: MaskData, fbo) -> tuple[float, float]:
