@@ -100,6 +100,8 @@ class VignettePostFxRenderer(SpecializedPostFxRenderer):
 
     def apply(self, pipeline: Pipeline, effect: Vignette, mask: MaskData) -> None:
         radius, softness = pipeline.scale_to_framebuffer(effect.radius, effect.softness)
+        radius /= pipeline.fbo.width
+        softness /= pipeline.fbo.width
         
         pipeline.apply_shader(
             self._get_program(),
