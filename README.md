@@ -117,7 +117,7 @@ def on_update(dt: float):
     pass   # game logic, called every frame
  
 def on_draw():
-    pass   # extra draw hook, runs before scene.draw
+    pass   # extra draw hook
  
 pv.run(on_update=on_update, on_draw=on_draw)
  
