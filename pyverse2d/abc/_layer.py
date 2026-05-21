@@ -156,7 +156,7 @@ class Layer(ABC):
             self._camera.update(dt)
             self._apply_context()
         if self._REQUIRES_CONTEXT:
-            self._update(dt, context=FrameContext)
+            self._update(dt, context=context)
         else:
             self._update(dt)
         self._clear_context()
