@@ -16,7 +16,7 @@ from .particle import (
 
 from . import postfx
 from .postfx import (
-    Blur, Chromatic, Pixelate, Wave,
+    Blur, Chromatic, Pixelate, Wave, DistortRipple, DistortSqueeze, DistortSwirl,
     PostFxZone,
     PostFxRenderer,
 )
@@ -36,6 +36,6 @@ __all__ = [
 
     "postfx",
     "PostFxZone",
-    "Blur", "Chromatic", "Pixelate", "Wave",
+    "Blur", "Chromatic", "Pixelate", "Wave", "DistortRipple", "DistortSqueeze", "DistortSwirl",
     "PostFxRenderer",
 ]
