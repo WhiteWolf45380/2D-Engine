@@ -90,17 +90,10 @@ class WavePostFxRenderer(SpecializedPostFxRenderer):
 
     _HANDLES: ClassVar[frozenset[type[PostFxEffect]]] = frozenset({Wave})
 
+    _REQUIRES_TIME: ClassVar[bool] = True
+
     _program: ClassVar[ShaderProgram | None] = None
     _time: ClassVar[float] = 0.0
-
-    @classmethod
-    def tick(cls, dt: float) -> None:
-        """Avance l'horloge interne partagée entre toutes les instances
-
-        Args:
-            dt: delta-time en secondes
-        """
-        cls._time += dt
 
     @classmethod
     def _get_program(cls) -> ShaderProgram:
