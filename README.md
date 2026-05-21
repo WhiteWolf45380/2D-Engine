@@ -98,6 +98,54 @@ pv.run()
 
 ---
 
+## Run Configuration
+
+### Engine API
+ 
+These are the top-level functions exposed directly on the `pyverse2d` module.
+ 
+```python
+# 1 - Bind the OS window to the engine (must be called before anything else)
+pv.set_window(window)
+ 
+# 2 - Upload scene assets to the GPU before the first frame
+pv.preload()           # preloads all pushed scenes
+pv.preload(my_scene)   # preloads a specific scene only
+ 
+# 3 - Start the main loop
+def on_update(dt: float):
+    pass   # game logic, called every frame
+ 
+def on_draw():
+    pass   # extra draw hook, runs before scene.draw
+ 
+pv.run(on_update=on_update, on_draw=on_draw)
+ 
+# 4 - Stop cleanly (closes the window and exits the pyglet loop)
+pv.stop()
+```
+ 
+### Profiling
+ 
+```python
+pv.preload()
+pv.profile(duration=10.0, on_update=on_update, export_path="profile_report.txt")
+```
+ 
+The profiler runs the main loop for `duration` seconds, then writes a frame-accurate report to `export_path` (pass `None` to print to console instead).
+ 
+### Traceback
+ 
+By default PyVerse2D enriches Python tracebacks with engine context. You can control this:
+ 
+```python
+pv.enable_traceback()    # on by default
+pv.disable_traceback()
+pv.set_traceback(True)   # equivalent to enable
+```
+ 
+---
+
 ## Internal objects
 
 ### Assets
@@ -199,6 +247,8 @@ len(bundle)
 "key" in bundle
 ```
 
+---
+
 ## Rendering Pipeline
 
 ### Window & screen
@@ -247,6 +297,8 @@ camera.goto((10.0, 0.0), duration=1.5, easing=pv.math.easing.ease_in_out_quad)
 # Parallax-derived camera (e.g. for a background layer)
 background_camera = Camera.derived_from(camera, parallax_x=0.3)
 ```
+
+---
 
 ## Core concepts
 
@@ -393,6 +445,8 @@ zone.move_effect(pv.fx.Blur, index=0)                   # push blur to first pas
 zone.remove_effect(pv.fx.Vignette)
 zone.disable()                                          # pause the zone without removing it
 ```
+
+---
 
 ## Managers
 
@@ -576,34 +630,6 @@ pv.ui.focused   # currently focused widget, or None
 pv.ui.unhover()
 pv.ui.unfocus()
 ```
-
-## Run Configuration
-
-### Profiling
-
-```python
-pv.preload()
-pv.profile(duration=10.0, on_update=on_update, export_path="profile_report.txt")
-```
-
----
-
-### Game loop
-
-```python
-def on_update(dt: float):
-    # your update logic
-    pass
-
-def on_draw():
-    # your extra draw logic (runs before scene.draw)
-    pass
-
-pv.preload()
-pv.run(on_update=on_update, on_draw=on_draw)
-```
-
-`pv.stop()` cleanly shuts down the engine and closes the window.
 
 ---
 
