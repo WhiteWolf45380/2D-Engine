@@ -56,7 +56,7 @@ class Chromatic(PostFxEffect):
         strength: intensité du décalage en unités mondes
         angle: angle du décalage en degrés *(0 = horizontal)*
     """
-    strength: Real = 0.005
+    strength: Real = 5
     angle: Real = 0.0
 
     _ID: ClassVar[str] = "chromatic"
