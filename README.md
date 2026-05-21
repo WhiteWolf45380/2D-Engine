@@ -98,7 +98,7 @@ pv.run()
 
 ---
 
-## Core concepts
+## Internal objects
 
 ### Assets
  
@@ -199,6 +199,8 @@ len(bundle)
 "key" in bundle
 ```
 
+## Rendering Pipeline
+
 ### Window & screen
 
 `LogicalScreen` defines the virtual resolution your game is designed for. `Window` wraps the OS window and handles letterboxing automatically, your game scales cleanly to any physical window size.
@@ -245,6 +247,8 @@ camera.goto((10.0, 0.0), duration=1.5, easing=pv.math.easing.ease_in_out_quad)
 # Parallax-derived camera (e.g. for a background layer)
 background_camera = Camera.derived_from(camera, parallax_x=0.3)
 ```
+
+## Core concepts
 
 ### Scene & layers
 
@@ -389,6 +393,8 @@ zone.move_effect(pv.fx.Blur, index=0)                   # push blur to first pas
 zone.remove_effect(pv.fx.Vignette)
 zone.disable()                                          # pause the zone without removing it
 ```
+
+## Managers
 
 ### KeyManager
  
@@ -571,6 +577,8 @@ pv.ui.unhover()
 pv.ui.unfocus()
 ```
 
+## Run Configuration
+
 ### Profiling
 
 ```python
@@ -580,7 +588,7 @@ pv.profile(duration=10.0, on_update=on_update, export_path="profile_report.txt")
 
 ---
 
-## Game loop
+### Game loop
 
 ```python
 def on_update(dt: float):
