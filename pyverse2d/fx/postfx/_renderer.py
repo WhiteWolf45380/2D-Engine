@@ -55,7 +55,7 @@ class PostFxRenderer:
         """
         PostFxRenderer._time += dt
         for renderer in self._with_clock:
-            renderer._time = PostFxRenderer._time
+            type(renderer)._time = PostFxRenderer._time
 
     # ======================================== RENDER ========================================
     def render(self, pipeline: Pipeline, zones: list[PostFxZone]) -> None:
