@@ -334,7 +334,6 @@ class RenderSystem(System):
             opacity=tc.opacity,
             width_easing=tc.width_easing,
             opacity_easing=tc.opacity_easing,
-            smooth=tc.smooth,
         )
         renderer.draw(pipeline, tc.color)
 

@@ -186,7 +186,6 @@ class PygletTrailRenderer:
         opacity: float,
         width_easing: EasingFunc | None,
         opacity_easing: EasingFunc | None,
-        smooth: bool,
     ) -> None:
         """Reconstruit le mesh depuis le buffer de points et uploade au GPU
 
@@ -198,7 +197,6 @@ class PygletTrailRenderer:
             opacity: opacité globale
             width_easing: courbe de largeur *(None = fixe)*
             opacity_easing: courbe d'opacité *(None = fixe)*
-            smooth: lissage Catmull-Rom avec normales analytiques
         """
         raw_pts = list(points)
         n_raw = len(raw_pts)
@@ -208,24 +206,7 @@ class PygletTrailRenderer:
             return
 
         # Lissage Catmull-Rom avec normales analytiques
-        smoothed_mode = False
-        if smooth and n_raw >= 4:
-            smoothed_mode = True
-            steps = 10
-            pt_list: list = []
-            for i in range(n_raw - 1):
-                p0 = raw_pts[max(i - 1, 0)]
-                p1 = raw_pts[i]
-                p2 = raw_pts[i + 1]
-                p3 = raw_pts[min(i + 2, n_raw - 1)]
-                for s in range(steps):
-                    pt_list.append(_catmull_rom(p0, p1, p2, p3, s / steps))
-            # Dernier point avec tangente finale
-            pt_list.append(_catmull_rom(
-                raw_pts[-4], raw_pts[-3], raw_pts[-2], raw_pts[-1], 1.0,
-            ))
-        else:
-            pt_list = raw_pts
+        pt_list = raw_pts
 
         n = len(pt_list)
 
@@ -250,11 +231,8 @@ class PygletTrailRenderer:
 
             px, py, age = pt[0], pt[1], pt[2]
 
-            # Normale : analytique si smooth, moyennée sinon
-            if smoothed_mode:
-                nx, ny = pt[3], pt[4]
-            else:
-                nx, ny = _normal_at(pt_list, i)
+            # Normale moyennée
+            nx, ny = _normal_at(pt_list, i)
 
             # Largeur
             t_life = max(0.0, min(1.0, 1.0 - age / duration))

@@ -26,7 +26,6 @@ class TrailRenderer(RendererComponent):
         image: texture du trail *(None = couleur unie, sinon texturé répété)*
         width_easing: courbe de décroissance de la largeur *(None = fixe)*
         opacity_easing: courbe de décroissance de l'opacité' *(None = fixe)*
-        smooth: active le lissage Catmull-Rom
         max_points: nombre de positions stockées maximal
         opacity: opacité globale *[0, 1]*
         z: ordre de rendu
@@ -35,7 +34,7 @@ class TrailRenderer(RendererComponent):
     __slots__ = (
         "_offset", "_width", "_duration", "_min_distance",
         "_color", "_image",
-        "_width_easing", "_opacity_easing", "_smooth",
+        "_width_easing", "_opacity_easing",
         "_max_points",
         "_points",
     )
@@ -50,7 +49,6 @@ class TrailRenderer(RendererComponent):
         image: Image | None = None,
         width_easing: EasingFunc | None = None,
         opacity_easing: EasingFunc | None = None,
-        smooth: bool = False,
         max_points: Integral = 128,
         opacity: Real = 1.0,
         z: Integral = 0,
@@ -65,7 +63,6 @@ class TrailRenderer(RendererComponent):
         duration = float(duration)
         min_distance = float(min_distance)
         color = Color(color)
-        smooth = bool(smooth)
         max_points = int(max_points)
 
         if __debug__:
@@ -85,7 +82,6 @@ class TrailRenderer(RendererComponent):
         self._image: Image | None = image
         self._width_easing: EasingFunc | None = width_easing
         self._opacity_easing: EasingFunc | None = opacity_easing
-        self._smooth: bool = smooth
         self._max_points: int = max_points
 
         # Attributs internes
@@ -101,7 +97,7 @@ class TrailRenderer(RendererComponent):
         return (
             self._offset, self._width, self._duration, self._min_distance,
             self._color, self._image,
-            self._width_easing, self._opacity_easing, self._smooth,
+            self._width_easing, self._opacity_easing,
             self._opacity, self._z,
         )
 
@@ -110,7 +106,7 @@ class TrailRenderer(RendererComponent):
         return TrailRenderer(
             self._offset, self._width, self._duration, self._min_distance,
             self._color, self._image, self._width_easing,
-            self._smooth, self._opacity, self._z, self._visible,
+            self._opacity, self._z, self._visible,
         )
 
     # ======================================== PROPERTIES ========================================
@@ -198,15 +194,6 @@ class TrailRenderer(RendererComponent):
         if __debug__:
             expect_callable(value, include_none=True)
         self._opacity_easing = value
-
-    @property
-    def smooth(self) -> bool:
-        """Lissage Catmull-Rom activé"""
-        return self._smooth
-
-    @smooth.setter
-    def smooth(self, value: bool) -> None:
-        self._smooth = bool(value)
 
     @property
     def max_points(self) -> int:
