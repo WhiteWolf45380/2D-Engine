@@ -5,6 +5,7 @@ from ..._internal import over, expect_callable
 from ...abc import RendererComponent
 from ...asset import Image, Color
 from ...typing import EasingFunc
+from ...math import Vector
 
 from collections import deque
 from numbers import Real, Integral
@@ -17,6 +18,7 @@ class TrailRenderer(RendererComponent):
     Ce composant est manipulé par le ``RenderSystem``.
 
     Args:
+        offset: décalage par rapport au Transform
         width: largeur maximale du ruban en unités monde *(> 0)*
         duration: durée de vie des points en secondes *(> 0)*
         min_distance: distance minimale entre deux points *(> 0)*
@@ -29,19 +31,20 @@ class TrailRenderer(RendererComponent):
         visible: visibilité
     """
     __slots__ = (
-        "_width", "_duration", "_min_distance",
+        "_offset", "_width", "_duration", "_min_distance",
         "_color", "_image",
         "_width_easing", "_smooth",
         "_points",
     )
 
-    _MAX_POINTS: ClassVar[int] = 64
+    MAX_POINTS: ClassVar[int] = 64
 
     def __init__(
         self,
+        offset: Vector = (0.0, 0.0),
         width: Real = 1.0,
         duration: Real = 0.5,
-        min_distance: Real = 0.05,
+        min_distance: Real = 0.1,
         color: Color = (255, 255, 255, 1.0),
         image: Image | None = None,
         width_easing: EasingFunc | None = None,
@@ -54,6 +57,7 @@ class TrailRenderer(RendererComponent):
         super().__init__(opacity, z, visible)
 
         # Transtypage et vérifications
+        offset = Vector(offset)
         width = float(width)
         duration = float(duration)
         min_distance = float(min_distance)
@@ -67,6 +71,7 @@ class TrailRenderer(RendererComponent):
             expect_callable(width_easing, include_none=True)
 
         # Attributs publiques
+        self._offset: Vector = offset
         self._width: float = width
         self._duration: float = duration
         self._min_distance: float = min_distance
@@ -85,17 +90,26 @@ class TrailRenderer(RendererComponent):
 
     def get_attributes(self) -> tuple:
         """Renvoie les attributs de la traînée"""
-        return (self._width, self._duration, self._min_distance, self._color, self._image, self._smooth, self._opacity, self._z)
+        return (self._offset, self._width, self._duration, self._min_distance, self._color, self._image, self._smooth, self._opacity, self._z)
 
     def copy(self) -> TrailRenderer:
         """Renvoie une copie de la traînée"""
         return TrailRenderer(
-            self._width, self._duration, self._min_distance,
+            self._offset, self._width, self._duration, self._min_distance,
             self._color, self._image, self._width_easing,
             self._smooth, self._opacity, self._z, self._visible,
         )
 
     # ======================================== PROPERTIES ========================================
+    @property
+    def offset(self) -> Vector:
+        """Décalage par rapport au ``Transform``"""
+        return self._offset
+    
+    @offset.setter
+    def offset(self, value: Vector) -> None:
+        self._offset.x, self._offset.y = value
+
     @property
     def width(self) -> float:
         """Largeur maximale du ruban en unités monde *(> 0)*"""
@@ -186,7 +200,7 @@ class TrailRenderer(RendererComponent):
             dx, dy = x - lx, y - ly
             if dx * dx + dy * dy < self._min_distance * self._min_distance:
                 return
-        if len(self._points) >= self._MAX_POINTS:
+        if len(self._points) >= self.MAX_POINTS:
             self._points.popleft()
         self._points.append((x, y, 0.0))
 

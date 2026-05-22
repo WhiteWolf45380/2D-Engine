@@ -229,9 +229,9 @@ class PygletTrailRenderer:
 
             # Largeur modulée
             t_life = max(0.0, min(1.0, 1.0 - age / duration))
-            hw = width * 0.5 * (width_easing(t_life) if width_easing else t_life)
+            hw = width * 0.5 * (width_easing(t_life) if width_easing else 1.0)
 
-            # Extrusion dans l'espace monde
+            # Extrusion dans l'espace monde puis conversion framebuffer
             lx = px + nx * hw
             ly = py + ny * hw
             rx = px - nx * hw

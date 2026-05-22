@@ -54,7 +54,7 @@ class RenderSystem(System):
     # ======================================== LIFE CYCLE ========================================
     @profile_section("world.animation.update")
     def update(self, world: World, dt: float):
-        """Actualisation du pilotage
+        """Actualisation du rendu
 
         Args:
             world: monde courant
@@ -65,7 +65,7 @@ class RenderSystem(System):
             tr: Transform = entity.get(Transform)
             if tc.is_visible():
                 tc._tick(dt)
-                tc._push(tr.x, tr.y)
+                tc._push(tr.x + tc.offset.x, tr.y + tc.offset.y)
 
     @profile_section("world.animation.draw")
     def draw(self, world: World, pipeline: Pipeline):
@@ -319,7 +319,7 @@ class RenderSystem(System):
 
         if eid not in self._trails:
             self._trails[eid] = PygletTrailRenderer(
-                max_points=TrailRenderer._MAX_POINTS,
+                max_points=TrailRenderer.MAX_POINTS,
                 image=tc.image,
             )
             entity.on_kill(self._make_clear_trail_func(eid))
