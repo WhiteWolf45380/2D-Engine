@@ -231,14 +231,11 @@ class PygletTrailRenderer:
             t_life = max(0.0, min(1.0, 1.0 - age / duration))
             hw = width * 0.5 * (width_easing(t_life) if width_easing else t_life)
 
-            # Extrusion dans l'espace monde puis conversion framebuffer
+            # Extrusion dans l'espace monde
             lx = px + nx * hw
             ly = py + ny * hw
             rx = px - nx * hw
             ry = py - ny * hw
-
-            lx, ly = pipeline.world_to_framebuffer(lx, ly)
-            rx, ry = pipeline.world_to_framebuffer(rx, ry)
 
             u = lengths[i] / total_length
             alpha = t_life * opacity
@@ -287,7 +284,7 @@ class PygletTrailRenderer:
         if self._textured:
             prog = self._get_tex_program()
             prog.use()
-            prog['u_mvp'] = pipeline.static_matrix
+            prog['u_mvp'] = pipeline.static_matrix @ pipeline.view_matrix
             prog['u_tint'] = color.rgb
             prog['u_texture'] = 0
             gl.glActiveTexture(gl.GL_TEXTURE0)
@@ -295,7 +292,7 @@ class PygletTrailRenderer:
         else:
             prog = self._get_color_program()
             prog.use()
-            prog['u_mvp'] = pipeline.static_matrix
+            prog['u_mvp'] = pipeline.static_matrix @ pipeline.view_matrix
 
         gl.glDrawArrays(gl.GL_TRIANGLE_STRIP, 0, self._vertex_count)
         gl.glBindVertexArray(0)
