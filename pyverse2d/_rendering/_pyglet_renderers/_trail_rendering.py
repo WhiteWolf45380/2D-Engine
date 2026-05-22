@@ -9,8 +9,6 @@ from collections import deque
 from typing import ClassVar
 
 import pyglet
-import pyglet.resource
-import os
 import pyglet.gl as gl
 from pyglet.graphics import Group
 from pyglet.graphics.shader import Shader, ShaderProgram
@@ -170,25 +168,20 @@ class PygletTrailRenderer:
         """
         cache_key = f"{path}|{'repeat' if tiling else 'clamp'}"
         if cache_key in cls._texture_cache:
-            return cls._texture_cache[cache_key]
-
-        directory = os.path.dirname(os.path.abspath(path))
-        if directory not in pyglet.resource.path:
-            pyglet.resource.path.append(directory)
-            pyglet.resource.reindex()
+            return cls._texture_cache[cache_key].id
 
         try:
-            raw = pyglet.resource.image(os.path.basename(path), atlas=False)
-            tex_id = raw.get_texture().id
+            img = pyglet.image.load(path)
+            texture = img.get_texture()
             wrap_mode = GL_REPEAT if tiling else GL_CLAMP_TO_EDGE
-            glBindTexture(GL_TEXTURE_2D, tex_id)
+            glBindTexture(GL_TEXTURE_2D, texture.id)
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrap_mode)
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrap_mode)
-            cls._texture_cache[cache_key] = tex_id
-            return tex_id
-        except pyglet.resource.ResourceNotFoundException:
-            print(f"[PygletTrailRenderer] Cannot load texture: {path}")
-            cls._texture_cache[cache_key] = 0
+            glBindTexture(GL_TEXTURE_2D, 0)
+            cls._texture_cache[cache_key] = texture
+            return texture.id
+        except Exception as e:
+            print(f"[PygletTrailRenderer] Cannot load texture: {path} ({e})")
             return 0
 
     def __init__(
