@@ -422,17 +422,18 @@ Available effects and their key parameters:
 
 | Effect | Description | Key params |
 |---|---|---|
-| `Blur` | Gaussian blur (separable, multi-pass) | `radius`, `passes` |
+| `Blur` | Gaussian blur | `radius`, `passes` |
+| `MotionBlur` | Dual frames motion blur | `strength` |
 | `Chromatic` | Chromatic aberration | `strength`, `angle` |
 | `ColorGrade` | Brightness / contrast / saturation / tint | `brightness`, `contrast`, `saturation`, `tint` |
 | `EdgeDetect` | Sobel edge detection | `threshold`, `strength`, `edge_color` |
 | `Flicker` | Luminosity flicker (unstable light source) | `amplitude`, `speed` |
 | `Glitch` | Digital corruption with band shifting | `strength`, `density`, `speed` |
 | `Pixelate` | Pixelation | `block_size` |
-| `Posterize` | Color level reduction (cel-shading) | `levels` |
+| `Posterize` | Color level reduction | `levels` |
 | `Scanlines` | CRT scanline overlay | `spacing`, `strength`, `softness` |
 | `Vignette` | Edge darkening | `strength`, `radius`, `softness`, `color` |
-| `Wave` | Sinusoidal distortion (cartesian) | `amplitude_x`, `amplitude_y`, `frequency_x`, `frequency_y`, `speed` |
+| `Wave` | Sinusoidal distortion | `amplitude_x`, `amplitude_y`, `frequency_x`, `frequency_y`, `speed` |
 | `DistortSwirl` | Vortex rotation | `angle`, `falloff` |
 | `DistortSqueeze` | Asymmetric directional stretch | `strength_x`, `strength_y`, `falloff` |
 | `DistortRipple` | Radial concentric wave | `amplitude`, `frequency`, `speed`, `falloff` |
