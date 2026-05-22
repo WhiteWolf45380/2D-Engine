@@ -11,6 +11,7 @@ from ._posterize import Posterize
 from ._glitch import Glitch
 from ._flicker import Flicker
 from ._edge_detect import EdgeDetect
+from ._motion_blur import MotionBlur
 
 from ._zone import PostFxZone
 
@@ -31,6 +32,7 @@ __all__ = [
     "Glitch",
     "Flicker",
     "EdgeDetect",
+    "MotionBlur",
 
     "PostFxZone",
 
