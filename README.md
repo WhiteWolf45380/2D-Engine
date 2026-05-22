@@ -57,7 +57,7 @@ window = Window(screen=screen, caption="Hello World", vsync=True)
 pv.set_window(window)
 
 # --- Scene ---
-camera = Camera(anchor=(0.5, 0.5), view_width=40, view_height=22.5)
+camera = Camera(anchor=(0.5, 0.5), view_height=30)
 viewport = Viewport(width=1920, height=1080, origin=(0.5, 0.5))
 main_scene = scene.Scene(camera=camera, viewport=viewport)
 scene.push(main_scene)
@@ -69,7 +69,7 @@ main_scene.add_layer(scene.WorldLayer(main_world), z=0)
 main_world.add_system(world.RenderSystem())
 main_world.add_system(world.PhysicsSystem())
 main_world.add_system(world.GravitySystem(pv.math.Vector(0.0, -9.8)))
-main_world.add_system(world.CollisionSystem())
+main_world.add_system(world.CollisionSystem(slop=0.01, restitution_threshold=0.05))
 
 # --- Ground ---
 ground_shape = pv.shape.Rect(30.0, 1.0)
@@ -82,12 +82,12 @@ ground = world.Entity(
 main_world.add_entity(ground)
 
 # --- Ball ---
-ball_shape = pv.shape.Circle(1.0)
+ball_shape = pv.shape.Circle(1)
 ball = world.Entity(
-    world.Transform(position=(0.0, 8.0), anchor=(0.5, 0.5)),
+    world.Transform(position=(0.0, 8.0)),
     world.ShapeRenderer(shape=ball_shape, filling_color=(80, 180, 255)),
     world.Collider(shape=ball_shape),
-    world.RigidBody(mass=1.0, restitution=0.8, friction=0.2),
+    world.RigidBody(mass=1.0, restitution=0.8),
 )
 main_world.add_entity(ball)
 
