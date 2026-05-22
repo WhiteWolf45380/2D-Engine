@@ -239,7 +239,7 @@ class PygletTrailRenderer:
         total_length = lengths[-1] if lengths[-1] > 1e-6 else 1.0
 
         # Génération du mesh
-        cr, cg, cb = color.r / 255.0, color.g / 255.0, color.b / 255.0
+        cr, cg, cb = color.rgb
         fpv = self._floats_per_vert
         buf = (gl.GLfloat * (self._max_verts * fpv))()
         vi = 0
