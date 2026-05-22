@@ -333,8 +333,8 @@ class RenderSystem(System):
             color=tc.color,
             opacity=tc.opacity,
             width_easing=tc.width_easing,
+            opacity_easing=tc.opacity_easing,
             smooth=tc.smooth,
-            pipeline=pipeline,
         )
         renderer.draw(pipeline, tc.color)
 

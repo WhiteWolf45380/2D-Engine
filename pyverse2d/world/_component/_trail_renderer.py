@@ -24,7 +24,8 @@ class TrailRenderer(RendererComponent):
         min_distance: distance minimale entre deux points *(> 0)*
         color: couleur RGBA du trail *(mode couleur unie)*
         image: texture du trail *(None = couleur unie, sinon texturé répété)*
-        width_easing: courbe de décroissance de la largeur tête→queue *(None = fixe)*
+        width_easing: courbe de décroissance de la largeur *(None = fixe)*
+        opacity_easing: courbe de décroissance de l'opacité' *(None = fixe)*
         smooth: active le lissage Catmull-Rom
         opacity: opacité globale *[0, 1]*
         z: ordre de rendu
@@ -33,7 +34,7 @@ class TrailRenderer(RendererComponent):
     __slots__ = (
         "_offset", "_width", "_duration", "_min_distance",
         "_color", "_image",
-        "_width_easing", "_smooth",
+        "_width_easing", "_opacity_easing", "_smooth",
         "_points",
     )
 
@@ -48,6 +49,7 @@ class TrailRenderer(RendererComponent):
         color: Color = (255, 255, 255, 1.0),
         image: Image | None = None,
         width_easing: EasingFunc | None = None,
+        opacity_easing: EasingFunc | None = None,
         smooth: bool = False,
         opacity: Real = 1.0,
         z: Integral = 0,
@@ -69,6 +71,7 @@ class TrailRenderer(RendererComponent):
             over(duration, 0, include=False)
             over(min_distance, 0, include=False)
             expect_callable(width_easing, include_none=True)
+            expect_callable(opacity_easing, include_none=True)
 
         # Attributs publiques
         self._offset: Vector = offset
@@ -77,7 +80,8 @@ class TrailRenderer(RendererComponent):
         self._min_distance: float = min_distance
         self._color: Color = color
         self._image: Image | None = image
-        self._width_easing: Callable[[float], float] | None = width_easing
+        self._width_easing: EasingFunc | None = width_easing
+        self._opacity_easing: EasingFunc | None = opacity_easing
         self._smooth: bool = smooth
 
         # Attributs internes
@@ -90,7 +94,12 @@ class TrailRenderer(RendererComponent):
 
     def get_attributes(self) -> tuple:
         """Renvoie les attributs de la traînée"""
-        return (self._offset, self._width, self._duration, self._min_distance, self._color, self._image, self._smooth, self._opacity, self._z)
+        return (
+            self._offset, self._width, self._duration, self._min_distance,
+            self._color, self._image,
+            self._width_easing, self._opacity_easing, self._smooth,
+            self._opacity, self._z,
+        )
 
     def copy(self) -> TrailRenderer:
         """Renvoie une copie de la traînée"""
@@ -165,13 +174,26 @@ class TrailRenderer(RendererComponent):
         self._image = value
 
     @property
-    def width_easing(self) -> Callable[[float], float] | None:
-        """Courbe de décroissance de la largeur tête→queue *(None = fixe)*"""
+    def width_easing(self) -> EasingFunc | None:
+        """Courbe de décroissance de la largeur *(None = fixe)*"""
         return self._width_easing
 
     @width_easing.setter
-    def width_easing(self, value: Callable[[float], float] | None) -> None:
+    def width_easing(self, value: EasingFunc | None) -> None:
+        if __debug__:
+            expect_callable(value, include_none=True)
         self._width_easing = value
+
+    @property
+    def opacity_easing(self) -> EasingFunc | None:
+        """Courbe de décroissance de l'opacité'*(None = fixe)*"""
+        return self._opacity_easing
+
+    @opacity_easing.setter
+    def opacity_easing(self, value: EasingFunc | None) -> None:
+        if __debug__:
+            expect_callable(value, include_none=True)
+        self._opacity_easing = value
 
     @property
     def smooth(self) -> bool:

@@ -3,9 +3,10 @@ from __future__ import annotations
 
 from ...asset import Image, Color
 from ..._rendering import Pipeline
+from ...math.easing import EasingFunc
 
 from collections import deque
-from typing import Callable, ClassVar
+from typing import ClassVar
 
 import pyglet.gl as gl
 from pyglet.graphics.shader import Shader, ShaderProgram
@@ -144,9 +145,9 @@ class PygletTrailRenderer:
         duration: float,
         color: Color,
         opacity: float,
-        width_easing: Callable[[float], float] | None,
+        width_easing: EasingFunc | None,
+        opacity_easing: EasingFunc | None,
         smooth: bool,
-        pipeline: Pipeline,
     ) -> None:
         """Reconstruit le mesh depuis le buffer de points et uploade au GPU
 
@@ -157,8 +158,8 @@ class PygletTrailRenderer:
             color: couleur RGBA *(mode couleur unie)*
             opacity: opacité globale
             width_easing: courbe de largeur *(None = fixe)*
+            opacity_easing: opacity_easing *(None = fixe)*
             smooth: lissage Catmull-Rom
-            pipeline: pipeline courant
         """
         pt_list = list(points)
         n = len(pt_list)
@@ -238,7 +239,7 @@ class PygletTrailRenderer:
             ry = py - ny * hw
 
             u = lengths[i] / total_length
-            alpha = t_life * opacity
+            alpha = (opacity_easing(t_life) if opacity_easing else 1.0) * opacity
 
             if self._textured:
                 buf[vi*fpv+0] = lx; buf[vi*fpv+1] = ly
