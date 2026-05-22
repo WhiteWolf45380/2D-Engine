@@ -1,7 +1,7 @@
 # ======================================== IMPORTS ========================================
 from __future__ import annotations
 
-from ..._internal import over, expect_callable
+from ..._internal import expect, over, expect_callable
 from ...abc import RendererComponent
 from ...asset import Image, Color
 from ...typing import EasingFunc
@@ -9,7 +9,6 @@ from ...math import Vector
 
 from collections import deque
 from numbers import Real, Integral
-from typing import Callable, ClassVar
 
 # ======================================== COMPONENT ========================================
 class TrailRenderer(RendererComponent):
@@ -24,6 +23,8 @@ class TrailRenderer(RendererComponent):
         min_distance: distance minimale entre deux points *(> 0)*
         color: couleur RGBA du trail *(mode couleur unie)*
         image: texture du trail *(None = couleur unie, sinon texturé répété)*
+        tiling: texture en carrage ou étirée *(ignoré si image = None)*
+        tile_size: longueur en unités monde d'une répétition *(ignoré si tiling = False)*
         width_easing: courbe de décroissance de la largeur *(None = fixe)*
         opacity_easing: courbe de décroissance de l'opacité' *(None = fixe)*
         max_points: nombre de positions stockées maximal
@@ -33,7 +34,7 @@ class TrailRenderer(RendererComponent):
     """
     __slots__ = (
         "_offset", "_width", "_duration", "_min_distance",
-        "_color", "_image",
+        "_color", "_image", "_tiling", "_tile_size",
         "_width_easing", "_opacity_easing",
         "_max_points",
         "_points",
@@ -47,6 +48,8 @@ class TrailRenderer(RendererComponent):
         min_distance: Real = 0.1,
         color: Color = (255, 255, 255, 1.0),
         image: Image | None = None,
+        tiling: bool = True,
+        tile_size: Real = 0.1,
         width_easing: EasingFunc | None = None,
         opacity_easing: EasingFunc | None = None,
         max_points: Integral = 128,
@@ -63,12 +66,16 @@ class TrailRenderer(RendererComponent):
         duration = float(duration)
         min_distance = float(min_distance)
         color = Color(color)
+        tiling = bool(tiling)
+        tile_size = float(tile_size)
         max_points = int(max_points)
 
         if __debug__:
             over(width, 0, include=False)
             over(duration, 0, include=False)
             over(min_distance, 0, include=False)
+            expect(image, (Image, None))
+            over(tile_size, 0, include=False)
             expect_callable(width_easing, include_none=True)
             expect_callable(opacity_easing, include_none=True)
             over(max_points, 0, include=False)
@@ -80,6 +87,8 @@ class TrailRenderer(RendererComponent):
         self._min_distance: float = min_distance
         self._color: Color = color
         self._image: Image | None = image
+        self._tiling: bool = tiling
+        self._tile_size: float = tile_size
         self._width_easing: EasingFunc | None = width_easing
         self._opacity_easing: EasingFunc | None = opacity_easing
         self._max_points: int = max_points
@@ -96,7 +105,7 @@ class TrailRenderer(RendererComponent):
         """Renvoie les attributs de la traînée"""
         return (
             self._offset, self._width, self._duration, self._min_distance,
-            self._color, self._image,
+            self._color, self._image, self._tiling, self.self._tile_size,
             self._width_easing, self._opacity_easing,
             self._opacity, self._z,
         )
@@ -105,7 +114,7 @@ class TrailRenderer(RendererComponent):
         """Renvoie une copie de la traînée"""
         return TrailRenderer(
             self._offset, self._width, self._duration, self._min_distance,
-            self._color, self._image, self._width_easing,
+            self._color, self._image, self._tiling, self._tile_size, self._width_easing,
             self._opacity, self._z, self._visible,
         )
 
@@ -171,7 +180,30 @@ class TrailRenderer(RendererComponent):
 
     @image.setter
     def image(self, value: Image | None) -> None:
+        if __debug__:
+            expect(value, (Image, None))
         self._image = value
+
+    @property
+    def tiling(self) -> bool:
+        """Texture en carrelage ou étirée"""
+        return self._tiling
+    
+    @tiling.setter
+    def tiling(self, value: bool) -> None:
+        self._tiling = bool(value)
+
+    @property
+    def tile_size(self) -> float:
+        """Longueur en unités monde d'une répétition *(ignoré si tiling = False)*"""
+        return self._tile_size
+    
+    @tile_size.setter
+    def tile_size(self, value: Real) -> None:
+        value = float(value)
+        if __debug__:
+            over(value, 0, include=False)
+        self._tile_size = value
 
     @property
     def width_easing(self) -> EasingFunc | None:

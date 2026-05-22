@@ -197,15 +197,16 @@ class PygletTrailRenderer:
         image: Image | None = None,
         color: Color = None,
         opacity: float = 1.0,
-        width: float = 10.0,
+        width: float = 1.0,
         duration: float = 1.0,
         width_easing: EasingFunc | None = None,
         opacity_easing: EasingFunc | None = None,
         tiling: bool = True,
-        tile_size: float = 64.0,
+        tile_size: float = 0.1,
         z: int = 0,
         pipeline: Pipeline = None,
     ) -> None:
+        # Attributs publiques
         self._image: Image | None = image
         self._color: Color = color
         self._opacity: float = opacity
@@ -218,6 +219,7 @@ class PygletTrailRenderer:
         self._z: int = z
         self._pipeline: Pipeline = pipeline
 
+        # Attributs internes
         self._vertex_count: int = 0
         self._visible: bool = True
         self._max_verts: int = max_points * 2
@@ -225,6 +227,7 @@ class PygletTrailRenderer:
         self._group: _TrailGroup | None = None
         self._anchor_vlist: object | None = None
 
+        # Construction
         self._build()
 
     # ======================================== BUILD ========================================
@@ -406,10 +409,7 @@ class PygletTrailRenderer:
         will_be_textured = self._image is not None
         if was_textured != will_be_textured:
             return "rebuild"
-        self._texture_id = (
-            self._load_texture(self._image.path, self._tiling)
-            if self._image is not None else 0
-        )
+        self._texture_id = self._load_texture(self._image.path, self._tiling) if self._image is not None else 0
         return None
 
     def _handle_tiling(self) -> None:

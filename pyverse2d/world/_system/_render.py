@@ -321,6 +321,8 @@ class RenderSystem(System):
             self._trails[eid] = PygletTrailRenderer(
                 max_points = tc.max_points,
                 image = tc.image,
+                tiling=tc.tiling,
+                tile_size=tc.tile_size,
                 color = tc.color,
                 opacity = tc.opacity,
                 width = tc.width,
@@ -337,6 +339,8 @@ class RenderSystem(System):
             self._trails[eid].update(
                 tc.points,
                 image = tc.image,
+                tiling=tc.tiling,
+                tile_size=tc.tile_size,
                 color = tc.color,
                 opacity = tc.opacity,
                 width = tc.width,
