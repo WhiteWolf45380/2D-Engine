@@ -192,7 +192,7 @@ class PygletTrailRenderer:
         total_length = lengths[-1] if lengths[-1] > 1e-6 else 1.0
 
         # Couleur normalisée
-        cr, cg, cb = color.r / 255.0, color.g / 255.0, color.b / 255.0
+        cr, cg, cb = color.rgb
 
         fpv = self._floats_per_vert
         buf = (gl.GLfloat * (self._max_verts * fpv))()
@@ -240,7 +240,7 @@ class PygletTrailRenderer:
             lx, ly = pipeline.world_to_framebuffer(lx, ly)
             rx, ry = pipeline.world_to_framebuffer(rx, ry)
 
-            u     = lengths[i] / total_length
+            u = lengths[i] / total_length
             alpha = t_life * opacity
 
             if self._textured:
@@ -288,7 +288,7 @@ class PygletTrailRenderer:
             prog = self._get_tex_program()
             prog.use()
             prog['u_mvp'] = pipeline.static_matrix
-            prog['u_tint'] = (color.r / 255.0, color.g / 255.0, color.b / 255.0)
+            prog['u_tint'] = color.rgb
             prog['u_texture'] = 0
             gl.glActiveTexture(gl.GL_TEXTURE0)
             gl.glBindTexture(gl.GL_TEXTURE_2D, self._texture_id)
