@@ -27,6 +27,7 @@ class TrailRenderer(RendererComponent):
         width_easing: courbe de décroissance de la largeur *(None = fixe)*
         opacity_easing: courbe de décroissance de l'opacité' *(None = fixe)*
         smooth: active le lissage Catmull-Rom
+        max_points: nombre de positions stockées maximal
         opacity: opacité globale *[0, 1]*
         z: ordre de rendu
         visible: visibilité
@@ -35,10 +36,9 @@ class TrailRenderer(RendererComponent):
         "_offset", "_width", "_duration", "_min_distance",
         "_color", "_image",
         "_width_easing", "_opacity_easing", "_smooth",
+        "_max_points",
         "_points",
     )
-
-    MAX_POINTS: ClassVar[int] = 64
 
     def __init__(
         self,
@@ -51,6 +51,7 @@ class TrailRenderer(RendererComponent):
         width_easing: EasingFunc | None = None,
         opacity_easing: EasingFunc | None = None,
         smooth: bool = False,
+        max_points: Integral = 128,
         opacity: Real = 1.0,
         z: Integral = 0,
         visible: bool = True,
@@ -65,6 +66,7 @@ class TrailRenderer(RendererComponent):
         min_distance = float(min_distance)
         color = Color(color)
         smooth = bool(smooth)
+        max_points = int(max_points)
 
         if __debug__:
             over(width, 0, include=False)
@@ -72,6 +74,7 @@ class TrailRenderer(RendererComponent):
             over(min_distance, 0, include=False)
             expect_callable(width_easing, include_none=True)
             expect_callable(opacity_easing, include_none=True)
+            over(max_points, 0, include=False)
 
         # Attributs publiques
         self._offset: Vector = offset
@@ -83,6 +86,7 @@ class TrailRenderer(RendererComponent):
         self._width_easing: EasingFunc | None = width_easing
         self._opacity_easing: EasingFunc | None = opacity_easing
         self._smooth: bool = smooth
+        self._max_points: int = max_points
 
         # Attributs internes
         self._points: deque[tuple[float, float, float]] = deque()
@@ -205,6 +209,11 @@ class TrailRenderer(RendererComponent):
         self._smooth = bool(value)
 
     @property
+    def max_points(self) -> int:
+        """Nombre maximal de positions stockées *(lecture seule)*"""
+        return self._max_points
+
+    @property
     def points(self) -> deque[tuple[float, float, float]]:
         """Buffer interne des points *(lecture seule)*"""
         return self._points
@@ -222,7 +231,7 @@ class TrailRenderer(RendererComponent):
             dx, dy = x - lx, y - ly
             if dx * dx + dy * dy < self._min_distance * self._min_distance:
                 return
-        if len(self._points) >= self.MAX_POINTS:
+        if len(self._points) >= self._max_points:
             self._points.popleft()
         self._points.append((x, y, 0.0))
 

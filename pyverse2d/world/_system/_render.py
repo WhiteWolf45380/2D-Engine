@@ -319,7 +319,7 @@ class RenderSystem(System):
 
         if eid not in self._trails:
             self._trails[eid] = PygletTrailRenderer(
-                max_points=TrailRenderer.MAX_POINTS,
+                max_points=TrailRenderer.max_points,
                 image=tc.image,
             )
             entity.on_kill(self._make_clear_trail_func(eid))
