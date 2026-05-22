@@ -329,7 +329,7 @@ player = world.Entity(
 main_world.add_entity(player)
 ```
 
-Available components: `Transform`, `ShapeRenderer`, `SpriteRenderer`, `TextRenderer`, `Animator`, `Collider`, `RigidBody`, `GroundSensor`, `Follow`, `SoundEmitter`, `VideoPlayer`.
+Available components: `Transform`, `ShapeRenderer`, `SpriteRenderer`, `TextRenderer`, `Animator`, `TrailRenderer`, `Collider`, `RigidBody`, `GroundSensor`, `Follow`, `SoundEmitter`, `VideoPlayer`.
 
 ### Systems
 
