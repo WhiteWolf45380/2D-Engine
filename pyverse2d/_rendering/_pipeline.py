@@ -189,7 +189,7 @@ class Pipeline:
     def full_matrix(self) -> Mat4:
         """Matrice Vp @ P @ V"""
         if self._context.full_matrix is None:
-            self._context.full_matrix = self.view_matrix @ self.static_matrix @ self.view_matrix
+            self._context.full_matrix = self.static_matrix @ self.view_matrix
         return self._context.full_matrix
     
     # ======================================== INTERFACE ========================================

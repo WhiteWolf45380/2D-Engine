@@ -272,10 +272,12 @@ class PygletTrailRenderer:
         )
         prog = pyglet.shapes.get_default_shader()
         self._anchor_vlist = prog.vertex_list(
-            0,
+            3,
             gl.GL_TRIANGLES,
             batch=self._pipeline.batch,
             group=self._group,
+            position=('f', [0.0, 0.0] * 3),
+            colors=('Bn', (0, 0, 0, 0) * 3),
         )
 
     def _rebuild(self) -> None:
@@ -299,10 +301,12 @@ class PygletTrailRenderer:
         )
         prog = pyglet.shapes.get_default_shader()
         self._anchor_vlist = prog.vertex_list(
-            0,
+            3,
             gl.GL_TRIANGLES,
             batch=self._pipeline.batch,
             group=self._group,
+            position=('f', [0.0, 0.0] * 3),
+            colors=('Bn', (0, 0, 0, 0) * 3),
         )
 
     # ======================================== GETTERS ========================================
