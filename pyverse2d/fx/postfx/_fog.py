@@ -42,7 +42,6 @@ uniform int u_octaves;
 uniform float u_lacunarity;
 uniform float u_gain;
 uniform vec3 u_color;
-uniform mat4 u_mvp;
 in vec2 v_uv;
 out vec4 out_color;
 
@@ -90,12 +89,8 @@ void main() {{
     vec2 orbit2 = vec2(cos(w2 * 0.618), sin(w2)) * 0.22;
 
     // Base UV ancrée monde
-    vec2 ndc = v_uv * 2.0 - 1.0;
-    vec4 world = u_mvp * vec4(ndc, 0.0, 1.0);
-    vec2 base_uv = (world.xy / world.w) / u_scale;
-
-    vec2 uv1 = base_uv + u_wind * t + orbit1;
-    vec2 uv2 = base_uv * 0.74 + u_wind * t * 0.58 + vec2(3.7, 1.9) + orbit2;
+    vec2 uv1 = v_uv + u_wind * t + orbit1;
+    vec2 uv2 = v_uv * 0.74 + u_wind * t * 0.58 + vec2(3.7, 1.9) + orbit2;
 
     float f1 = fbm(uv1);
     float f2 = fbm(uv2);
@@ -217,7 +212,6 @@ class FogPostFxRenderer(SpecializedPostFxRenderer):
             u_lacunarity=effect.lacunarity,
             u_gain=effect.gain,
             u_color=effect.color.rgb,
-            u_mvp=pipeline.full_matrix,
             **mask.as_uniforms(),
         )
 
