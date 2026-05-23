@@ -128,11 +128,11 @@ class Fog(PostFxEffect):
         color: couleur RGB du brouillard
     """
     angle: Real = 0.0
-    velocity: Real = 0.05
+    velocity: Real = 1
     base: Real = 0.25
-    density: Real = 0.35
-    softness: Real = 0.45
-    scale: Real = 2.5
+    density: Real = 0.4
+    softness: Real = 0.5
+    scale: Real = 10
     warp: Real = 1.0
     octaves: Integral = 4
     lacunarity: Real = 2.0
