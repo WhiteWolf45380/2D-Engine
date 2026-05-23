@@ -31,48 +31,45 @@ void main() {
 _FRAG = f"""
 #version 330 core
 uniform sampler2D u_texture;
-uniform vec2  u_wind;        // direction + vitesse en UV/s
+uniform vec2 u_wind;
 uniform float u_time;
-uniform float u_density;     // seuil de densité [0, 1]
-uniform float u_softness;    // largeur du fondu (> 0)
-uniform float u_scale;       // zoom du bruit (> 0)
-uniform int   u_octaves;     // octaves fBm [1, 8]
-uniform float u_lacunarity;  // fréquence entre octaves
-uniform float u_gain;        // atténuation entre octaves
-uniform vec3  u_color;       // couleur du brouillard
+uniform float u_base;
+uniform float u_density;
+uniform float u_softness;
+uniform float u_scale;
+uniform float u_warp;
+uniform int u_octaves;
+uniform float u_lacunarity;
+uniform float u_gain;
+uniform vec3 u_color;
 in vec2 v_uv;
 out vec4 out_color;
 
 {GLSL_MASK}
 
-// ---- Hash sans texture ----
 float hash(vec2 p) {{
     p = fract(p * vec2(127.1, 311.7));
     p += dot(p, p + 19.19);
     return fract(p.x * p.y);
 }}
 
-// ---- Bruit bilinéaire ----
 float noise(vec2 p) {{
     vec2 i = floor(p);
     vec2 f = fract(p);
-    vec2 u = f * f * (3.0 - 2.0 * f);   // smoothstep
-
+    vec2 u = f * f * (3.0 - 2.0 * f);
     float a = hash(i);
     float b = hash(i + vec2(1.0, 0.0));
     float c = hash(i + vec2(0.0, 1.0));
     float d = hash(i + vec2(1.0, 1.0));
-
     return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
 }}
 
-// ---- Fractal Brownian Motion ----
 float fbm(vec2 p) {{
     float value = 0.0;
     float amplitude = 0.5;
     float frequency = 1.0;
     for (int i = 0; i < u_octaves; i++) {{
-        value     += amplitude * noise(p * frequency);
+        value += amplitude * noise(p * frequency);
         frequency *= u_lacunarity;
         amplitude *= u_gain;
     }}
@@ -80,22 +77,30 @@ float fbm(vec2 p) {{
 }}
 
 void main() {{
-    vec4  orig = texture(u_texture, v_uv);
+    vec4 orig = texture(u_texture, v_uv);
     float mask = compute_mask();
+    float t = u_time;
 
-    // UV animés par le vent
-    vec2 uv = v_uv * u_scale + u_wind * u_time;
+    // ---- Orbite de Lissajous ----
+    float w1 = t * 0.038 * u_warp;
+    vec2 orbit1 = vec2(cos(w1), sin(w1 * 0.618)) * 0.28;
 
-    // fBm en deux couches décalées pour plus d'organicité
-    float n  = fbm(uv);
-    float n2 = fbm(uv + vec2(3.7, 1.4));  // décalage de domaine
-    float fog = fbm(uv + vec2(n, n2));
+    float w2 = t * 0.025 * u_warp;
+    vec2 orbit2 = vec2(cos(w2 * 0.618), sin(w2) ) * 0.22;
 
-    // Seuil soft
-    float alpha = smoothstep(u_density, u_density + max(u_softness, 0.001), fog);
+    // UV de base : dérive de vent + orbite continue
+    vec2 uv1 = v_uv * u_scale + u_wind * t + orbit1;
+    vec2 uv2 = v_uv * u_scale * 0.74 + u_wind * t * 0.58 + vec2(3.7, 1.9) + orbit2;
+
+    float f1 = fbm(uv1);
+    float f2 = fbm(uv2);
+    float fog = (f1 + f2) * 0.5;
+
+    float dynamic = smoothstep(u_density, u_density + max(u_softness, 0.001), fog);
+    float alpha = u_base + (1.0 - u_base) * dynamic;
 
     vec3 fogged = mix(orig.rgb, u_color, alpha);
-    out_color   = vec4(mix(orig.rgb, fogged, mask), orig.a);
+    out_color = vec4(mix(orig.rgb, fogged, mask), orig.a);
 }}
 """
 
@@ -104,51 +109,60 @@ void main() {{
 class Fog(PostFxEffect):
     """Effet post-processing: brouillard procédural animé
 
-    Génère un brouillard volumétrique 2D via fractal Brownian motion (fBm).
-    Le vent anime le déplacement du bruit frame par frame via l'horloge interne.
+    Le point de sample de chaque couche décrit une courbe de Lissajous
+    (fréquences en rapport nombre d'or → jamais de répétition exacte).
+    Les masses de brouillard se déforment, s'épaississent et s'éclaircissent
+    continuellement pendant leur déplacement — au lieu de translater rigidement.
 
     Args:
         angle: angle du vent en degrés *(0 = droite)*
-        velocity: vitesse du vent en unités monde par second *(> 0)*
-        density: seuil d'apparition du brouillard *[0, 1]* — plus bas = plus dense
-        softness: largeur du fondu entre brouillard et scène *(>= 0)*
-        scale: zoom du bruit procédural *(> 0)* - plus bas = nuages plus grands
-        octaves: nombre d'octaves fBm *[1, 8]* - plus élevé = plus de détail
+        velocity: vitesse de dérive globale
+        base: épaisseur minimale garantie partout *[0, 1]*
+        density: seuil des épaississements dynamiques *[0, 1]*
+        softness: largeur du fondu des variations *(>= 0)*
+        scale: zoom du bruit *(> 0)* — plus bas = structures plus larges
+        warp: vitesse d'orbite *(> 0)* — contrôle l'intensité de déformation
+        octaves: octaves fBm *[1, 8]*
         lacunarity: facteur de fréquence entre octaves *(> 1)*
         gain: facteur d'amplitude entre octaves *]0, 1[*
         color: couleur RGB du brouillard
     """
     angle: Real = 0.0
     velocity: Real = 0.05
-    density: Real = 0.4
-    softness: Real = 0.3
-    scale: Real = 3.0
-    octaves: Integral = 5
+    base: Real = 0.25
+    density: Real = 0.35
+    softness: Real = 0.45
+    scale: Real = 2.5
+    warp: Real = 1.0
+    octaves: Integral = 4
     lacunarity: Real = 2.0
     gain: Real = 0.5
-    color: tuple = (1.0, 1.0, 1.0)
+    color: Color = (1.0, 1.0, 1.0)
 
     _ID: ClassVar[str] = "fog"
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "angle", float(self.angle))
         object.__setattr__(self, "velocity", float(self.velocity))
+        object.__setattr__(self, "base", float(self.base))
         object.__setattr__(self, "density", float(self.density))
         object.__setattr__(self, "softness", float(self.softness))
         object.__setattr__(self, "scale", float(self.scale))
+        object.__setattr__(self, "warp", float(self.warp))
         object.__setattr__(self, "octaves", int(self.octaves))
         object.__setattr__(self, "lacunarity", float(self.lacunarity))
         object.__setattr__(self, "gain", float(self.gain))
-        object.__setattr__(self, "color", tuple(float(c) for c in self.color))
+        object.__setattr__(self, "color", Color(self.color))
 
         if __debug__:
+            clamped(self.base)
             clamped(self.density)
             positive(self.softness)
             over(self.scale, 0, include=False)
+            over(self.warp, 0, include=False)
             over(self.octaves, 1, include=True)
             over(self.lacunarity, 1.0, include=False)
             clamped(self.gain, include_min=False, include_max=False)
-            over(self.velocity, 0, include=False)
 
 # ======================================== RENDERER ========================================
 class FogPostFxRenderer(SpecializedPostFxRenderer):
@@ -181,21 +195,23 @@ class FogPostFxRenderer(SpecializedPostFxRenderer):
         theta = math.radians(effect.angle)
         vx, vy = pipeline.scale_to_framebuffer(effect.velocity, effect.velocity)
         wind = (
-            math.cos(theta) * vx,
-            math.sin(theta) * vy,
+            -math.cos(theta) * vx,
+            -math.sin(theta) * vy,
         )
 
         pipeline.apply_shader(
             self._get_program(),
             u_wind=wind,
             u_time=self._time,
+            u_base=effect.base,
             u_density=effect.density,
             u_softness=effect.softness,
             u_scale=effect.scale,
+            u_warp=effect.warp,
             u_octaves=effect.octaves,
             u_lacunarity=effect.lacunarity,
             u_gain=effect.gain,
-            u_color=effect.color,
+            u_color=effect.color.rgb,
             **mask.as_uniforms(),
         )
 
