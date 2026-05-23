@@ -56,7 +56,7 @@ class Pipeline:
         "_window", "_quad", "_temp_fbo",
         "_data", "_projection_cache", "_view_cache",
         "_view_buffer", "_default_view",
-        "_context",
+        "_context", "_current_is_main",
     )
 
     _COORD: ClassVar[CoordinatesManager] = None
@@ -82,6 +82,7 @@ class Pipeline:
 
         # Contexte
         self._context: _PipelineContext = _PipelineContext()
+        self._current_is_main: bool = False
 
     # ======================================== GETTERS ========================================
     # OpenGl
@@ -188,16 +189,35 @@ class Pipeline:
     @property
     def full_matrix(self) -> Mat4:
         """Matrice Vp @ P @ V"""
-        if self._context.full_matrix is None:
-            self._context.full_matrix = self.static_matrix @ self.view_matrix
-        return self._context.full_matrix
+        ctx = self._context
+        if ctx.full_matrix is None:
+            is_main = self.is_current_main()
+            if is_main and ctx.main_full_matrix is not None:
+                ctx.full_matrix = ctx.main_full_matrix
+            else:
+                ctx.full_matrix = self.static_matrix @ self.view_matrix
+                if is_main:
+                    ctx.main_full_matrix = ctx.full_matrix
+        return ctx.full_matrix
     
     @property
     def inv_full_matrix(self) -> Mat4:
         """Matrice (Vp @ P @ V)^(-1)"""
-        if self._context.inv_full_matrix is None:
-            self._context.inv_full_matrix = self.full_matrix.__invert__()
-        return self._context.inv_full_matrix
+        ctx = self._context
+        if ctx.inv_full_matrix is None:
+            is_main = self.is_current_main()
+            if is_main and ctx.inv_full_matrix is not None:
+                ctx.inv_full_matrix = ctx.main_inv_full_matrix
+            else:
+                ctx.inv_full_matrix = self.full_matrix.__invert__()
+                if is_main:
+                    ctx.main_inv_full_matrix = ctx.inv_full_matrix
+        return ctx.inv_full_matrix
+    
+    # ======================================== PREDICATES ========================================
+    def is_current_main(self) -> bool:
+        """Vérifie que la caméra courante soit la caméra pincipale de la scene"""
+        return self._current_is_main
     
     # ======================================== INTERFACE ========================================
     def get_group(self, z: int = 0) -> Group:
@@ -215,7 +235,7 @@ class Pipeline:
 
         Args:
             program: shader program à appliquer
-            **uniforms: uniforms à passer au shader (u_texture réservé)
+            **uniforms: uniforms à passer au shader *(u_texture réservé)*
         """
         scene_fbo = self._context.fbo
         temp_fbo = self._get_temp_fbo(scene_fbo)
@@ -269,10 +289,12 @@ class Pipeline:
         Vp: Mat4 = scene.viewport.viewport_matrix()
         P: Mat4 = scene.camera.projection_matrix(screen.width, screen.height)
         V: Mat4 = scene.camera.view_matrix()
-        self._context.viewport_matrix = Vp        
+        self._context.viewport_matrix = Vp
         self._context.main_projection = P
         self._context.main_view = V
         self._context.main_static_matrix = Vp @ P
+        self._context.full_matrix = None
+        self._context.inv_full_matrix = None
 
         # Assignation du FrameBuffer
         fbo.bind()
@@ -306,7 +328,8 @@ class Pipeline:
         self._context.z_groups = layers_data[layer].z_groups
 
         # Calcul des matrices du layer
-        if self._context.camera is self._context.main_camera:
+        self._current_is_main = self._context.camera is self._context.main_camera
+        if self.is_current_main():
             P: Mat4 = self._context.main_projection
             V: Mat4 = self._context.main_view
             Sc: Mat4 = self._context.main_static_matrix
@@ -533,12 +556,16 @@ class _PipelineContext:
     projection_matrix: Mat4 = None
     view_matrix: Mat4 = None
     static_matrix: Mat4 = None
+
     full_matrix: Mat4 = None
     inv_full_matrix: Mat4 = None
 
     main_projection: Mat4 = None
     main_view: Mat4 = None
     main_static_matrix: Mat4 = None
+
+    main_full_matrix: Mat4 = None
+    main_inv_full_matrix: Mat4 = None
 
     def clear(self) -> None:
         """Nettoie le contexte"""
