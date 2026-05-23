@@ -437,6 +437,7 @@ Available effects and their key parameters:
 | `DistortSwirl` | Vortex rotation | `angle`, `falloff` |
 | `DistortSqueeze` | Asymmetric directional stretch | `strength_x`, `strength_y`, `falloff` |
 | `DistortRipple` | Radial concentric wave | `amplitude`, `frequency`, `speed`, `falloff` |
+| `Fog` | FBM dynamic fog | `angle`, `velocity`, `density`, `softness`, `scale`, `octaves`, `lacunarity`, `gain`, `color` |
 
 Effects can be added, removed, replaced and reordered at runtime:
 
