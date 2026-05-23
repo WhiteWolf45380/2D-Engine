@@ -293,8 +293,8 @@ class Pipeline:
         self._context.main_projection = P
         self._context.main_view = V
         self._context.main_static_matrix = Vp @ P
-        self._context.full_matrix = None
-        self._context.inv_full_matrix = None
+        self._context.main_full_matrix = None
+        self._context.main_inv_full_matrix = None
 
         # Assignation du FrameBuffer
         fbo.bind()
@@ -341,6 +341,8 @@ class Pipeline:
         self._context.projection_matrix = P
         self._context.view_matrix = V
         self._context.static_matrix = Sc
+        self._context.full_matrix = None
+        self._context.inv_full_matrix = None
 
     def apply(self, projection: Mat4 = None, view: Mat4 = None) -> None:
         """Applique le contexte GPU courant
