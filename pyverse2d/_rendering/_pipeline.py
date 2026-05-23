@@ -192,6 +192,13 @@ class Pipeline:
             self._context.full_matrix = self.static_matrix @ self.view_matrix
         return self._context.full_matrix
     
+    @property
+    def inv_full_matrix(self) -> Mat4:
+        """Matrice (Vp @ P @ V)^(-1)"""
+        if self._context.inv_full_matrix is None:
+            self._context.inv_full_matrix = self.full_matrix.__invert__()
+        return self._context.inv_full_matrix
+    
     # ======================================== INTERFACE ========================================
     def get_group(self, z: int = 0) -> Group:
         """Renvoie le ``Group`` associé au z-order donné dans le ``Layer``courant
@@ -527,6 +534,7 @@ class _PipelineContext:
     view_matrix: Mat4 = None
     static_matrix: Mat4 = None
     full_matrix: Mat4 = None
+    inv_full_matrix: Mat4 = None
 
     main_projection: Mat4 = None
     main_view: Mat4 = None

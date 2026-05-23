@@ -42,6 +42,7 @@ uniform int u_octaves;
 uniform float u_lacunarity;
 uniform float u_gain;
 uniform vec3 u_color;
+uniform mat4 u_inv_mvp;
 in vec2 v_uv;
 out vec4 out_color;
 
@@ -86,11 +87,15 @@ void main() {{
     vec2 orbit1 = vec2(cos(w1), sin(w1 * 0.618)) * 0.28;
 
     float w2 = t * 0.025 * u_warp;
-    vec2 orbit2 = vec2(cos(w2 * 0.618), sin(w2)) * 0.22;
+    vec2 orbit2 = vec2(cos(w2 * 0.618), sin(w2) ) * 0.22;
 
-    // Base UV ancrée monde
-    vec2 uv1 = v_uv + u_wind * t + orbit1;
-    vec2 uv2 = v_uv * 0.74 + u_wind * t * 0.58 + vec2(3.7, 1.9) + orbit2;
+    // UV de base : dérive de vent + orbite continue
+    vec2 ndc = v_uv * 2.0 - 1.0;
+    vec4 world = u_inv_mvp * vec4(ndc, 0.0, 1.0);
+    vec2 base_uv = (world.xy / world.w) / u_scale;
+
+    vec2 uv1 = base_uv + u_wind * t + orbit1;
+    vec2 uv2 = base_uv * 0.74 + u_wind * t * 0.58 + vec2(3.7, 1.9) + orbit2;
 
     float f1 = fbm(uv1);
     float f2 = fbm(uv2);
@@ -108,11 +113,6 @@ void main() {{
 @dataclass(slots=True, frozen=True)
 class Fog(PostFxEffect):
     """Effet post-processing: brouillard procédural animé
-
-    Le point de sample de chaque couche décrit une courbe de Lissajous
-    (fréquences en rapport nombre d'or → jamais de répétition exacte).
-    Les masses de brouillard se déforment, s'épaississent et s'éclaircissent
-    continuellement pendant leur déplacement — au lieu de translater rigidement.
 
     Args:
         angle: angle du vent en degrés *(0 = droite)*
@@ -176,12 +176,14 @@ class FogPostFxRenderer(SpecializedPostFxRenderer):
 
     @classmethod
     def _get_program(cls) -> ShaderProgram:
+        """Renvoie le programme de shader associé"""
         if cls._program is None:
             cls._program = ShaderProgram(Shader(_VERT, 'vertex'), Shader(_FRAG, 'fragment'))
         return cls._program
 
     @classmethod
     def clear_shader_cache(cls) -> None:
+        """Nettoie le cache du programme de shader"""
         cls._program = None
 
     def apply(self, pipeline: Pipeline, effect: Fog, mask: MaskData) -> None:
@@ -197,21 +199,22 @@ class FogPostFxRenderer(SpecializedPostFxRenderer):
             -math.cos(theta) * effect.velocity,
             -math.sin(theta) * effect.velocity,
         )
-        scale = pipeline.scale_to_world(effect.scale)
+        density = 1 - effect.density
 
         pipeline.apply_shader(
             self._get_program(),
             u_wind=wind,
             u_time=self._time,
             u_base=effect.base,
-            u_density=effect.density,
+            u_density=density,
             u_softness=effect.softness,
-            u_scale=scale,
+            u_scale=effect.scale,
             u_warp=effect.warp,
             u_octaves=effect.octaves,
             u_lacunarity=effect.lacunarity,
             u_gain=effect.gain,
             u_color=effect.color.rgb,
+            u_inv_mvp=pipeline.inv_full_matrix,
             **mask.as_uniforms(),
         )
 
