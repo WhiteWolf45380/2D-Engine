@@ -143,13 +143,13 @@ class ParticleRenderer:
             gl.glBufferSubData(gl.GL_ARRAY_BUFFER, 0, data.nbytes, data.ctypes.data_as(ctypes.POINTER(gl.GLfloat)))
 
     # ======================================== INTERFACE ========================================
-    def render(self, pipeline: Pipeline, emitters: list[ParticleEmitter], additive: bool) -> None:
+    def render(self, pipeline: Pipeline, emitters: list[ParticleEmitter], blending: float) -> None:
         """Rendu instancié de toutes les particules
 
         Args:
             pipeline: Pipeline courant
             emitters: émetteurs à rendre
-            additive: blending additif ou alpha classique
+            blending: interpolation entre alpha classique et blending additif *[0, 1]*
         """
         # Grouper par texture
         groups: dict = {}
@@ -168,10 +168,17 @@ class ParticleRenderer:
         self._ensure_vao()
 
         gl.glEnable(gl.GL_BLEND)
-        if additive:
+        if blending >= 1.0:
             gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE)
-        else:
+        elif blending <= 0.0:
             gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
+        else:
+            gl.glBlendFuncSeparate(
+                gl.GL_SRC_ALPHA,
+                gl.GL_ONE_MINUS_SRC_ALPHA,
+                gl.GL_ONE,
+                gl.GL_ONE_MINUS_SRC_ALPHA
+            )
 
         gl.glBindVertexArray(ParticleRenderer._vao)
 
