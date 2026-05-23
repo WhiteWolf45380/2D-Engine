@@ -421,7 +421,7 @@ class Pipeline:
             return fb_w
         return fb_w, fb_h
     
-    def scale_to_framebuffer(self, width: float | None = None, height: float | None = None) -> float | tuple[float, float]:
+    def scale_to_world(self, width: float | None = None, height: float | None = None) -> float | tuple[float, float]:
         """Convertit une taille framebuffer en taille monde
         
         Args:
